@@ -402,7 +402,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 	}
 
 	if status.Status != "running" {
-		os.Exit(1)
+		os.Exit(1) //nolint:gocritic
 	}
 
 	return err

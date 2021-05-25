@@ -24,7 +24,7 @@ func Backoff(ctx context.Context, d time.Duration, max uint64, fn func() error, 
 		}
 
 		if log != nil {
-			log.Info("Retrying operation in %s", waitTime)
+			log.Infof("Retrying operation in %s", waitTime)
 		}
 
 		t := time.NewTicker(waitTime)
