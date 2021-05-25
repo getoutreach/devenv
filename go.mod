@@ -13,11 +13,11 @@ require (
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/getoutreach/gobox v1.0.1
-	github.com/go-git/go-billy/v5 v5.1.0
-	github.com/go-git/go-git/v5 v5.3.0
+	github.com/go-git/go-billy/v5 v5.3.1
+	github.com/go-git/go-git/v5 v5.4.1
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
-	github.com/hashicorp/vault/api v1.0.4
+	github.com/hashicorp/vault/api v1.1.0
 	github.com/jaredallard/localizer v1.8.2
 	github.com/jetstack/cert-manager v1.2.0
 	github.com/jonboulle/clockwork v0.1.1-0.20190114141812-62fb9bc030d1 // indirect
