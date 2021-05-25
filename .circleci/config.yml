@@ -224,7 +224,8 @@ jobs:
                   grep -A 2 github.com ~/.ssh/config | grep IdentityFile | awk '{ print $2 }' | xargs -n 1 ssh-add
 
                   # Setup Docker (GCR) Auth
-                  source "./scripts/lib/docker-authn.sh"
+                  ./scripts/bootstrap-lib.sh
+                  source "./.bootstrap/shell/lib/docker-authn.sh"
             - run:
                 name: Release
                 command: |
