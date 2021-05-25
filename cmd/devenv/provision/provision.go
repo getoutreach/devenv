@@ -17,7 +17,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	dockerclient "github.com/docker/docker/client"
 	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
@@ -203,12 +202,14 @@ func (o *Options) applyPostRestore(ctx context.Context) error { //nolint:funlen
 
 	o.log.Info("Applying post-restore manifest(s)")
 
-	//nolint:gosec // Why: Gotta do what you gotta do
-	cmd := exec.CommandContext(ctx, os.Args[0], "kubectl", "apply", "-f", processed.Name())
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return devenvutil.Backoff(ctx, 1*time.Second, 5, func() error {
+		//nolint:gosec // Why: Gotta do what you gotta do
+		cmd := exec.CommandContext(ctx, os.Args[0], "kubectl", "apply", "-f", processed.Name())
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
+	}, o.log)
 }
 
 func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,gocyclo
@@ -241,26 +242,17 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	}
 
 	// Wait for Velero to load the backup
-	t := backoff.WithMaxRetries(backoff.WithContext(backoff.NewConstantBackOff(30*time.Second), ctx), 10)
-
-	for {
+	err = devenvutil.Backoff(ctx, 30*time.Second, 10, func() error {
 		err2 := snapshotOpt.CreateBackupStorage(ctx, "devenv", snapshotLocalBucket)
 		if err2 != nil && !kerrors.IsAlreadyExists(err2) {
-			o.log.WithError(err2).Infof("Waiting to create backup storage location")
+			o.log.WithError(err2).Debug("Waiting to create backup storage location")
 		}
 
 		_, err2 = snapshotOpt.GetSnapshot(ctx, snapshotTarget.VeleroBackupName)
-		if err2 == nil {
-			break
-		}
-
-		waitTime := t.NextBackOff()
-		if waitTime == backoff.Stop { // this is hit when max attempts or context is canceled
-			return fmt.Errorf("reached maximum attempts")
-		}
-		o.log.WithError(err2).Infof("Waiting for snapshot to be loaded, waiting %s", waitTime)
-
-		time.Sleep(waitTime)
+		return err2
+	}, o.log)
+	if err != nil {
+		return errors.Wrap(err, "failed to verify velero loaded snapshot")
 	}
 
 	err = snapshotOpt.RestoreSnapshot(ctx, snapshotTarget.VeleroBackupName, false)
