@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: orca
+  namespace: bento1a
+spec:
+  tls:
+    - hosts:
+        - developer.outreach.io
+      secretName: orca-tls
+  rules:
+    - host: developer.outreach.io
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: orca-proxy
+              servicePort: 8080

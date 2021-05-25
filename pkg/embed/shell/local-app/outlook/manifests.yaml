@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: outlook-ingress
+  namespace: bento1a
+spec:
+  tls:
+    - hosts:
+        - outlook.outreach-dev.com
+      secretName: outlook-ingress-cert
+  rules:
+    - host: outlook.outreach-dev.com
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: outlook-proxy
+              servicePort: 10365
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: outlook-ingress-cert
+  namespace: bento1a
+spec:
+  secretName: outlook-ingress-cert
+  issuerRef:
+    name: selfsigned
+    kind: ClusterIssuer
+  commonName: outlook.outreach-dev.com
+  dnsNames:
+    - outlook.outreach-dev.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: outlook-proxy
+  namespace: bento1a
+spec:
+  selector:
+    app: outlook-proxy
+  ports:
+    - protocol: TCP
+      port: 10365
+      targetPort: 10365

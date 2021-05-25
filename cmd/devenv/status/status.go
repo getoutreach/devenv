@@ -1,0 +1,409 @@
+package status
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net"
+	"os"
+	"strings"
+	"text/tabwriter"
+	"time"
+
+	dockerclient "github.com/docker/docker/client"
+	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/containerruntime"
+	"github.com/getoutreach/devenv/pkg/kube"
+	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
+	"github.com/getoutreach/gobox/pkg/trace"
+	apiv1 "github.com/jaredallard/localizer/api/v1"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+)
+
+const (
+	Degraded      = "degraded"
+	Unprovisioned = "unprovisioned"
+	Running       = "running"
+	Stopped       = "stopped"
+	Unknown       = "unknown"
+)
+
+//nolint:gochecknoglobals
+var (
+	statusLongDesc = `
+		status shows the status of your developer environment.
+
+		This is done by checking, simply, if it is up or down, but also runs a series of health checks to report the health.
+	`
+	statusExample = `
+		# View the status of the developer environment
+		devenv status
+	`
+)
+
+type Options struct {
+	log logrus.FieldLogger
+	k   kubernetes.Interface
+	d   dockerclient.APIClient
+
+	// Quiet denotes if we should output text or not
+	Quiet bool
+
+	// Namespaces is a slice of strings which, if not empty, filters
+	// the output of the status command.
+	Namespaces []string
+
+	// AllNamespaces is a flag that denotes whether or not to display
+	// all namespaces in the output of the status command.
+	AllNamespaces bool
+
+	// IncludeKubeSystem is a flag that denotes whether or not to
+	// include kube-system in the output of the status command.
+	IncludeKubeSystem bool
+}
+
+func NewOptions(log logrus.FieldLogger) (*Options, error) {
+	k, err := kube.GetKubeClient()
+	if err != nil {
+		log.WithError(err).Warn("failed to create a kubernetes client")
+	}
+
+	d, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
+	if err != nil {
+		log.WithError(err).Warn("failed to create a docker client")
+	}
+
+	return &Options{
+		d:   d,
+		k:   k,
+		log: log,
+	}, nil
+}
+
+func NewCmdStatus(log logrus.FieldLogger) *cli.Command {
+	return &cli.Command{
+		Name:        "status",
+		Usage:       "View the status of the developer environment",
+		Description: cmdutil.NewDescription(statusLongDesc, statusExample),
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "quiet",
+				Aliases: []string{"q"},
+				Usage:   "Whether to print a detailed status message",
+			},
+			&cli.StringSliceFlag{
+				Name:    "namespace",
+				Aliases: []string{"n"},
+				Usage:   "Which namespace to print information about, can be duplicated to show multiple namespaces. If omitted, all namespaces will be printed.",
+			},
+			&cli.BoolFlag{
+				Name:  "kube-system",
+				Usage: "Include kube-system in the output.",
+			},
+			&cli.BoolFlag{
+				Name:    "all-namespaces",
+				Aliases: []string{"a"},
+				Usage:   "Displays all namespaces in the output.",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			o, err := NewOptions(log)
+			if err != nil {
+				return err
+			}
+
+			o.Quiet = c.Bool("quiet")
+			o.Namespaces = c.StringSlice("namespace")
+			o.IncludeKubeSystem = c.Bool("kube-system")
+			o.AllNamespaces = c.Bool("all-namespaces")
+
+			return o.Run(c.Context)
+		},
+	}
+}
+
+type Status struct {
+	// Status is the status of the cluster in text format, eventually
+	// will be enum of: running, stopped, unprovisioned, degraded, or unknown
+	Status string
+
+	// Reason is included when a status may need potential
+	// explanation. For now this is just non-running or stopped statuses
+	Reason string
+
+	// KubernetesVersion is the version of the developer environment
+	KubernetesVersion string
+
+	// Version is the version of the developer environment
+	Version string
+}
+
+// GetStatus determines the status of a developer environment
+// nolint:funlen
+func (o *Options) GetStatus(ctx context.Context) (*Status, error) {
+	ctx = trace.StartCall(ctx, "status.GetStatus")
+	defer trace.EndCall(ctx)
+
+	status := &Status{
+		Status: Unknown,
+	}
+
+	if o.d == nil {
+		status.Reason = "Failed to communicate with Docker (client couldn't be created)"
+		return status, nil
+	}
+
+	if o.k == nil {
+		status.Status = Unprovisioned
+		return status, nil
+	}
+
+	// check the status of the k3s container to determine
+	// if it's stopped
+	cont, err := o.d.ContainerInspect(ctx, containerruntime.ContainerName)
+	if err != nil {
+		if dockerclient.IsErrNotFound(err) {
+			// check for the old runtime
+			oldCont, err := o.d.ContainerInspect(ctx, "k3s") //nolint:govet
+			if dockerclient.IsErrNotFound(err) {
+				status.Status = Unprovisioned
+				return status, nil
+			} else if err != nil {
+				// other error we don't know, cry :(
+				return status, err
+			}
+
+			cont = oldCont
+			status.Reason = "Older Kubernetes Runtime Found"
+		} else {
+			// we don't know of the error, so... cry
+			return status, err
+		}
+	}
+
+	// read the version of the container
+	if _, ok := cont.Config.Labels["io.outreach.devenv.version"]; ok {
+		status.Version = cont.Config.Labels["io.outreach.devenv.version"]
+	}
+
+	// parse the container state
+	if cont.State.Status == "exited" {
+		status.Status = Stopped
+		return status, nil
+	}
+
+	timeout := int64(5)
+	_, err = o.k.CoreV1().Pods("default").List(ctx, metav1.ListOptions{Limit: 1, TimeoutSeconds: &timeout})
+	if err != nil {
+		status.Status = Degraded
+		status.Reason = errors.Wrap(err, "failed to reach kubernetes").Error()
+		return status, nil
+	}
+
+	v, err := o.k.Discovery().ServerVersion()
+	if err != nil {
+		status.Status = Degraded
+		status.Reason = errors.Wrap(err, "failed to get kubernetes version").Error()
+		return status, nil
+	}
+
+	err = o.CheckLocalDNSResolution(ctx)
+	if err != nil {
+		status.Status = Degraded
+		status.Reason = errors.Wrap(err, "local DNS resolution is failing").Error()
+		return status, nil
+	}
+
+	// set the server version
+	status.KubernetesVersion = v.String()
+
+	// we assume running and healthy at this point
+	status.Status = Running
+	return status, nil
+}
+
+func (o *Options) CheckLocalDNSResolution(ctx context.Context) error {
+	ctx = trace.StartCall(ctx, "status.CheckLocalDNSResolution")
+	defer trace.EndCall(ctx)
+
+	addrs, err := net.LookupHost("localhost")
+	if err != nil {
+		return errors.Wrap(err, "localhost lookup failed")
+	}
+
+	if len(addrs) == 0 {
+		return fmt.Errorf("localhost had no addresses")
+	}
+
+	return nil
+}
+
+func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
+	target := io.Writer(os.Stdout)
+	if o.Quiet {
+		target = ioutil.Discard
+	}
+
+	w := tabwriter.NewWriter(target, 10, 0, 5, ' ', 0)
+
+	status, err := o.GetStatus(ctx)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintln(w, "Overall Status:\n---")
+	fmt.Fprintf(w, "Status: %s\n", status.Status)
+	if status.Reason != "" {
+		fmt.Fprintf(w, "Reason: %s\n", status.Reason)
+	}
+
+	fmt.Fprintf(w, "Devenv Version: %s\n", status.Version)
+	fmt.Fprintf(w, "Kubernetes Version: %s\n", status.KubernetesVersion)
+
+	fmt.Fprintln(w, "\ndevenv kubectl top nodes output:\n---")
+
+	err = cmdutil.RunKubernetesCommand(ctx, "", false, "kubectl", "top", "nodes")
+	if err != nil {
+		o.log.WithError(err).Warn("kubectl metrics unavailable currently, check again later")
+	}
+
+	nodes, err := o.k.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	namespaces, err := o.k.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	var localizerResp *apiv1.ListResponse
+	if kubernetestunnelruntime.IsLocalizerRunning() {
+		gCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+		defer cancel()
+
+		conn, err := grpc.DialContext(gCtx, //nolint:govet // why: it's okay to shadow the error variable here
+			fmt.Sprintf("unix://%s", kubernetestunnelruntime.LocalizerSock),
+			grpc.WithBlock(),
+			grpc.WithInsecure(),
+		)
+
+		if err != nil {
+			return errors.Wrap(err, "failed to talk to localizer daemon")
+		}
+		defer conn.Close()
+
+		client := apiv1.NewLocalizerServiceClient(conn)
+		if localizerResp, err = client.List(ctx, &apiv1.ListRequest{}); err != nil {
+			return err
+		}
+	}
+
+	for i := range nodes.Items {
+		if nodes.Items[i].Name != containerruntime.ContainerName {
+			continue
+		}
+
+		capacity := &nodes.Items[i].Status.Capacity
+		allocatable := &nodes.Items[i].Status.Allocatable
+
+		fmt.Fprintf(w, "\nNode \"%s\" Information:\n---\n", containerruntime.ContainerName)
+
+		fmt.Fprintln(w, "Resources (capacity/allocatable):")
+		fmt.Fprintf(w, "\tCPU: %s/%s\n", capacity.Cpu(), allocatable.Cpu())
+		fmt.Fprintf(w, "\tMemory: %s/%s\n", capacity.Memory(), allocatable.Memory())
+		fmt.Fprintf(w, "\tStorage (Ephemeral): %s/%s\n", capacity.StorageEphemeral(), allocatable.StorageEphemeral())
+		fmt.Fprintf(w, "\tPods: %s/%s\n", capacity.Pods(), allocatable.Pods())
+
+		fmt.Fprintln(w, "Conditions:")
+		for j := range nodes.Items[i].Status.Conditions {
+			fmt.Fprintf(w, "\t%s: %s (%s)\n", nodes.Items[i].Status.Conditions[j].Type, nodes.Items[i].Status.Conditions[j].Status, nodes.Items[i].Status.Conditions[j].Message)
+		}
+
+		fmt.Fprintf(w, "Images Deployed: %d\n", len(nodes.Items[i].Status.Images))
+		break
+	}
+
+	for i := range namespaces.Items {
+		if namespaces.Items[i].Name == "kube-system" {
+			if !o.IncludeKubeSystem {
+				continue
+			}
+		}
+
+		var included bool
+		if o.AllNamespaces {
+			included = true
+		} else {
+			for j := range o.Namespaces {
+				if strings.EqualFold(strings.TrimSpace(o.Namespaces[j]), namespaces.Items[i].Name) {
+					included = true
+					break
+				}
+			}
+		}
+
+		if !included {
+			continue
+		}
+
+		deployments, err := o.k.AppsV1().Deployments(namespaces.Items[i].Name).List(ctx, metav1.ListOptions{}) //nolint:govet // why: it's okay to shadow the error variable here
+		if err != nil {
+			return err
+		}
+
+		// Skip namespaces who have 0 deployments.
+		if len(deployments.Items) == 0 {
+			continue
+		}
+
+		fmt.Fprintf(w, "\n\nNamespace \"%s\" Deployments:\n---\n", namespaces.Items[i].Name)
+
+		for j := range deployments.Items {
+			fmt.Fprintf(w, "%s [ ", deployments.Items[j].Name)
+
+			for k := range deployments.Items[j].Status.Conditions {
+				if deployments.Items[j].Status.Conditions[k].Status == v1.ConditionTrue {
+					fmt.Fprintf(w, "%s ", deployments.Items[j].Status.Conditions[k].Type)
+				}
+			}
+
+			fmt.Fprint(w, "]\n")
+
+			if localizerResp != nil {
+				for k := range localizerResp.Services {
+					if localizerResp.Services[k] == nil {
+						// Shouldn't ever happen, but panic insurance.
+						continue
+					}
+
+					service := localizerResp.Services[k]
+
+					if localizerResp.Services[k].Name == deployments.Items[j].Name {
+						fmt.Fprintf(w, "-> Status: %s [%s] <localizer>\n", service.Status, service.StatusReason)
+						fmt.Fprintf(w, "-> Endpoint: %s <localizer>\n", service.Endpoint)
+						fmt.Fprintf(w, "-> IP: %s <localizer>\n", service.Ip)
+						fmt.Fprintf(w, "-> Ports: %s <localizer>\n", service.Ports)
+					}
+				}
+			}
+		}
+	}
+
+	if err := w.Flush(); err != nil { //nolint:govet // We're. OK. Shadowing. Error.
+		return err
+	}
+
+	if status.Status != "running" {
+		os.Exit(1)
+	}
+
+	return err
+}

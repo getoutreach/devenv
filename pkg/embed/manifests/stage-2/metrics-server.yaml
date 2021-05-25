@@ -1,0 +1,16 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: metrics-server
+  namespace: kube-system
+spec:
+  chart: metrics-server
+  version: 5.3.3
+  repo: https://charts.bitnami.com/bitnami
+  targetNamespace: kube-system
+  valuesContent: |-
+    extraArgs:
+      kubelet-insecure-tls: ''
+      kubelet-preferred-address-types: InternalIP
+    apiService:
+      create: true

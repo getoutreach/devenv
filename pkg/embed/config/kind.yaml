@@ -1,0 +1,40 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: "{{ .Name }}"
+nodes:
+  - role: control-plane
+    image: "gcr.io/outreach-docker/kindest/node:v1.20.5{{ .TagSuffix }}"
+    extraMounts:
+      - containerPath: /var/lib/kubelet/config.json
+        readOnly: true
+        hostPath: "{{ .Home }}/.outreach/.config/dev-environment/dockerconfig.json"
+    extraLabels:
+      io.outreach.devenv.version: "{{ .DevenvVersion }}"
+    extraPortMappings:
+      - containerPort: 32080
+        hostPort: 80
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 32443
+        hostPort: 443
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+    kubeadmConfigPatches:
+      - |
+        kind: ClusterConfiguration
+        apiServer:
+          # Enable TokenReview API.  See DT-190.
+          extraArgs:
+            # I don't know if this matches production, but I believe it does like
+            # up with the k3s behavior from the dev-env versions v4 and below.
+            service-account-issuer: "api"
+
+            # The docs say this will be automatically set to the same value
+            # as --service-account-issuer if left unspecified, but in practice
+            # k8s throws an error on startup if we don't include it.
+            api-audiences: "api"
+
+            # `kubeadm` includes the flag for the `.pub` equivalent
+            # automatically.  It is not clear why this one isn't specified
+            # automatically, too.
+            service-account-signing-key-file: "/etc/kubernetes/pki/sa.key"

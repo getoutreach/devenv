@@ -1,0 +1,37 @@
+version: 3
+automerge: false
+
+projects:
+  ###Block(projects)
+  - &default
+    name: snapshots
+    dir: ./deployments/devenv/snapshots
+    terraform_version: v0.14.7
+    autoplan:
+      when_modified:
+        [
+          "*.tf",
+          "./**.tf",
+          "./modules/**/*.tf",
+          "*.tfvars",
+          "./**.tfvars",
+          "./modules/**/*.tfvars",
+        ]
+      enabled: true
+    apply_requirements: [mergeable, approved]
+    workflow: default
+  ###EndBlock(projects)
+
+workflows:
+  default:
+    plan:
+      steps:
+        - run: /usr/bin/vault-login
+        - init
+        - plan
+    apply:
+      steps:
+        - run: /usr/bin/vault-login
+        - apply
+  ###Block(workflows)
+  ###EndBlock(workflows)
