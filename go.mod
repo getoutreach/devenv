@@ -30,7 +30,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.8.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/versent/saml2aws/v2 v2.28.4
+	github.com/versent/saml2aws/v2 v2.30.0
 	github.com/vmware-tanzu/velero v1.6.0
 	google.golang.org/grpc v1.36.1
 	gopkg.in/yaml.v2 v2.4.0
