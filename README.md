@@ -19,7 +19,7 @@ sudo chown $(id -u):$(id -g) $(command -v devenv)
 2. **(macOS only)** Ensure the `devenv` binary is authorized to run.
 
 ```bash
-xattr -c $(type -P devenv)
+xattr -c $(command -v devenv)
 ```
 
 3. Follow the instructions for your platform in the [detailed system requirements docs](docs/system-requirements.md)
