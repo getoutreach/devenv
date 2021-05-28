@@ -43,3 +43,9 @@ export KUBECONFIG="$HOME/.kube/config:$HOME/.outreach/kubeconfig.yaml"
 ```
 
 You now have a developer environment provisioned!
+
+**_Be careful_**: from now on, your dev tools look a lot like production tools. To help with this, when you want to run `kubectl` commands against your dev environment cluster it is recommended you use the built-in wrapper:
+```bash
+$ devenv kubectl <the rest of your kubectl command>
+```
+
