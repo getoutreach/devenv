@@ -9,6 +9,7 @@ data "aws_iam_policy_document" "automated_snapshot_policy_data" {
   statement {
     actions = [
       "s3:PutObject",
+      "s3:GetObject",
     ]
     resources = [
       "arn:aws:s3:::outreach-devenv-snapshots/automated-snapshots/*",
