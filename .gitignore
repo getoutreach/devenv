@@ -52,6 +52,9 @@ Pulumi.*.yaml
 # bootstrap libs
 .bootstrap
 
+# CircleCI cache version
+/cache-version.txt
+
 ###Block(extras)
 # Created by dev-env when ran in this directory
 .deps

@@ -30,7 +30,7 @@ const (
 	MinioAccessKey          = "minioaccess"
 	MinioSecretKey          = "miniosecret"
 	MinioSnapshotBucketName = "velero"
-	MinioDockerImage        = "minio/minio:RELEASE.2021-05-18T00-53-28Z"
+	MinioDockerImage        = "minio/minio:RELEASE.2021-06-07T21-40-51Z"
 )
 
 func CreateMinioClient() (*minio.Client, error) {
