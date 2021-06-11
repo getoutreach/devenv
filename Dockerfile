@@ -35,6 +35,7 @@ ENV ZONEINFO=/zoneinfo.zip
 RUN apk add --no-cache bash docker wget openssl sudo ncurses git openssh-client jq curl
 RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing kubectl
 RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community vault libcap
+RUN setcap cap_ipc_lock= /usr/sbin/vault
 # Python
 RUN apk add --no-cache python3 \
   &&  curl https://bootstrap.pypa.io/get-pip.py -o - | python3
