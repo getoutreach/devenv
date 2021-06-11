@@ -36,7 +36,7 @@ require (
 	golang.org/x/net v0.0.0-20210326220855-61e056675ecf // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	google.golang.org/genproto v0.0.0-20210325224202-eed09b1b5210 // indirect
-	google.golang.org/grpc v1.36.1
+	google.golang.org/grpc v1.38.0
 	gopkg.in/yaml.v2 v2.4.0
 
 	// Kubernetes dependencies
