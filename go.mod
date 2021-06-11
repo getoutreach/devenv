@@ -12,6 +12,8 @@ require (
 	github.com/containerd/containerd v1.4.4 // indirect
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/getoutreach/eng/v2 v2.6.2
+	github.com/getoutreach/go-outreach/v2 v2.16.0
 	github.com/getoutreach/gobox v1.0.1
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.1
@@ -20,7 +22,6 @@ require (
 	github.com/hashicorp/vault/api v1.1.0
 	github.com/jaredallard/localizer v1.8.2
 	github.com/jetstack/cert-manager v1.2.0
-	github.com/jonboulle/clockwork v0.1.1-0.20190114141812-62fb9bc030d1 // indirect
 	github.com/klauspost/compress v1.11.13 // indirect
 	github.com/manifoldco/promptui v0.8.0
 	github.com/minio/minio-go/v7 v7.0.10

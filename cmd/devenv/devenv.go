@@ -28,12 +28,12 @@ import (
 	"github.com/getoutreach/devenv/pkg/box"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/containerruntime"
-	oapp "github.com/getoutreach/gobox/pkg/app"
-	"github.com/getoutreach/gobox/pkg/cfg"
-	olog "github.com/getoutreach/gobox/pkg/log"
-	"github.com/getoutreach/gobox/pkg/secrets"
-	"github.com/getoutreach/gobox/pkg/trace"
-	"github.com/getoutreach/gobox/pkg/updater"
+	"github.com/getoutreach/eng/v2/pkg/updater"
+	oapp "github.com/getoutreach/go-outreach/v2/pkg/app"
+	"github.com/getoutreach/go-outreach/v2/pkg/cfg"
+	olog "github.com/getoutreach/go-outreach/v2/pkg/log"
+	"github.com/getoutreach/go-outreach/v2/pkg/secrets"
+	"github.com/getoutreach/go-outreach/v2/pkg/trace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -257,11 +257,10 @@ func main() { //nolint:funlen
 
 	if err := app.RunContext(ctx, os.Args); err != nil {
 		log.Errorf("failed to run: %v", err)
+		//nolint:errcheck // We're attaching the error to the trace.
+		trace.SetCallStatus(ctx, err)
 		exitCode = 1
 
-		// For some reason sometimes code after this doesn't get executed... Fair warning.
-		//nolint:errcheck // Why: We're emitting an error, we already handled it.
-		trace.SetCallStatus(ctx, err)
 		return
 	}
 }
