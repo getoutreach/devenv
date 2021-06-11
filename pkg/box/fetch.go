@@ -45,7 +45,7 @@ func LoadBox() (*Config, error) {
 }
 
 // ApplyEnvOverrides overrides a box configuration based on env vars.
-// This should really only be used for things that need to be overriden
+// This should really only be used for things that need to be overridden
 // on runtime, e.g. CI
 func ApplyEnvOverrides(s *Config) {
 	if vaultAddr := os.Getenv("VAULT_ADDR"); vaultAddr != "" {
