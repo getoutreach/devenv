@@ -19,12 +19,6 @@ import (
 )
 
 func EnsureLoggedIn(ctx context.Context, log logrus.FieldLogger, b *box.Config, k kubernetes.Interface) error {
-	if os.Getenv("CI") == "true" {
-		// Eventually we'll want to allow this for other users
-		log.Info("Skipping Vault authentication in CI")
-		return nil
-	}
-
 	// Check if we need to issue a new token
 	err := exec.CommandContext(ctx, "vault", "token", "lookup").Run()
 	if err != nil {
