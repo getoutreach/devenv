@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/go/pkg --mount=type=cache,target=/go-build-cache 
   make BINDIR=/src/bin/ GO_EXTRA_FLAGS=-v
 
 
-FROM gcr.io/outreach-docker/alpine:3.13
+FROM gcr.io/outreach-docker/golang:1.16.2
 ENTRYPOINT ["/usr/local/bin/devenv", "--skip-update"]
 
 LABEL "io.outreach.reporting_team"="cia-dev-tooling"
@@ -34,6 +34,7 @@ ENV ZONEINFO=/zoneinfo.zip
 # Install runtime dependencies
 RUN apk add --no-cache bash docker wget openssl sudo ncurses git openssh-client jq curl
 RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing kubectl
+RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community vault libcap
 # Python
 RUN apk add --no-cache python3 \
   &&  curl https://bootstrap.pypa.io/get-pip.py -o - | python3
