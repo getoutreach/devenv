@@ -163,6 +163,12 @@ func NewCmdSnapshot(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 				Name:        "generate",
 				Description: "Generate a snapshot from a snapshot definition",
 				Usage:       "devenv snapshot generate",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "skip-upload",
+						Usage: "Generate a snapshot, but don't upload it",
+					},
+				},
 				Action: func(c *cli.Context) error {
 					b, err := ioutil.ReadFile("snapshots.yaml")
 					if err != nil {
@@ -175,7 +181,7 @@ func NewCmdSnapshot(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 						return err
 					}
 
-					return o.Generate(c.Context, s)
+					return o.Generate(c.Context, s, c.Bool("skip-upload"))
 				},
 			},
 		},

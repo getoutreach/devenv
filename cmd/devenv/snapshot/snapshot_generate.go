@@ -28,7 +28,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig) error { //nolint:funlen
+func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, skipUpload bool) error { //nolint:funlen
 	b, err := box.LoadBox()
 	if err != nil {
 		return errors.Wrap(err, "failed to load box configuration")
@@ -67,10 +67,15 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig) e
 	for name, t := range s.Targets {
 		//nolint:govet // Why: We're OK shadowing err
 		var err error
-		generatedTargets[name], err = o.generateSnapshot(ctx, mc, s3c, name, t)
+		generatedTargets[name], err = o.generateSnapshot(ctx, mc, s3c, name, t, skipUpload)
 		if err != nil {
 			return err
 		}
+	}
+
+	// Don't generate a lock if we're not uploading
+	if skipUpload {
+		return nil
 	}
 
 	lock := &box.SnapshotLock{
@@ -199,7 +204,7 @@ func (o *Options) uploadSnapshot(ctx context.Context, mc *minio.Client, s3c *s3.
 
 //nolint:funlen
 func (o *Options) generateSnapshot(ctx context.Context, mc *minio.Client, s3c *s3.Client,
-	name string, t *box.SnapshotTarget) (*box.SnapshotLockTarget, error) {
+	name string, t *box.SnapshotTarget, skipUpload bool) (*box.SnapshotLockTarget, error) {
 	o.log.WithField("snapshot", name).Info("Generating Snapshot")
 
 	destroyOpts, err := destroy.NewOptions(o.log)
@@ -255,9 +260,13 @@ func (o *Options) generateSnapshot(ctx context.Context, mc *minio.Client, s3c *s
 		return nil, err
 	}
 
-	hash, key, err := o.uploadSnapshot(ctx, mc, s3c, name, t)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to upload snapshot")
+	hash := "unknown"
+	key := "unknown"
+	if !skipUpload {
+		hash, key, err = o.uploadSnapshot(ctx, mc, s3c, name, t)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to upload snapshot")
+		}
 	}
 
 	return &box.SnapshotLockTarget{

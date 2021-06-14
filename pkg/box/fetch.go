@@ -65,12 +65,7 @@ func LoadBoxStorage() (*Storage, error) {
 	}
 
 	var s *Storage
-	err = yaml.NewDecoder(f).Decode(&s)
-	if err != nil {
-		return nil, err
-	}
-
-	return s, nil
+	return s, yaml.NewDecoder(f).Decode(&s)
 }
 
 // EnsureBox loads a box if it already exists, or prompts the user for the box

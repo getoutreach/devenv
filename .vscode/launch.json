@@ -11,8 +11,8 @@
       "mode": "debug",
       "program": "${workspaceRoot}/cmd/devenv/devenv.go",
       "buildFlags": "-tags=or_dev",
-      "cwd": "${workspaceRoot}/../devenv-snapshots",
-      "args": ["snapshot", "generate"]
+      "cwd": "${workspaceRoot}",
+      "args": ["status"]
     }
   ]
 }
