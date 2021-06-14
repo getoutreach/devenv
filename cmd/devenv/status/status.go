@@ -246,7 +246,7 @@ func (o *Options) CheckLocalDNSResolution(ctx context.Context) error { //nolint:
 	return nil
 }
 
-func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error {
+func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nolint:funlen
 	nodes, err := o.k.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
