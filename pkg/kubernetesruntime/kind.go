@@ -96,7 +96,7 @@ func GetKubeConfig(ctx context.Context, log logrus.FieldLogger) (*api.Config, er
 
 	b, err := exec.CommandContext(ctx, kind, "get", "kubeconfig", "--name", KindClusterName).Output()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to run kiund: %s", b)
+		return nil, errors.Wrapf(err, "failed to run kind: %s", b)
 	}
 
 	kubeconfig, err := clientcmd.Load(b)
