@@ -29,7 +29,11 @@ modified=false
 for domain in "${domains[@]}"; do
   if ! grep "$domain" "$hostsFile" >/dev/null 2>&1; then
     echo " ADD $domain"
-    echo "127.0.0.1 $domain" >>"$tempFile"
+    if [[ -z $CI ]]; then
+      echo "127.0.0.1 $domain" >>"$tempFile"
+    else
+      sudo bash -c "echo '127.0.0.1 $domain' >>'$tempFile'"
+    fi
     modified=true
   fi
 done
