@@ -38,7 +38,7 @@ if [[ $modified == "true" ]]; then
       "Start-Process -Verb runAs powershell.exe -ArgumentList '-c Move-Item -Force -Path \"$(wslpath -w "$tempFile")\" -Destination \"$(wslpath -w "$hostsFile")\"'"
   else
     echo "Updating $hostsFile, password prompt (if present) is for sudo access"
-    sudo cp "$tempFile" "$hostsFile"
+    yes | sudo cp -f "$tempFile" "$hostsFile"
     rm "$tempFile" >/dev/null 2>&1 || true
   fi
 fi
