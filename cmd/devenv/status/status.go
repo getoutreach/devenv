@@ -16,6 +16,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
+	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/trace"
 	apiv1 "github.com/jaredallard/localizer/api/v1"
 	"github.com/pkg/errors"
@@ -387,22 +388,26 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 
 	fmt.Fprintln(w, "Overall Status:\n---")
 	fmt.Fprintf(w, "Status: %s\n", status.Status)
+	fmt.Fprintf(w, "Devenv Version: %s\n", app.Info().Version)
 	if status.Reason != "" {
 		fmt.Fprintf(w, "Reason: %s\n", status.Reason)
 	}
 
-	fmt.Fprintf(w, "Devenv Version: %s\n", status.Version)
-	fmt.Fprintf(w, "Kubernetes Version: %s\n", status.KubernetesVersion)
-
-	fmt.Fprintln(w, "\ndevenv kubectl top nodes output:\n---")
-
-	err = cmdutil.RunKubernetesCommand(ctx, "", false, "kubectl", "top", "nodes")
-	if err != nil {
-		o.log.WithError(err).Warn("kubectl metrics unavailable currently, check again later")
+	if status.Version != "" {
+		fmt.Fprintf(w, "Running devenv Version: %s\n", status.Version)
 	}
-
+	if status.KubernetesVersion != "" {
+		fmt.Fprintf(w, "Kubernetes Version: %s\n", status.KubernetesVersion)
+	}
 	// Only show Kubernetes info if we were able to make a client
 	if o.k != nil {
+		fmt.Fprintln(w, "\ndevenv kubectl top nodes output:\n---")
+
+		err = cmdutil.RunKubernetesCommand(ctx, "", false, "kubectl", "top", "nodes")
+		if err != nil {
+			o.log.WithError(err).Warn("kubectl metrics unavailable currently, check again later")
+		}
+
 		if err := o.kubernetesInfo(ctx, w); err != nil {
 			return err
 		}
