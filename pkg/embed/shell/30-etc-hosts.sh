@@ -16,9 +16,14 @@ if [[ $OS == "windows" ]]; then
   hostsFile="/mnt/c/Windows/System32/drivers/etc/hosts"
 fi
 
-tempFile=$(mktemp)
-
-cp "$hostsFile" "$tempFile"
+# We can't modify the file in Docker, which we use in CI, so for now
+# just write to that w/o the one-time sudo optimization.
+if [[ -z $CI ]]; then
+  cp "$hostsFile" "$tempFile"
+  tempFile=$(mktemp)
+else
+  tempFile="$hostsFile"
+fi
 
 modified=false
 for domain in "${domains[@]}"; do
@@ -30,7 +35,7 @@ for domain in "${domains[@]}"; do
 done
 
 # Only replace the file when it's been updated.
-if [[ $modified == "true" ]]; then
+if [[ $modified == "true" ]] && [[ -z $CI ]]; then
   # To minimize the number of sudo / UAC calls we have to
   # move the hosts file to replace the existing one
   if [[ $OS == "windows" ]]; then
@@ -38,7 +43,7 @@ if [[ $modified == "true" ]]; then
       "Start-Process -Verb runAs powershell.exe -ArgumentList '-c Move-Item -Force -Path \"$(wslpath -w "$tempFile")\" -Destination \"$(wslpath -w "$hostsFile")\"'"
   else
     echo "Updating $hostsFile, password prompt (if present) is for sudo access"
-    yes | sudo cp -f "$tempFile" "$hostsFile"
+    sudo mv "$tempFile" "$hostsFile"
     rm "$tempFile" >/dev/null 2>&1 || true
   fi
 fi
