@@ -230,7 +230,7 @@ func (o *Options) GetStatus(ctx context.Context) (*Status, error) {
 	return status, nil
 }
 
-func (o *Options) CheckLocalDNSResolution(ctx context.Context) error {
+func (o *Options) CheckLocalDNSResolution(ctx context.Context) error { //nolint:funlen
 	ctx = trace.StartCall(ctx, "status.CheckLocalDNSResolution")
 	defer trace.EndCall(ctx)
 
@@ -408,7 +408,8 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 			o.log.WithError(err).Warn("kubectl metrics unavailable currently, check again later")
 		}
 
-		if err := o.kubernetesInfo(ctx, w); err != nil {
+		err = o.kubernetesInfo(ctx, w)
+		if err != nil {
 			return err
 		}
 	}
