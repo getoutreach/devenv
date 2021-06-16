@@ -9,6 +9,7 @@ module "s3-testbucket" {
   bento                 = "None"
   tier                  = "Non-essential"
   k8s_cluster           = "None"
+  bucket_name           = "outreach-devenv-snapshots"
 }
 
 data "aws_iam_policy_document" "automated_snapshot_policy_data" {
