@@ -13,6 +13,7 @@ local mockSecret = ok.Secret(name, namespace=name) {
 local manifests = ok.HelmChart(name) {
   namespace:: name,
   version:: '1.14.5',
+  // Using a custom repo until https://github.com/ricoberger/vault-secrets-operator/pull/113 gets released
   repo:: 'https://jaredallard.me/helm-charts',
   values:: {
     environmentVars: ok.envList({
