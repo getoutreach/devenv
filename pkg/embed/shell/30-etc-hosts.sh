@@ -19,8 +19,8 @@ fi
 # We can't modify the file in Docker, which we use in CI, so for now
 # just write to that w/o the one-time sudo optimization.
 if [[ -z $CI ]]; then
-  cp "$hostsFile" "$tempFile"
   tempFile=$(mktemp)
+  cp "$hostsFile" "$tempFile"
 else
   tempFile="$hostsFile"
 fi
