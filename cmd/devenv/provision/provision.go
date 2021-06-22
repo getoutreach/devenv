@@ -1,6 +1,8 @@
 package provision
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -25,6 +27,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/box"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
@@ -435,6 +438,45 @@ func (o *Options) createKindCluster(ctx context.Context) error {
 	return kubernetesruntime.InitKind(ctx, o.log)
 }
 
+func (o *Options) removeServiceImages(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, "docker", "exec", "-it",
+		kubernetesruntime.KindClusterName+"-control-plane", "ctr", "--namespace", "k8s.io", "images", "ls")
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+
+	images := make(map[string]bool)
+	scanner := bufio.NewScanner(bytes.NewReader(b))
+	for scanner.Scan() {
+		text := scanner.Text()
+
+		split := strings.Split(text, " ")
+		if len(split) < 1 {
+			continue
+		}
+
+		img := split[0]
+		if !strings.HasPrefix(img, o.b.DeveloperEnvironmentConfig.ImageRegistry) {
+			continue
+		}
+
+		if !strings.HasSuffix(img, ":latest") {
+			continue
+		}
+
+		images[img] = true
+	}
+
+	for img := range images {
+		if err2 := containerruntime.RemoveImage(ctx, img); err2 != nil {
+			o.log.WithField("image", img).Warn("Failed to remove docker image")
+		}
+	}
+
+	return nil
+}
+
 // generateDockerConfig generates a docker configuration file that is used
 // to authenticate image pulls by KinD
 func (o *Options) generateDockerConfig() error {
@@ -497,8 +539,9 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 		return errors.Wrap(err, "failed to ensure snapshot storage exists")
 	}
 
-	// TODO: update all the docker images
-	// this can probably be done post-mvp
+	if err := o.removeServiceImages(ctx); err != nil {
+		return errors.Wrap(err, "failed to remove docker images from cache")
+	}
 
 	if !o.Base {
 		// Restore using a snapshot

@@ -188,6 +188,7 @@ func main() { //nolint:funlen
 		snapshot.NewCmdSnapshot(log),
 		expose.NewCmdExpose(log),
 		{
+			// DEPRECATED: Remove on the next minor release, was undocumented
 			Name:   "remove-image",
 			Hidden: true,
 			Action: func(c *cli.Context) error {
