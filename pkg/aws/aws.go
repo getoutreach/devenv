@@ -33,7 +33,7 @@ func DefaultCredentialOptions() *CredentialOptions {
 	}
 
 	return &CredentialOptions{
-		Role:    "arn:aws:iam::182192988802:role/okta_eng_readonly_role",
+		Role:    "arn:aws:iam::182192988802:role/okta_eng_readwrite_role",
 		Profile: profile,
 	}
 }

@@ -14,9 +14,9 @@ func Test_assumedToRole(t *testing.T) {
 		{
 			name: "should properly parse principal_arn",
 			args: args{
-				assumedRole: "arn:aws:sts::182192988802:assumed-role/okta_eng_readonly_role/jared.allard@outreach.io",
+				assumedRole: "arn:aws:sts::182192988802:assumed-role/okta_eng_readwrite_role/jared.allard@outreach.io",
 			},
-			want: "arn:aws:iam::182192988802:role/okta_eng_readonly_role",
+			want: "arn:aws:iam::182192988802:role/okta_eng_readwrite_role",
 		},
 		{
 			name: "should ignore invalid input",
