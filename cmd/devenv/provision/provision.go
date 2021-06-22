@@ -439,6 +439,7 @@ func (o *Options) createKindCluster(ctx context.Context) error {
 }
 
 func (o *Options) removeServiceImages(ctx context.Context) error {
+	//nolint:gosec // Why: We're passing a constant
 	cmd := exec.CommandContext(ctx, "docker", "exec", "-it",
 		kubernetesruntime.KindClusterName+"-control-plane", "ctr", "--namespace", "k8s.io", "images", "ls")
 	b, err := cmd.CombinedOutput()
@@ -539,6 +540,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 		return errors.Wrap(err, "failed to ensure snapshot storage exists")
 	}
 
+	//nolint:govet // Why: OK w/ err shadow
 	if err := o.removeServiceImages(ctx); err != nil {
 		return errors.Wrap(err, "failed to remove docker images from cache")
 	}
