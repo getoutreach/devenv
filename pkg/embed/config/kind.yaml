@@ -3,7 +3,7 @@ apiVersion: kind.x-k8s.io/v1alpha4
 name: "{{ .Name }}"
 nodes:
   - role: control-plane
-    image: "gcr.io/outreach-docker/kindest/node:v1.20.5{{ .TagSuffix }}"
+    image: "gcr.io/outreach-docker/kindest/node:v1.20.7"
     extraMounts:
       - containerPath: /var/lib/kubelet/config.json
         readOnly: true

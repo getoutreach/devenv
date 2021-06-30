@@ -440,11 +440,11 @@ func (o *Options) createKindCluster(ctx context.Context) error {
 
 func (o *Options) removeServiceImages(ctx context.Context) error {
 	//nolint:gosec // Why: We're passing a constant
-	cmd := exec.CommandContext(ctx, "docker", "exec", "-it",
+	cmd := exec.CommandContext(ctx, "docker", "exec",
 		kubernetesruntime.KindClusterName+"-control-plane", "ctr", "--namespace", "k8s.io", "images", "ls")
 	b, err := cmd.CombinedOutput()
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to list docker images: %s", string(b))
 	}
 
 	images := make(map[string]bool)
@@ -470,6 +470,7 @@ func (o *Options) removeServiceImages(ctx context.Context) error {
 	}
 
 	for img := range images {
+		o.log.WithField("image", img).Infoln("Removing docker image")
 		if err2 := containerruntime.RemoveImage(ctx, img); err2 != nil {
 			o.log.WithField("image", img).Warn("Failed to remove docker image")
 		}
