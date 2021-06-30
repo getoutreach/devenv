@@ -12,7 +12,7 @@ require (
 	github.com/containerd/containerd v1.4.4 // indirect
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/getoutreach/gobox v1.0.1
+	github.com/getoutreach/gobox v1.4.0
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.1
 	github.com/gogo/protobuf v1.3.2 // indirect
