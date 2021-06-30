@@ -1,6 +1,6 @@
 # Outreach Kubernetes Developer Environment
 
-[System Requirements](system-requirements.md) |
+[System Requirements](docs/system-requirements.md) |
 [Lifecycle](docs/lifecycle.md) |
 [Interacting with Services](docs/interacting-with-services.md) |
 
