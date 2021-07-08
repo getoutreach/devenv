@@ -32,7 +32,7 @@ xattr -c $(command -v devenv)
 To create a developer environment, run:
 
 ```bash
-devenv provision --base
+devenv provision
 ```
 
 Next there's a manual step that you'll need to do. You'll need to add a `KUBECONFIG` environment variable, this can be done by adding the line below to your shellrc (generally `~/.zshrc` or `~/.zsh_profile` or `~/.bashrc`):
