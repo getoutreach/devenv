@@ -2,6 +2,13 @@ package box
 
 import "time"
 
+type SnapshotLockChannel string
+
+const (
+	SnapshotLockChannelStable SnapshotLockChannel = "stable"
+	SnapshotLockChannelRC     SnapshotLockChannel = "rc"
+)
+
 type DeveloperEnvironmentConfig struct {
 	// SnapshotConfig is the snapshot configuration for the devenv
 	SnapshotConfig *SnapshotConfig `yaml:"snapshots"`
@@ -118,9 +125,31 @@ type SnapshotLockTarget struct {
 	VeleroBackupName string `yaml:"veleroBackupName"`
 }
 
+type SnapshotLockListItem struct {
+	// Digest is a MD5 base64 encoded digest of the archive
+	Digest string `yaml:"digest"`
+
+	// Key is the key that this snapshot is stored at, note that the bucket is
+	// not set or determined here and instead come from the snapshotconfig
+	URI string `yaml:"key"`
+
+	// Config is the config used to generate this snapshot
+	Config *SnapshotTarget
+
+	// VeleroBackupName is the name of this snapshot. This is used to invoke velero
+	// commands. It should not be used for uniqueness constraints.
+	VeleroBackupName string `yaml:"veleroBackupName"`
+}
+type SnapshotLockList struct {
+	// Snapshots is a channel seperated list of snapshots for a given target
+	Snapshots map[SnapshotLockChannel][]*SnapshotLockListItem `yaml:"snapshots"`
+}
+
 // SnapshotLock is an manifest of all the available snapshots
 type SnapshotLock struct {
 	Version     int                            `yaml:"version"`
 	GeneratedAt time.Time                      `yaml:"generatedAt"`
 	Targets     map[string]*SnapshotLockTarget `yaml:"targets"`
+
+	TargetsV2 map[string]*SnapshotLockList `yaml:"targets_v2"`
 }

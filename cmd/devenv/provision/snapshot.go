@@ -26,15 +26,15 @@ import (
 )
 
 type localSnapshot struct {
-	Name     string                  `yaml:"name"`
-	Metadata *box.SnapshotLockTarget `yaml:"metadata"`
+	Name     string                    `yaml:"name"`
+	Metadata *box.SnapshotLockListItem `yaml:"metadata"`
 }
 
 // fetchSnapshot finds the latest snapshot by name
 // downloads it, stages it into the restore bucket, then returns the config.
 // It's stored in it's own local S3 bucket because restic isn't namespaced
 // which is used to store volume contents.
-func (o *Options) fetchSnapshot(ctx context.Context) (*box.SnapshotLockTarget, error) { //nolint:funlen
+func (o *Options) fetchSnapshot(ctx context.Context) (*box.SnapshotLockListItem, error) { //nolint:funlen
 	bucketName := fmt.Sprintf("%s-restore", snapshoter.MinioSnapshotBucketName)
 	err := snapshoter.Ensure(ctx, o.d, o.log)
 	if err != nil {
@@ -67,11 +67,19 @@ func (o *Options) fetchSnapshot(ctx context.Context) (*box.SnapshotLockTarget, e
 		return nil, errors.Wrap(err, "failed to parse remote snapshot lockfile")
 	}
 
-	if _, ok := lockfile.Targets[o.SnapshotTarget]; !ok {
+	if _, ok := lockfile.TargetsV2[o.SnapshotTarget]; !ok {
 		return nil, fmt.Errorf("unknown snapshot target '%s'", o.SnapshotTarget)
 	}
 
-	latestSnapshotFile := lockfile.Targets[o.SnapshotTarget]
+	if _, ok := lockfile.TargetsV2[o.SnapshotTarget].Snapshots[o.SnapshotChannel]; !ok {
+		return nil, fmt.Errorf("unknown snapshot channel '%s'", o.SnapshotChannel)
+	}
+
+	if len(lockfile.TargetsV2[o.SnapshotTarget].Snapshots[o.SnapshotChannel]) == 0 {
+		return nil, fmt.Errorf("no snapshots found for channel '%s'", o.SnapshotChannel)
+	}
+
+	latestSnapshotFile := lockfile.TargetsV2[o.SnapshotTarget].Snapshots[o.SnapshotChannel][0]
 
 	if currentResp, err2 := m.GetObject(ctx, bucketName, "current.yaml", minio.GetObjectOptions{}); err2 == nil {
 		var current *localSnapshot
@@ -101,7 +109,7 @@ func (o *Options) fetchSnapshot(ctx context.Context) (*box.SnapshotLockTarget, e
 	return latestSnapshotFile, o.uploadFilesFromArchive(ctx, m, bucketName, latestSnapshotFile, s3client)
 }
 
-func (o *Options) downloadArchive(ctx context.Context, snapshot *box.SnapshotLockTarget, s3client *s3.Client) (*os.File, error) { //nolint:funlen
+func (o *Options) downloadArchive(ctx context.Context, snapshot *box.SnapshotLockListItem, s3client *s3.Client) (*os.File, error) { //nolint:funlen
 	obj, err := s3client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: &o.b.DeveloperEnvironmentConfig.SnapshotConfig.Bucket,
 		Key:    &snapshot.URI,
@@ -157,7 +165,7 @@ func (o *Options) downloadArchive(ctx context.Context, snapshot *box.SnapshotLoc
 
 // uploadFilesFromArchive uploads the files from a given tar.xz archive
 // into our local S3 bucket
-func (o *Options) uploadFilesFromArchive(ctx context.Context, m *minio.Client, bucketName string, snapshot *box.SnapshotLockTarget, s3client *s3.Client) error { //nolint:funlen
+func (o *Options) uploadFilesFromArchive(ctx context.Context, m *minio.Client, bucketName string, snapshot *box.SnapshotLockListItem, s3client *s3.Client) error { //nolint:funlen
 	t := backoff.WithMaxRetries(backoff.WithContext(backoff.NewExponentialBackOff(), ctx), 5)
 
 	var f *os.File

@@ -168,6 +168,11 @@ func NewCmdSnapshot(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 						Name:  "skip-upload",
 						Usage: "Generate a snapshot, but don't upload it",
 					},
+					&cli.StringFlag{
+						Name:  "channel",
+						Value: string(box.SnapshotLockChannelRC),
+						Usage: "Which channel this snapshot should be uploaded to",
+					},
 				},
 				Action: func(c *cli.Context) error {
 					b, err := ioutil.ReadFile("snapshots.yaml")
@@ -181,7 +186,7 @@ func NewCmdSnapshot(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 						return err
 					}
 
-					return o.Generate(c.Context, s, c.Bool("skip-upload"))
+					return o.Generate(c.Context, s, c.Bool("skip-upload"), box.SnapshotLockChannel(c.String("channel")))
 				},
 			},
 		},

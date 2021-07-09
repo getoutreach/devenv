@@ -28,7 +28,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, skipUpload bool) error { //nolint:funlen
+func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, skipUpload bool, channel box.SnapshotLockChannel) error { //nolint:funlen
 	b, err := box.LoadBox()
 	if err != nil {
 		return errors.Wrap(err, "failed to load box configuration")
@@ -44,7 +44,6 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 		return err
 	}
 
-	// TODO: We need to allow this to be changed
 	copts := devenvaws.DefaultCredentialOptions()
 	if b.DeveloperEnvironmentConfig.SnapshotConfig.WriteAWSRole != "" {
 		copts.Role = b.DeveloperEnvironmentConfig.SnapshotConfig.WriteAWSRole
@@ -52,7 +51,7 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 	copts.Log = o.log
 	err = devenvaws.EnsureValidCredentials(ctx, copts)
 	if err != nil {
-		return errors.Wrap(err, "failed to get neccesssary permissions")
+		return errors.Wrap(err, "failed to get necessary permissions")
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -63,14 +62,41 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 
 	s3c := s3.NewFromConfig(cfg)
 
-	generatedTargets := make(map[string]*box.SnapshotLockTarget)
+	lockfile := &box.SnapshotLock{}
+	resp, err := s3c.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: &b.DeveloperEnvironmentConfig.SnapshotConfig.Bucket,
+		Key:    aws.String("automated-snapshots/v2/latest.yaml"),
+	})
+	if err == nil {
+		defer resp.Body.Close()
+		err = yaml.NewDecoder(resp.Body).Decode(&lockfile)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse remote snapshot lockfile")
+		}
+	} else {
+		o.log.WithError(err).
+			Warn("Failed to fetch existing remote snapshot lockfile, will generate a new one")
+	}
+
 	for name, t := range s.Targets {
 		//nolint:govet // Why: We're OK shadowing err
-		var err error
-		generatedTargets[name], err = o.generateSnapshot(ctx, mc, s3c, name, t, skipUpload)
+		itm, err := o.generateSnapshot(ctx, mc, s3c, name, t, skipUpload)
 		if err != nil {
 			return err
 		}
+
+		if _, ok := lockfile.TargetsV2[name]; !ok {
+			lockfile.TargetsV2[name] = &box.SnapshotLockList{}
+		}
+
+		if _, ok := lockfile.TargetsV2[name].Snapshots[channel]; !ok {
+			lockfile.TargetsV2[name].Snapshots[channel] = make([]*box.SnapshotLockListItem, 0)
+		}
+
+		// Make this the latest version
+		lockfile.TargetsV2[name].Snapshots[channel] = append(
+			[]*box.SnapshotLockListItem{itm}, lockfile.TargetsV2[name].Snapshots[channel]...,
+		)
 	}
 
 	// Don't generate a lock if we're not uploading
@@ -78,13 +104,9 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 		return nil
 	}
 
-	lock := &box.SnapshotLock{
-		Version:     1,
-		GeneratedAt: time.Now().UTC(),
-		Targets:     generatedTargets,
-	}
+	lockfile.GeneratedAt = time.Now().UTC()
 
-	byt, err := yaml.Marshal(lock)
+	byt, err := yaml.Marshal(lockfile)
 	if err != nil {
 		return err
 	}
@@ -204,7 +226,7 @@ func (o *Options) uploadSnapshot(ctx context.Context, mc *minio.Client, s3c *s3.
 
 //nolint:funlen
 func (o *Options) generateSnapshot(ctx context.Context, mc *minio.Client, s3c *s3.Client,
-	name string, t *box.SnapshotTarget, skipUpload bool) (*box.SnapshotLockTarget, error) {
+	name string, t *box.SnapshotTarget, skipUpload bool) (*box.SnapshotLockListItem, error) {
 	o.log.WithField("snapshot", name).Info("Generating Snapshot")
 
 	destroyOpts, err := destroy.NewOptions(o.log)
@@ -269,7 +291,7 @@ func (o *Options) generateSnapshot(ctx context.Context, mc *minio.Client, s3c *s
 		}
 	}
 
-	return &box.SnapshotLockTarget{
+	return &box.SnapshotLockListItem{
 		Digest:           hash,
 		URI:              key,
 		Config:           t,

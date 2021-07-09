@@ -78,9 +78,10 @@ var (
 )
 
 type Options struct {
-	DeployApps     []string
-	SnapshotTarget string
-	Base           bool
+	DeployApps      []string
+	SnapshotTarget  string
+	SnapshotChannel box.SnapshotLockChannel
+	Base            bool
 
 	log     logrus.FieldLogger
 	d       dockerclient.APIClient
@@ -138,6 +139,11 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 				Usage: "Snapshot target to use",
 				Value: defaultSnapshot,
 			},
+			&cli.StringFlag{
+				Name:  "snapshot-channel",
+				Usage: "Snapshot channel to use",
+				Value: string(box.SnapshotLockChannelStable),
+			},
 		},
 		Action: func(c *cli.Context) error {
 			o, err := NewOptions(log)
@@ -149,6 +155,7 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 
 			o.Base = c.Bool("base")
 			o.SnapshotTarget = c.String("snapshot-target")
+			o.SnapshotChannel = box.SnapshotLockChannel(c.String("snapshot-channel"))
 
 			return o.Run(c.Context)
 		},
