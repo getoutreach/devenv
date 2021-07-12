@@ -141,7 +141,7 @@ type SnapshotLockListItem struct {
 	VeleroBackupName string `yaml:"veleroBackupName"`
 }
 type SnapshotLockList struct {
-	// Snapshots is a channel seperated list of snapshots for a given target
+	// Snapshots is a channel separated list of snapshots for a given target
 	Snapshots map[SnapshotLockChannel][]*SnapshotLockListItem `yaml:"snapshots"`
 }
 
