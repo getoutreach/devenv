@@ -78,6 +78,10 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 			Warn("Failed to fetch existing remote snapshot lockfile, will generate a new one")
 	}
 
+	if lockfile.TargetsV2 == nil {
+		lockfile.TargetsV2 = make(map[string]*box.SnapshotLockList)
+	}
+
 	for name, t := range s.Targets {
 		//nolint:govet // Why: We're OK shadowing err
 		itm, err := o.generateSnapshot(ctx, mc, s3c, name, t, skipUpload)
@@ -87,6 +91,10 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 
 		if _, ok := lockfile.TargetsV2[name]; !ok {
 			lockfile.TargetsV2[name] = &box.SnapshotLockList{}
+		}
+
+		if lockfile.TargetsV2[name].Snapshots == nil {
+			lockfile.TargetsV2[name].Snapshots = make(map[box.SnapshotLockChannel][]*box.SnapshotLockListItem)
 		}
 
 		if _, ok := lockfile.TargetsV2[name].Snapshots[channel]; !ok {
