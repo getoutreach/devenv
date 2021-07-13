@@ -59,12 +59,7 @@ find_namespace() {
 
 infer_app_namespace() {
   local appName="$1"
-  if [[ $appName == "giraffe" ]]; then
-    # the appName is actually bento1a-web 😭 Hardcode this
-    echo giraffe
-  else
-    find_namespace app "$appName"
-  fi
+  find_namespace app "$appName"
 }
 
 get_ready_pods() {

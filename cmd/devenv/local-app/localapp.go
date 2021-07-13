@@ -164,9 +164,6 @@ func (o *Options) handleSpecialCases() {
 	case "accounts", "outreach-accounts": //nolint:goconst
 		o.Namespace = "outreach-accounts"
 		o.AppName = "outreach-accounts"
-	case "giraffe":
-		o.Namespace = "giraffe"
-		o.AppName = "bento1a-giraffe"
 	case "flagship", "flagship-server":
 		o.Namespace = DefaultNamespace
 		o.AppName = "flagship-server"

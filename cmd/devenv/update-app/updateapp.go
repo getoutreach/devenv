@@ -37,7 +37,7 @@ var (
 
 		# Update a specific application (based on namespace)
 		devenv update-app authz--bento1a (bootstrap)
-		devenv update-app giraffe (non-standard)
+		devenv update-app flagship (non-standard)
 	`
 	notUpdatableViaDeployApp = map[string]bool{
 		"bento1a": true,
