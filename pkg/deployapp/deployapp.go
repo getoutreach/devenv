@@ -308,7 +308,7 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 	deployScriptPath := filepath.Join(a.Path, "scripts", "deploy-to-dev.sh")
 	if _, err := os.Stat(serviceYamlPath); err == nil {
 		a.Type = TypeBootstrap
-	} else if _, err := os.Stat(serviceYamlPath); err == nil {
+	} else if _, err := os.Stat(deployScriptPath); err == nil {
 		a.Type = TypeLegacy
 	} else {
 		return fmt.Errorf("failed to determine application type, no %s or %s", serviceYamlPath, deployScriptPath)
