@@ -247,7 +247,7 @@ func (o *Options) generateSnapshot(ctx context.Context, mc *minio.Client, s3c *s
 	destroyOpts.Run(ctx) //nolint:errcheck
 
 	// using exec because of an import cycle, need to fix
-	err = cmdutil.RunKubernetesCommand(ctx, "", false, os.Args[0], "provision", "--base")
+	err = cmdutil.RunKubernetesCommand(ctx, "", false, os.Args[0], "--skip-update", "provision", "--base")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to provision developer environment")
 	}
@@ -256,7 +256,7 @@ func (o *Options) generateSnapshot(ctx context.Context, mc *minio.Client, s3c *s
 		o.log.Info("Deploying applications into devenv")
 		for _, app := range t.DeployApps {
 			o.log.WithField("application", app).Info("Deploying application")
-			cmd := exec.CommandContext(ctx, os.Args[0], "deploy-app", app) //nolint:gosec
+			cmd := exec.CommandContext(ctx, os.Args[0], "--skip-app", "deploy-app", app) //nolint:gosec
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
 			cmd.Stdin = os.Stdin
