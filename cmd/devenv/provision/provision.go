@@ -213,7 +213,7 @@ func (o *Options) applyPostRestore(ctx context.Context) error { //nolint:funlen
 	o.log.Info("Applying post-restore manifest(s)")
 
 	return devenvutil.Backoff(ctx, 1*time.Second, 5, func() error {
-		return cmdutil.RunKubernetesCommand(ctx, "", false, os.Args[0], "kubectl", "apply", "-f", processed.Name())
+		return cmdutil.RunKubernetesCommand(ctx, "", false, os.Args[0], "--skip-update", "kubectl", "apply", "-f", processed.Name())
 	}, o.log)
 }
 
