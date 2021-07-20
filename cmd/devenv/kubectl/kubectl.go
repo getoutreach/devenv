@@ -3,7 +3,6 @@ package kubectl
 import (
 	"context"
 	"math/rand"
-	"os"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -43,7 +42,7 @@ func (o *Options) Run(ctx context.Context) error {
 	rand.Seed(time.Now().UnixNano())
 
 	command := cmd.NewDefaultKubectlCommand()
-	command.SetArgs(append([]string{"--context", "dev-environment"}, os.Args[2:]...))
+	command.SetArgs(append([]string{"--context", "dev-environment"}, o.Args...))
 
 	logs.InitLogs()
 	defer logs.FlushLogs()
