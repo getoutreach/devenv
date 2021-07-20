@@ -304,12 +304,14 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 	// to worry about the source code
 	a.Path = repositoryPath
 
-	if _, err := os.Stat(filepath.Join(a.Path, "service.yaml")); err == nil {
+	serviceYamlPath := filepath.Join(a.Path, "service.yaml")
+	deployScriptPath := filepath.Join(a.Path, "scripts", "deploy-to-dev.sh")
+	if _, err := os.Stat(serviceYamlPath); err == nil {
 		a.Type = TypeBootstrap
-	} else if _, err := os.Stat(filepath.Join(a.Path, "scripts", "deploy-to-dev.sh")); err == nil {
+	} else if _, err := os.Stat(deployScriptPath); err == nil {
 		a.Type = TypeLegacy
 	} else {
-		return fmt.Errorf("failed to determine application type, no service.yaml or scripts/deploy-dev.sh")
+		return fmt.Errorf("failed to determine application type, no %s or %s", serviceYamlPath, deployScriptPath)
 	}
 
 	// Delete all jobs with a db-migration annotation. Namespaces aren't the same per type
