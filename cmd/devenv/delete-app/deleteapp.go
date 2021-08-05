@@ -1,4 +1,4 @@
-package deployapp
+package deleteapp
 
 import (
 	"context"
