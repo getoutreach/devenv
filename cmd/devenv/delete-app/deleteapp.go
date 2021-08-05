@@ -20,16 +20,16 @@ import (
 //nolint:gochecknoglobals
 var (
 	deployAppLongDesc = `
-		deploy-app deploys an Outreach application into your developer environment. The application name (appName) provided should match, exactly, an Outreach repository name.
+		delete-app deletes an Outreach application into your developer environment. The application name (appName) provided should match, exactly, an Outreach repository name.
 	`
 	deployAppExample = `
-		# Deploy an application to the developer environment
+		# Delete an application in of the developer environment
 		devenv deploy-app <appName>
 
-		# Deploy a local directory application to the developer environment
+		# Delete a local directory application in the developer environment
 		devenv deploy-app .
 
-		# Deploy a local application to the developer environment
+		# Delete a local application in the developer environment
 		devenv deploy-app ./outreach-accounts
 	`
 )
@@ -55,18 +55,12 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	}, nil
 }
 
-func NewCmdDeployApp(log logrus.FieldLogger) *cli.Command {
+func NewCmdDeleteApp(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
-		Name:        "deploy-app",
-		Usage:       "Deploy an application to the developer environment",
+		Name:        "delete-app",
+		Usage:       "Delete an application in the developer environment",
 		Description: cmdutil.NewDescription(deployAppLongDesc, deployAppExample),
-		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:   "local",
-				Hidden: true,
-				Usage:  "Deploy an application from local disk --local <path>",
-			},
-		},
+		Flags:       []cli.Flag{},
 		Action: func(c *cli.Context) error {
 			if c.Args().Len() == 0 {
 				return fmt.Errorf("missing application")
@@ -74,10 +68,6 @@ func NewCmdDeployApp(log logrus.FieldLogger) *cli.Command {
 			o, err := NewOptions(log)
 			if err != nil {
 				return err
-			}
-
-			if c.Bool("local") {
-				o.log.Warn("!!! --local is deprecated, please specify just a path instead, e.g. deploy-app .")
 			}
 
 			o.App = c.Args().First()
@@ -103,5 +93,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Deploy(ctx, o.log, o.k, o.conf, o.App)
+	return app.Delete(ctx, o.log, o.k, o.conf, o.App)
 }

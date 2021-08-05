@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/getoutreach/devenv/cmd/devenv/completion"
+	deleteapp "github.com/getoutreach/devenv/cmd/devenv/delete-app"
 	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
 	"github.com/getoutreach/devenv/cmd/devenv/expose"
@@ -175,6 +176,7 @@ func main() { //nolint:funlen
 		///Block(commands)
 		provision.NewCmdProvision(log),
 		deployapp.NewCmdDeployApp(log),
+		deleteapp.NewCmdDeleteApp(log),
 		destroy.NewCmdDestroy(log),
 		status.NewCmdStatus(log),
 		localapp.NewCmdLocalApp(log),
