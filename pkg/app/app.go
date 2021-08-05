@@ -107,7 +107,7 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 		os.RemoveAll(tempDir)
 	}
 
-	if err = os.MkdirAll(tempDir, 0755); err != nil {
+	if err := os.MkdirAll(tempDir, 0755); err != nil { //nolint:govet // Why: We're okay with shadowing the error.
 		return cleanup, err
 	}
 
