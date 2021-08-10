@@ -4,13 +4,17 @@ import (
 	"context"
 	"time"
 
+	"github.com/getoutreach/async/pkg/async"
 	localapp "github.com/getoutreach/devenv/cmd/devenv/local-app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
+	localizerapi "github.com/getoutreach/localizer/api"
+	"github.com/getoutreach/localizer/pkg/localizer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc"
 )
 
 //nolint:gochecknoglobals
@@ -82,28 +86,33 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return errors.Wrap(err, "failed to get sudo")
 	}
 
-	doneChan := make(chan struct{})
+	if localizer.IsRunning() {
+		client, closer, err := localizer.Connect(ctx, grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
+		if err != nil {
+			o.log.Info("detected localizer socket, but could not connect to localizer. try the following and then rerun:\n\tsudo kill $(pgrep localizer)\n\tsudo rm -f /var/run/localizer.sock")
+			return errors.Wrap(err, "connect to localizer client to kill stale connection")
+		}
+		defer closer()
+
+		if _, err := client.Kill(ctx, &localizerapi.Empty{}); err != nil {
+			return errors.Wrap(err, "kill stale localizer connectin")
+		}
+
+		// Wait for that stale connection to actually be gone before continuing.
+		for ctx.Err() == nil && localizer.IsRunning() {
+			async.Sleep(ctx, time.Second*1)
+		}
+	}
+
+	localizerErrCh := make(chan error)
 	go func() {
 		// sudo hacks, -E here is just "forward environment"
-		err = cmdutil.RunKubernetesCommand(ctx, "", false, "sudo", "-E", p)
-		close(doneChan)
+		localizerErrCh <- cmdutil.RunKubernetesCommand(ctx, "", false, "sudo", "-E", p)
 	}()
 
 	// wait for localizer to be up
-	tick := time.NewTicker(2 * time.Second)
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-tick.C:
-		}
-
-		if !kubernetestunnelruntime.IsLocalizerRunning() {
-			o.log.Info("waiting for localizer to be running")
-			continue
-		}
-
-		break
+	for ctx.Err() == nil && !localizer.IsRunning() {
+		async.Sleep(ctx, time.Second*2)
 	}
 
 	for _, a := range o.LocalApps {
@@ -117,6 +126,5 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 	}
 
 	// Wait for localizer to stop
-	<-doneChan
-	return err
+	return <-localizerErrCh
 }

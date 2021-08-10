@@ -9,16 +9,16 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.4.0
 	github.com/cenkalti/backoff/v4 v4.1.0
-	github.com/containerd/containerd v1.4.4 // indirect
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/getoutreach/gobox v1.4.0
+	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
+	github.com/getoutreach/async v1.2.0
+	github.com/getoutreach/gobox v1.8.0
+	github.com/getoutreach/localizer v1.12.0
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.1
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/vault/api v1.1.0
-	github.com/jaredallard/localizer v1.8.2
 	github.com/jetstack/cert-manager v1.2.0
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/klauspost/compress v1.11.13 // indirect
@@ -33,18 +33,16 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/versent/saml2aws/v2 v2.30.0
 	github.com/vmware-tanzu/velero v1.6.0
-	golang.org/x/net v0.0.0-20210326220855-61e056675ecf // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
-	google.golang.org/genproto v0.0.0-20210325224202-eed09b1b5210 // indirect
-	google.golang.org/grpc v1.36.1
+	google.golang.org/grpc v1.37.0
 	gopkg.in/yaml.v2 v2.4.0
 
 	// Kubernetes dependencies
-	k8s.io/api v0.20.5
+	k8s.io/api v0.21.0
 	k8s.io/apiextensions-apiserver v0.20.5
-	k8s.io/apimachinery v0.20.5
+	k8s.io/apimachinery v0.21.0
 	k8s.io/cli-runtime v0.20.5
-	k8s.io/client-go v0.20.5
+	k8s.io/client-go v0.21.0
 	k8s.io/component-base v0.20.5
 	k8s.io/kubectl v0.20.5
 )

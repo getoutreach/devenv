@@ -15,10 +15,10 @@ import (
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/kube"
-	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/trace"
-	apiv1 "github.com/jaredallard/localizer/api/v1"
+	localizerapi "github.com/getoutreach/localizer/api"
+	"github.com/getoutreach/localizer/pkg/localizer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -257,24 +257,21 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 		return err
 	}
 
-	var localizerResp *apiv1.ListResponse
-	if kubernetestunnelruntime.IsLocalizerRunning() {
+	var localizerResp *localizerapi.ListResponse
+	if localizer.IsRunning() {
 		gCtx, cancel := context.WithTimeout(ctx, time.Second*5)
 		defer cancel()
 
-		conn, err := grpc.DialContext(gCtx, //nolint:govet // why: it's okay to shadow the error variable here
-			fmt.Sprintf("unix://%s", kubernetestunnelruntime.LocalizerSock),
+		client, closer, err := localizer.Connect(gCtx, //nolint:govet // why: it's okay to shadow the error variable here
 			grpc.WithBlock(),
 			grpc.WithInsecure(),
 		)
-
 		if err != nil {
-			return errors.Wrap(err, "failed to talk to localizer daemon")
+			return errors.Wrap(err, "failed to connect to localizer daemon")
 		}
-		defer conn.Close()
+		defer closer()
 
-		client := apiv1.NewLocalizerServiceClient(conn)
-		if localizerResp, err = client.List(ctx, &apiv1.ListRequest{}); err != nil {
+		if localizerResp, err = client.List(ctx, &localizerapi.ListRequest{}); err != nil {
 			return err
 		}
 	}

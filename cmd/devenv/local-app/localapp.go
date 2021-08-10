@@ -12,6 +12,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/embed"
 	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
+	"github.com/getoutreach/localizer/pkg/localizer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -208,7 +209,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	if !kubernetestunnelruntime.IsLocalizerRunning() {
+	if !localizer.IsRunning() {
 		o.log.Error("Did you run 'devenv tunnel'?")
 		return fmt.Errorf("failed to find running kubernetes tunnel runtime")
 	}
