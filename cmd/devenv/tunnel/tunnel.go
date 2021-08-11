@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/getoutreach/async/pkg/async"
 	localapp "github.com/getoutreach/devenv/cmd/devenv/local-app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
+	"github.com/getoutreach/gobox/pkg/async"
 	localizerapi "github.com/getoutreach/localizer/api"
 	"github.com/getoutreach/localizer/pkg/localizer"
 	"github.com/pkg/errors"

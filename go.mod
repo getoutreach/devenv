@@ -12,8 +12,7 @@ require (
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
-	github.com/getoutreach/async v1.2.0
-	github.com/getoutreach/gobox v1.8.0
+	github.com/getoutreach/gobox v1.10.0
 	github.com/getoutreach/localizer v1.12.0
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.1
