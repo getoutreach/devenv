@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	KindVersion     = "v0.10.0-outreach.3"
+	KindVersion     = "v0.12.0-outreach.1"
 	KindDownloadURL = "https://github.com/getoutreach/kind/releases/download/" + KindVersion + "/kind-" + runtime.GOOS + "-" + runtime.GOARCH
 	KindClusterName = "dev-environment"
 )
