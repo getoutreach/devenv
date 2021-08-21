@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -38,7 +40,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	// Place any extra imports for your startup code here
 	///Block(imports)
 	///EndBlock(imports)
@@ -97,6 +99,12 @@ func overrideConfigLoaders() {
 }
 
 func main() { //nolint:funlen
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
+		}
+	}()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	log := logrus.New()
 
@@ -260,11 +268,10 @@ func main() { //nolint:funlen
 
 	if err := app.RunContext(ctx, os.Args); err != nil {
 		log.Errorf("failed to run: %v", err)
+		//nolint:errcheck // We're attaching the error to the trace.
+		trace.SetCallStatus(ctx, err)
 		exitCode = 1
 
-		// For some reason sometimes code after this doesn't get executed... Fair warning.
-		//nolint:errcheck // Why: We're emitting an error, we already handled it.
-		trace.SetCallStatus(ctx, err)
 		return
 	}
 }
