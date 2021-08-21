@@ -392,9 +392,9 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		}
 
 		o.log.WithError(err).WithField("pods", unreadyPods).
-			Warn("Waiting for pods to be ready")
+			Info("Waiting for pods to be ready")
 
-		async.Sleep(ctx, 10*time.Second)
+		async.Sleep(ctx, 30*time.Second)
 	}
 
 	return ctx.Err()
