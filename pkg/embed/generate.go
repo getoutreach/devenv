@@ -57,7 +57,8 @@ func ExtractToDir(efs *goembed.FS, dir string) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create temporary file")
 		}
-		err = nf.Chmod(777) // Can't access orig file perms? :'(
+		//nolint:gocritic // Why: This is an octal friendly package
+		err = nf.Chmod(0777) // Can't access orig file perms? :'(
 		if err != nil {
 			return errors.Wrap(err, "failed to chmod temporary file")
 		}
@@ -69,7 +70,7 @@ func ExtractToDir(efs *goembed.FS, dir string) error {
 
 // ExtractAllToTempDir extracts all embedded files into a temporary directory
 // allowing usage of them with shell scripts / external commands.
-// The extracted files match the embededed setup
+// The extracted files match the embedded setup
 func ExtractAllToTempDir(ctx context.Context) (string, error) {
 	// Use os.CreateTemp to get a non-allocated file name for usage as
 	// a temp dir
