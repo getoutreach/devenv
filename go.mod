@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.4.0
 	github.com/cenkalti/backoff/v4 v4.1.0
-	github.com/docker/docker v20.10.5+incompatible
+	github.com/docker/docker v20.10.8+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
 	github.com/getoutreach/gobox v1.11.0
