@@ -52,7 +52,7 @@ require (
 	k8s.io/cli-runtime v0.20.5
 	k8s.io/client-go v0.21.0
 	k8s.io/component-base v0.20.5
-	k8s.io/kubectl v0.20.5
+	k8s.io/kubectl v0.22.1
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.0 // indirect
 )
