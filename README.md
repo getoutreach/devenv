@@ -22,7 +22,7 @@ sudo chown $(id -u):$(id -g) $(command -v devenv)
 xattr -c $(command -v devenv)
 ```
 
-3. Follow the instructions for your platform in the [detailed system requirements docs](docs/system-requirements.md)
+3. **(If you have not already run `./orc setup`)** Follow the instructions for your platform in the [detailed system requirements docs](docs/system-requirements.md). 
 
 ### Defining a Box
 
