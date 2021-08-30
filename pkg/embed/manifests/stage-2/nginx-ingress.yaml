@@ -7,7 +7,7 @@ spec:
   chart: ingress-nginx
   repo: https://kubernetes.github.io/ingress-nginx
   targetNamespace: nginx-ingress
-  version: 3.30.0
+  version: 4.0.1
   valuesContent: |-
     controller:
       admissionWebhooks:
