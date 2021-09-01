@@ -32,7 +32,6 @@ import (
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/devenv/pkg/snapshoter"
-	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/minio/minio-go/v7"
 
 	"github.com/pkg/errors"
@@ -43,7 +42,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
 	corev1 "k8s.io/api/core/v1"
@@ -384,70 +382,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		o.log.Info("URL was reachable")
 	}
 
-	for ctx.Err() == nil {
-		unreadyPods, err := o.checkPodsReady(ctx, k)
-		if err == nil {
-			o.log.Info("All pods were ready")
-			break
-		}
-
-		o.log.WithError(err).WithField("pods", unreadyPods).
-			Info("Waiting for pods to be ready")
-
-		async.Sleep(ctx, 30*time.Second)
-	}
-
-	return ctx.Err()
-}
-
-func (o *Options) checkPodsReady(ctx context.Context, k kubernetes.Interface) ([]string, error) {
-	pods, err := k.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list pods")
-	}
-
-	unreadyPods := []string{}
-	for i := range pods.Items {
-		po := &pods.Items[i]
-		ready := false
-
-		// Skip pods that are jobs and have succeeded
-		if po.Status.Phase == corev1.PodSucceeded &&
-			len(po.OwnerReferences) == 1 && po.OwnerReferences[0].Kind == "Job" {
-			continue
-		}
-
-		// Special case for strimzi which is broken currently.
-		// TODO(jaredallard): Need to figure out what to do here long term.
-		if strings.HasPrefix(po.Name, "strimzi-topic-operator") {
-			continue
-		}
-
-		// Check that a pod is ready (e.g. the ready checks passed)
-		for ii := range po.Status.Conditions {
-			cond := &po.Status.Conditions[ii]
-			if cond.Type == corev1.PodReady { // Ready
-				if cond.Status == corev1.ConditionTrue { // True
-					ready = true
-					break
-				}
-			}
-		}
-
-		// if ready, skip it
-		if ready {
-			continue
-		}
-
-		unreadyPods = append(unreadyPods, po.Namespace+"/"+po.Name)
-	}
-
-	// no unready pods, not an error
-	if len(unreadyPods) == 0 {
-		return nil, nil
-	}
-
-	return unreadyPods, fmt.Errorf("not all pods were ready")
+	return devenvutil.WaitForAllPodsToBeReady(ctx, k, o.log)
 }
 
 func (o *Options) checkPrereqs(ctx context.Context) error {

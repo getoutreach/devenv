@@ -203,11 +203,15 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 
 	switch a.Type {
 	case TypeBootstrap:
-		return a.deployBootstrap(ctx)
+		err = a.deployBootstrap(ctx)
 	case TypeLegacy:
-		return a.deployLegacy(ctx)
+		err = a.deployLegacy(ctx)
+	default:
+		err = fmt.Errorf("unknown application type %s", a.Type)
+	}
+	if err != nil {
+		return err
 	}
 
-	// If this ever fires, there is an issue with *App.determineType.
-	return fmt.Errorf("unknown application type %s", a.Type)
+	return devenvutil.WaitForAllPodsToBeReady(ctx, a.k, a.log)
 }
