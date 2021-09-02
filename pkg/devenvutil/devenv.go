@@ -3,14 +3,17 @@ package devenvutil
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/worker"
+	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/getoutreach/gobox/pkg/trace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -169,4 +172,74 @@ func DeleteObjects(ctx context.Context, log logrus.FieldLogger, k kubernetes.Int
 		return errors.Wrap(trace.SetCallStatus(ctx, err), "failed to delete object"), nil
 	})
 	return err
+}
+
+// FindUnreadyPods checks all namespaces to find pods that are unready, they are
+// then returned. If an error occurs, err is returned.
+func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, error) {
+	pods, err := k.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list pods")
+	}
+
+	unreadyPods := []string{}
+	for i := range pods.Items {
+		po := &pods.Items[i]
+		ready := false
+
+		// Skip pods that are jobs and have succeeded
+		if po.Status.Phase == corev1.PodSucceeded &&
+			len(po.OwnerReferences) == 1 && po.OwnerReferences[0].Kind == "Job" {
+			continue
+		}
+
+		// Special case for strimzi which is broken currently.
+		// TODO(jaredallard): Need to figure out what to do here long term.
+		if strings.HasPrefix(po.Name, "strimzi-topic-operator") {
+			continue
+		}
+
+		// Check that a pod is ready (e.g. the ready checks passed)
+		for ii := range po.Status.Conditions {
+			cond := &po.Status.Conditions[ii]
+			if cond.Type == corev1.PodReady { // Ready
+				if cond.Status == corev1.ConditionTrue { // True
+					ready = true
+					break
+				}
+			}
+		}
+
+		// if ready, skip it
+		if ready {
+			continue
+		}
+
+		unreadyPods = append(unreadyPods, po.Namespace+"/"+po.Name)
+	}
+
+	// no unready pods, not an error
+	if len(unreadyPods) == 0 {
+		return nil, nil
+	}
+
+	return unreadyPods, fmt.Errorf("not all pods were ready")
+}
+
+// WaitForAllPodsToBeReady waits for all pods to be unready.
+func WaitForAllPodsToBeReady(ctx context.Context, k kubernetes.Interface, log logrus.FieldLogger) error {
+	for ctx.Err() == nil {
+		unreadyPods, err := FindUnreadyPods(ctx, k)
+		if err == nil {
+			log.Info("All pods were ready")
+			break
+		}
+
+		log.WithError(err).WithField("pods", unreadyPods).
+			Info("Waiting for pods to be ready")
+
+		async.Sleep(ctx, 30*time.Second)
+	}
+
+	return ctx.Err()
 }
