@@ -332,7 +332,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	o.log.Info("Regenerating certificates with local CA")
 
 	// CA regeneration can sometimes fail, so retry it on failure
-	for ctx.Err() != nil {
+	for ctx.Err() == nil {
 		ropts := renew.NewOptions(genericclioptions.IOStreams{In: os.Stdout, Out: os.Stdout, ErrOut: os.Stderr})
 		ropts.AllNamespaces = true
 		ropts.All = true
