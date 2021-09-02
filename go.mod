@@ -3,10 +3,10 @@ module github.com/getoutreach/devenv
 go 1.16
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.6.0
+	github.com/aws/aws-sdk-go-v2 v1.9.0
 	github.com/aws/aws-sdk-go-v2/config v1.1.4
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.0.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.4.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.14.0
 	github.com/cenkalti/backoff/v4 v4.1.0
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0
