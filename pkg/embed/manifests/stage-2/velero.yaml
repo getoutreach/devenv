@@ -7,7 +7,7 @@ spec:
   chart: velero
   repo: https://vmware-tanzu.github.io/helm-charts
   targetNamespace: velero
-  version: 2.14.12
+  version: 2.23.6
   valuesContent: |-
     ##
     ## Configuration settings that directly affect the Velero deployment YAML.
@@ -17,7 +17,7 @@ spec:
     # enabling restic). Required.
     image:
       repository: velero/velero
-      tag: v1.5.3
+      tag: v1.6.3
       pullPolicy: IfNotPresent    
 
     # Init containers to add to the Velero deployment's pod spec. At least one plugin provider image is required.
@@ -41,7 +41,7 @@ spec:
       provider: aws
 
       # Parameters for the `default` BackupStorageLocation. See
-      # https://velero.io/docs/v1.5/api-types/backupstoragelocation/
+      # https://velero.io/docs/v1.6/api-types/backupstoragelocation/
       backupStorageLocation:
         # Bucket to store backups in. Required.
         bucket: velero
@@ -53,7 +53,7 @@ spec:
           s3Url: http://minio-developer-environment:9000
 
       # Parameters for the `default` VolumeSnapshotLocation. See
-      # https://velero.io/docs/v1.5/api-types/volumesnapshotlocation/
+      # https://velero.io/docs/v1.6/api-types/volumesnapshotlocation/
       volumeSnapshotLocation:
         # Additional provider-specific configuration. See link above
         # for details of required/optional fields for your provider.

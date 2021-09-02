@@ -12,9 +12,8 @@ local mockSecret = ok.Secret(name, namespace=name) {
 
 local manifests = ok.HelmChart(name) {
   namespace:: name,
-  version:: '1.14.5',
-  // Using a custom repo until https://github.com/ricoberger/vault-secrets-operator/pull/113 gets released
-  repo:: 'https://jaredallard.me/helm-charts',
+  version:: '1.15.1',
+  repo:: 'https://ricoberger.github.io/helm-charts',
   values:: {
     environmentVars: ok.envList({
       // This allows us to override it
@@ -23,7 +22,6 @@ local manifests = ok.HelmChart(name) {
       VAULT_TOKEN_LEASE_DURATION: ok.SecretKeyRef(mockSecret, 'VAULT_TOKEN_LEASE_DURATION'),
     }),
     vault: {
-      // TODO: Get this from box.Config
       address: vault_addr,
     },
   },

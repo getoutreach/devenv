@@ -23,7 +23,7 @@ local items = {
             spec+: {
               containers_:: {
                 default: ok.Container('default') {
-                  image: 'gcr.io/outreach-docker/kindest/node:v1.20.2',
+                  image: 'gcr.io/outreach-docker/kindest/node:v1.20.7',
                   command: ['/bin/bash', '-c', 'crictl rmi --prune'],
                   volumeMounts_+:: {
                     'containerd-socket': {

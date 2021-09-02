@@ -36,7 +36,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/versent/saml2aws/v2 v2.30.0
 	github.com/vmihailenco/tagparser v0.1.2 // indirect
-	github.com/vmware-tanzu/velero v1.6.0
+	github.com/vmware-tanzu/velero v1.6.3
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	google.golang.org/appengine v1.6.7 // indirect
