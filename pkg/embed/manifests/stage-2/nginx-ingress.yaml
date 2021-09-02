@@ -10,6 +10,9 @@ spec:
   version: 4.0.1
   valuesContent: |-
     controller:
+      # We're the default ingress controller, so process ingresses
+      # without a ingress class.
+      watchIngressWithoutClass: true
       admissionWebhooks:
         # Skip admission webhook for now because we don't wait for it to be ready, which would
         # cause problems when ingresses try to be created
