@@ -32,6 +32,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/devenv/pkg/snapshoter"
+	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/minio/minio-go/v7"
 
 	"github.com/pkg/errors"
@@ -329,18 +330,27 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	}
 
 	o.log.Info("Regenerating certificates with local CA")
-	ropts := renew.NewOptions(genericclioptions.IOStreams{In: os.Stdout, Out: os.Stdout, ErrOut: os.Stderr})
-	ropts.AllNamespaces = true
-	ropts.All = true
-	ropts.RESTConfig = rest
-	ropts.CMClient, err = cmclient.NewForConfig(rest)
-	if err != nil {
-		return errors.Wrap(err, "failed to create cert-manager client")
-	}
 
-	// Renew the certificates
-	if err2 := ropts.Run(ctx, []string{}); err2 != nil {
-		return errors.Wrap(err2, "failed to trigger CA certificate regeneration")
+	// CA regeneration can sometimes fail, so retry it on failure
+	for ctx.Err() != nil {
+		ropts := renew.NewOptions(genericclioptions.IOStreams{In: os.Stdout, Out: os.Stdout, ErrOut: os.Stderr})
+		ropts.AllNamespaces = true
+		ropts.All = true
+		ropts.RESTConfig = rest
+		ropts.CMClient, err = cmclient.NewForConfig(rest)
+		if err != nil {
+			return errors.Wrap(err, "failed to create cert-manager client")
+		}
+
+		if err2 := ropts.Run(ctx, []string{}); kerrors.IsResourceExpired(err2) {
+			o.log.WithError(err).Warn("Retrying certificate regeneration operation ...")
+			async.Sleep(ctx, time.Second*5)
+		} else if err2 != nil {
+			return errors.Wrap(err2, "failed to trigger certificate regeneration")
+		}
+	}
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
 
 	if snapshotTarget.Config.ReadyAddress != "" {
