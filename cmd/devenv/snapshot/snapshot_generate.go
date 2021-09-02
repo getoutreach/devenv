@@ -274,6 +274,20 @@ func (o *Options) generateSnapshot(ctx context.Context, mc *minio.Client, s3c *s
 		}
 	}
 
+	if len(t.PostDeployApps) != 0 {
+		o.log.Info("Deploying applications into devenv")
+		for _, app := range t.PostDeployApps {
+			o.log.WithField("application", app).Info("Deploying application")
+			cmd := exec.CommandContext(ctx, os.Args[0], "--skip-update", "deploy-app", app) //nolint:gosec
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			cmd.Stdin = os.Stdin
+			if err := cmd.Run(); err != nil { //nolint:govet // Why: We're OK shadowing err.
+				return nil, errors.Wrap(err, "failed to deploy application")
+			}
+		}
+	}
+
 	// Need to create a new Kubernetes client that uses the new cluster
 	o, err = NewOptions(o.log)
 	if err != nil {

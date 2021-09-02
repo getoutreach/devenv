@@ -98,6 +98,10 @@ type SnapshotTarget struct {
 	// before running the Command specified.
 	DeployApps []string `yaml:"deploy_apps"`
 
+	// PostDeployApps is an array of applications to deploy via deploy-app
+	// after running the Command specified.
+	PostDeployApps []string `yaml:"post_deploy_apps"`
+
 	// ReadyAddress is a URL to ping before marking the devenv as ready
 	ReadyAddress string `yaml:"readyAddress"`
 }
