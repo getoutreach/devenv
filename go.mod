@@ -27,7 +27,7 @@ require (
 	github.com/novln/docker-parser v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.20.0 // indirect
-	github.com/schollz/progressbar/v3 v3.8.1
+	github.com/schollz/progressbar/v3 v3.8.2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3 // indirect
 	github.com/urfave/cli/v2 v2.3.0
