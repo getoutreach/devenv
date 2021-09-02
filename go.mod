@@ -3,7 +3,6 @@ module github.com/getoutreach/devenv
 go 1.16
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.12
 	github.com/aws/aws-sdk-go-v2 v1.6.0
 	github.com/aws/aws-sdk-go-v2/config v1.1.4
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.0.0 // indirect
@@ -11,10 +10,9 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.0
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/getoutreach/gobox v1.11.0
+	github.com/getoutreach/gobox v1.13.0
 	github.com/getoutreach/localizer v1.12.0
-	github.com/go-git/go-billy/v5 v5.3.1
-	github.com/go-git/go-git/v5 v5.4.1
+	github.com/go-git/go-git/v5 v5.4.1 // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect

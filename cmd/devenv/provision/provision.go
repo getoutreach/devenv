@@ -25,7 +25,6 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/snapshot"
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/aws"
-	"github.com/getoutreach/devenv/pkg/box"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
@@ -33,6 +32,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/devenv/pkg/snapshoter"
 	"github.com/getoutreach/gobox/pkg/async"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/minio/minio-go/v7"
 
 	"github.com/pkg/errors"

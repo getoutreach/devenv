@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
-	"github.com/getoutreach/devenv/pkg/box"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/worker"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/gobox/pkg/trace"
 	dockerparser "github.com/novln/docker-parser"
 	"github.com/pkg/errors"
