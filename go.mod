@@ -14,28 +14,22 @@ require (
 	github.com/getoutreach/localizer v1.12.0
 	github.com/go-git/go-git/v5 v5.4.1 // indirect
 	github.com/google/btree v1.0.1 // indirect
-	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
-	github.com/hashicorp/vault/api v1.1.0
-	github.com/jetstack/cert-manager v1.2.0
+	github.com/hashicorp/vault/api v1.1.1
+	github.com/jetstack/cert-manager v1.5.3
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/klauspost/compress v1.11.13 // indirect
 	github.com/manifoldco/promptui v0.8.0
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/mitchellh/go-wordwrap v1.0.1
-	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/novln/docker-parser v1.0.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/common v0.20.0 // indirect
 	github.com/schollz/progressbar/v3 v3.8.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/cobra v1.1.3 // indirect
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/versent/saml2aws/v2 v2.30.0
 	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/vmware-tanzu/velero v1.6.3
-	go.uber.org/atomic v1.7.0 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210716133855-ce7ef5c701ea // indirect
 	google.golang.org/grpc v1.39.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -45,14 +39,13 @@ require (
 	// Ensure that the versions here are always the same
 	// and that the replace directives are updated to match.
 	// Current version: v0.21.0
-	k8s.io/api v0.21.0
-	k8s.io/apiextensions-apiserver v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/cli-runtime v0.21.0
-	k8s.io/client-go v0.21.0
-	k8s.io/component-base v0.21.0
-	k8s.io/kubectl v0.21.0
-	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
+	k8s.io/api v0.21.3
+	k8s.io/apiextensions-apiserver v0.21.3
+	k8s.io/apimachinery v0.21.3
+	k8s.io/cli-runtime v0.21.3
+	k8s.io/client-go v0.21.3
+	k8s.io/component-base v0.21.3
+	k8s.io/kubectl v0.21.3
 )
 
 replace (
