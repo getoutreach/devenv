@@ -9,7 +9,6 @@ import (
 
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
-	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/sshhelper"
 	"github.com/getoutreach/gobox/pkg/trace"
 	dockerparser "github.com/novln/docker-parser"
@@ -138,23 +137,25 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 		return err
 	}
 
+	// TODO: How do we deploy this into a remote environment?
+	// A: We don't?
 	a.log.Info("Pushing built Docker Image into Kubernetes")
-	kindPath, err := kubernetesruntime.EnsureKind(a.log)
-	if err != nil {
-		return errors.Wrap(err, "failed to find/download Kind")
-	}
-
-	err = cmdutil.RunKubernetesCommand(
-		ctx,
-		a.Path,
-		true,
-		kindPath,
-		"load",
-		"docker-image",
-		fmt.Sprintf("gcr.io/outreach-docker/%s", a.RepositoryName),
-		"--name",
-		kubernetesruntime.KindClusterName,
-	)
+	//nolint:gocritic
+	// kindPath, err := kubernetesruntime.EnsureKind(a.log)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to find/download Kind")
+	// }
+	// err = cmdutil.RunKubernetesCommand(
+	// 	ctx,
+	// 	a.Path,
+	// 	true,
+	// 	kindPath,
+	// 	"load",
+	// 	"docker-image",
+	// 	fmt.Sprintf("gcr.io/outreach-docker/%s", a.RepositoryName),
+	// 	"--name",
+	// 	kubernetesruntime.KindClusterName,
+	// )
 
 	return errors.Wrap(err, "failed to push docker image to Kubernetes")
 }

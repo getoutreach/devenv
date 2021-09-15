@@ -166,42 +166,8 @@ func (o *Options) GetStatus(ctx context.Context) (*Status, error) {
 		return status, nil
 	}
 
-	// check the status of the k3s container to determine
-	// if it's stopped
-	cont, err := o.d.ContainerInspect(ctx, containerruntime.ContainerName)
-	if err != nil {
-		if dockerclient.IsErrNotFound(err) {
-			// check for the old runtime
-			oldCont, err := o.d.ContainerInspect(ctx, "k3s") //nolint:govet
-			if dockerclient.IsErrNotFound(err) {
-				status.Status = Unprovisioned
-				return status, nil
-			} else if err != nil {
-				// other error we don't know, cry :(
-				return status, err
-			}
-
-			cont = oldCont
-			status.Reason = "Older Kubernetes Runtime Found"
-		} else {
-			// we don't know of the error, so... cry
-			return status, err
-		}
-	}
-
-	// read the version of the container
-	if _, ok := cont.Config.Labels["io.outreach.devenv.version"]; ok {
-		status.Version = cont.Config.Labels["io.outreach.devenv.version"]
-	}
-
-	// parse the container state
-	if cont.State.Status == "exited" {
-		status.Status = Stopped
-		return status, nil
-	}
-
 	timeout := int64(5)
-	_, err = o.k.CoreV1().Pods("default").List(ctx, metav1.ListOptions{Limit: 1, TimeoutSeconds: &timeout})
+	_, err := o.k.CoreV1().Pods("default").List(ctx, metav1.ListOptions{Limit: 1, TimeoutSeconds: &timeout})
 	if err != nil {
 		status.Status = Degraded
 		status.Reason = errors.Wrap(err, "failed to reach kubernetes").Error()

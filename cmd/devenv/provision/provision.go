@@ -23,6 +23,7 @@ import (
 	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
 	"github.com/getoutreach/devenv/cmd/devenv/snapshot"
+	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -43,6 +44,8 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	corev1 "k8s.io/api/core/v1"
@@ -75,19 +78,22 @@ var (
 
 	imagePullSecretPath = filepath.Join(".outreach", ".config", "dev-environment", "image-pull-secret")
 	dockerConfigPath    = filepath.Join(".outreach", ".config", "dev-environment", "dockerconfig.json")
-	snapshotLocalBucket = fmt.Sprintf("%s-restore", snapshoter.MinioSnapshotBucketName)
+	snapshotLocalBucket = "velero-restore"
 )
 
 type Options struct {
-	DeployApps      []string
-	SnapshotTarget  string
-	SnapshotChannel box.SnapshotLockChannel
-	Base            bool
+	DeployApps        []string
+	SnapshotTarget    string
+	SnapshotChannel   box.SnapshotLockChannel
+	KubernetesRuntime kubernetesruntime.Runtime
+	Base              bool
 
 	log     logrus.FieldLogger
 	d       dockerclient.APIClient
 	homeDir string
 	b       *box.Config
+	k       kubernetes.Interface
+	r       *rest.Config
 }
 
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
@@ -145,6 +151,11 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 				Usage: "Snapshot channel to use",
 				Value: string(box.SnapshotLockChannelStable),
 			},
+			&cli.StringFlag{
+				Name:  "kubernetes-runtime",
+				Usage: "Specify which kubernetes runtime to use (options: kind, loft)",
+				Value: "kind",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			o, err := NewOptions(log)
@@ -158,13 +169,20 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 			o.SnapshotTarget = c.String("snapshot-target")
 			o.SnapshotChannel = box.SnapshotLockChannel(c.String("snapshot-channel"))
 
+			runtimeName := c.String("kubernetes-runtime")
+			k8sRuntime, err := kubernetesruntime.GetRuntime(runtimeName)
+			if err != nil {
+				return errors.Wrap(err, "failed to load kubernetes runtime")
+			}
+			o.KubernetesRuntime = k8sRuntime
+
 			return o.Run(c.Context)
 		},
 	}
 }
 
 func (o *Options) applyPostRestore(ctx context.Context) error { //nolint:funlen
-	m, err := snapshoter.CreateMinioClient()
+	m, err := snapshoter.NewSnapshotBackend(ctx, o.r, o.k)
 	if err != nil {
 		return errors.Wrap(err, "failed to create local snapshot storage client")
 	}
@@ -232,7 +250,32 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	defer os.RemoveAll(dir)
 
 	err = cmdutil.RunKubernetesCommand(ctx, dir, true, "kubecfg",
-		"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update", "manifests/stage-2/velero.yaml")
+		"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update", "manifests/stage-2/minio.yaml")
+	if err != nil {
+		return err
+	}
+
+	err = devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log)
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for snapshot infra to be ready")
+	}
+
+	// TODO(jaredallard): the kubernetes runtime needs to be able to pass this information
+	// in somehow.
+	clusterName := "dev-environment"
+	if o.KubernetesRuntime.GetConfig().Name == "loft" {
+		usr, err := user.Current() //nolint:govet // Why: we're OK shadowing err
+		if err != nil {
+			return err
+		}
+		clusterName = usr.Username + "-devenv"
+	}
+
+	runtimeConf := o.KubernetesRuntime.GetConfig()
+	err = cmdutil.RunKubernetesCommand(ctx, dir, true, "kubecfg",
+		"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update",
+		"--ext-str", fmt.Sprintf("cluster_type=%s", runtimeConf.Type),
+		"--ext-str", fmt.Sprintf("cluster_name=%s", clusterName), "manifests/stage-2/velero.jsonnet")
 	if err != nil {
 		return err
 	}
@@ -271,18 +314,13 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		return errors.Wrap(err, "failed to apply post-restore manifests from local snapshot storage")
 	}
 
-	k, kconf, err := kube.GetKubeClientWithConfig()
-	if err != nil {
-		return err
-	}
-
 	// Sometimes, if we don't preemptively delete all restic-wait containing pods
 	// we can end up with a restic-wait attempting to run again, which results
 	// in the pod being blocked. This appears to happen whenever a pod is "restarted".
 	// Deleting all of these pods prevents that from happening as the restic-wait pod is
 	// removed by velero's admission controller.
 	o.log.Info("Cleaning up snapshot restore artifacts")
-	err = devenvutil.DeleteObjects(ctx, o.log, k, kconf, devenvutil.DeleteObjectsObjects{
+	err = devenvutil.DeleteObjects(ctx, o.log, o.k, o.r, devenvutil.DeleteObjectsObjects{
 		Type: &corev1.Pod{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Pod",
@@ -316,14 +354,9 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		return errors.Wrap(err, "failed to run provision.d scripts")
 	}
 
-	client, _, err := kube.GetKubeClientWithConfig()
-	if err != nil {
-		return err
-	}
-
 	if o.b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
 		o.log.Info("Ensuring Vault has valid credentials")
-		err = vault.EnsureLoggedIn(ctx, o.log, o.b, client)
+		err = vault.EnsureLoggedIn(ctx, o.log, o.b, o.k)
 		if err != nil {
 			return errors.Wrap(err, "failed to configure vault")
 		}
@@ -335,7 +368,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	for ctx.Err() == nil {
 		// When ropts fails, we need to create a new rest config
 		// so just use a fresh one every time here.
-		_, rest, err2 := kube.GetKubeClientWithConfig()
+		_, k8sConf, err2 := kube.GetKubeClientWithConfig()
 		if err2 != nil {
 			return err2
 		}
@@ -343,8 +376,8 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		ropts := renew.NewOptions(genericclioptions.IOStreams{In: os.Stdout, Out: os.Stdout, ErrOut: os.Stderr})
 		ropts.AllNamespaces = true
 		ropts.All = true
-		ropts.RESTConfig = rest
-		ropts.CMClient, err = cmclient.NewForConfig(rest)
+		ropts.RESTConfig = k8sConf
+		ropts.CMClient, err = cmclient.NewForConfig(k8sConf)
 		if err != nil {
 			return errors.Wrap(err, "failed to create cert-manager client")
 		}
@@ -403,7 +436,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		o.log.Info("URL was reachable")
 	}
 
-	return devenvutil.WaitForAllPodsToBeReady(ctx, k, o.log)
+	return devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log)
 }
 
 func (o *Options) checkPrereqs(ctx context.Context) error {
@@ -413,7 +446,7 @@ func (o *Options) checkPrereqs(ctx context.Context) error {
 	}
 
 	// See if a devenv already exists, only one is allowed
-	if _, err := o.d.ContainerInspect(ctx, kubernetesruntime.KindClusterName+"-control-plane"); err == nil {
+	if stat := o.KubernetesRuntime.Status(ctx, o.log); stat.Status.Status != status.Unknown {
 		return fmt.Errorf("dev-environment already exists, run devenv destroy to create a new one first")
 	}
 
@@ -467,11 +500,12 @@ func (o *Options) deployBaseManifests(ctx context.Context) error {
 	return o.runProvisionScripts(ctx)
 }
 
-func (o *Options) createKindCluster(ctx context.Context) error {
-	return kubernetesruntime.InitKind(ctx, o.log)
-}
-
 func (o *Options) removeServiceImages(ctx context.Context) error {
+	// Only run this on local clusters
+	if o.KubernetesRuntime.GetConfig().Name != "kind" {
+		return nil
+	}
+
 	//nolint:gosec // Why: We're passing a constant
 	cmd := exec.CommandContext(ctx, "docker", "exec",
 		kubernetesruntime.KindClusterName+"-control-plane", "ctr", "--namespace", "k8s.io", "images", "ls")
@@ -536,7 +570,7 @@ func (o *Options) generateDockerConfig() error {
 }
 
 func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
-	if runtime.GOOS == "darwin" {
+	if runtime.GOOS == "darwin" && o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal {
 		if err := o.configureDockerForMac(ctx); err != nil {
 			return err
 		}
@@ -555,11 +589,11 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 	}
 
 	o.log.Info("Creating Kubernetes cluster")
-	if err := o.createKindCluster(ctx); err != nil { //nolint:govet // Why: OK w/ err shadow
+	if err := o.KubernetesRuntime.Create(ctx, o.log); err != nil { //nolint:govet // Why: OK w/ err shadow
 		return errors.Wrap(err, "failed to create kind cluster")
 	}
 
-	kconf, err := kubernetesruntime.GetKubeConfig(ctx, o.log)
+	kconf, err := o.KubernetesRuntime.GetKubeConfig(ctx)
 	if err != nil { //nolint:govet // Why: OK w/ err shadow
 		return errors.Wrap(err, "failed to create kind cluster")
 	}
@@ -569,10 +603,12 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 		return errors.Wrap(err, "failed to write kubeconfig")
 	}
 
-	//nolint:govet // Why: OK w/ err shadow
-	if err := snapshoter.Ensure(ctx, o.d, o.log); err != nil {
-		return errors.Wrap(err, "failed to ensure snapshot storage exists")
+	k8sClient, k8sRestConf, err := kube.GetKubeClientWithConfig()
+	if err != nil {
+		return err
 	}
+	o.k = k8sClient
+	o.r = k8sRestConf
 
 	//nolint:govet // Why: OK w/ err shadow
 	if err := o.removeServiceImages(ctx); err != nil {
@@ -589,8 +625,11 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 				o.log.WithError(err).Error("failed to remove intermediate environment")
 				return err2
 			}
+			dopts.KubernetesRuntime = o.KubernetesRuntime
 
-			err2 = dopts.Run(ctx)
+			cctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+			defer cancel()
+			err2 = dopts.Run(cctx)
 			if err2 != nil {
 				o.log.WithError(err).Error("failed to remove intermediate environment")
 				return err2

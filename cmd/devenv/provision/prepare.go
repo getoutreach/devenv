@@ -11,6 +11,7 @@ import (
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/embed"
+	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/pkg/errors"
 )
 
@@ -61,6 +62,11 @@ func (o *Options) deployStages(ctx context.Context, stages int) error {
 	// e.g. stages 3
 	// stage 0, 1, 2
 	for i := 0; i != (stages + 1); i++ {
+		// Stage 0 is only for local runtimes.
+		if i == 0 && o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeRemote {
+			continue
+		}
+
 		if err := o.deployStage(ctx, i); err != nil {
 			return errors.Wrapf(err, "failed to deploy stage %d", i)
 		}

@@ -3,12 +3,10 @@ package destroy
 import (
 	"context"
 
-	"github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
-	"github.com/getoutreach/devenv/pkg/snapshoter"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -32,6 +30,7 @@ type Options struct {
 	// Options
 	RemoveImageCache      bool
 	RemoveSnapshotStorage bool
+	KubernetesRuntime     kubernetesruntime.Runtime
 }
 
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
@@ -60,6 +59,12 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 				Name:  "remove-snapshot-storage",
 				Usage: "cleanup local snapshot storage",
 			},
+			// TODO: This should not be here post-MVP
+			// this should be inferred
+			&cli.StringFlag{
+				Name:  "kubernetes-runtime",
+				Usage: "Specify which kubernetes runtime to use",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			o, err := NewOptions(log)
@@ -69,48 +74,37 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 			o.RemoveImageCache = c.Bool("remove-image-cache")
 			o.RemoveSnapshotStorage = c.Bool("remove-snapshot-storage")
 
+			r, err := kubernetesruntime.GetRuntime(c.String("kubernetes-runtime"))
+			if err != nil {
+				return errors.Wrap(err, "failed to find kubernetes runtime")
+			}
+			o.KubernetesRuntime = r
+
 			return o.Run(c.Context)
 		},
 	}
 }
 
 func (o *Options) Run(ctx context.Context) error {
-	_, err := kubernetesruntime.EnsureKind(o.log)
-	if err != nil {
-		o.log.Errorf("failed to download container runtime")
-		return err
-	}
-
 	o.log.Info("Destroying devenv ...")
-	if err := kubernetesruntime.ResetKind(ctx, o.log); err != nil {
+	if err := o.KubernetesRuntime.Destroy(ctx, o.log); err != nil {
 		o.log.WithError(err).Warn("failed to remove kind cluster")
 	}
 
 	if o.RemoveImageCache {
-		o.log.Info("Removing Kubernetes Docker image cache ...")
-		err := o.d.VolumeRemove(ctx, containerruntime.ContainerName+"-containerd", false)
-		if err != nil && !dockerclient.IsErrNotFound(err) {
-			return errors.Wrap(err, "failed to remove image volume")
+		if o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal {
+			o.log.Info("Removing Kubernetes Docker image cache ...")
+			err := o.d.VolumeRemove(ctx, containerruntime.ContainerName+"-containerd", false)
+			if err != nil && !dockerclient.IsErrNotFound(err) {
+				return errors.Wrap(err, "failed to remove image volume")
+			}
+		} else {
+			o.log.Warn("--remove-image-cache has no effect on a remote kubernetes runtime")
 		}
 	}
 
 	if o.RemoveSnapshotStorage {
-		err := o.d.ContainerStop(ctx, snapshoter.MinioContainerName, nil)
-		if err != nil && !dockerclient.IsErrNotFound(err) {
-			return errors.Wrap(err, "failed to stop local snapshot storage")
-		}
-
-		err = o.d.ContainerRemove(ctx, snapshoter.MinioContainerName, types.ContainerRemoveOptions{
-			Force: true,
-		})
-		if err != nil && !dockerclient.IsErrNotFound(err) {
-			return errors.Wrap(err, "failed to remove local snapshot storage")
-		}
-
-		err = o.d.VolumeRemove(ctx, snapshoter.MinioContainerName, true)
-		if err != nil && !dockerclient.IsErrNotFound(err) {
-			return errors.Wrap(err, "failed to remove local snapshot storage data")
-		}
+		o.log.Warn("DEPRECATED: --remove-snapshot-storage no longer has any effect")
 	}
 
 	o.log.Info("Finished successfully")

@@ -1,4 +1,4 @@
-local ok = import './libs.libsonnet';
+local ok = import '../libs.libsonnet';
 local name = 'vault-secrets-operator';
 local vault_addr = std.extVar('vault_addr');
 

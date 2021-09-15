@@ -1,0 +1,34 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: minio
+  namespace: kube-system
+spec:
+  chart: minio
+  version: 8.0.10
+  repo: https://helm.min.io/
+  targetNamespace: minio
+  valuesContent: |-
+    # From: https://hub.docker.com/r/minio/minio/tags/?page=1&ordering=last_updated
+    image:
+      tag: RELEASE.2021-09-09T21-37-07Z
+    # From: https://hub.docker.com/r/minio/mc/tags/?page=1&ordering=last_updated
+    mcImage:
+      tag: RELEASE.2021-09-02T09-21-27Z
+    buckets:
+    - name: velero
+      policy: none
+      purge: false
+    - name: velero-restore
+      policy: none
+      purge: false
+
+    resources:
+      requests:
+        memory: 200Mi
+
+    # These credentials ARE INSECURE, but this is just for a local / restricted access
+    # cloud devenv so this is currently acceptable. Potentially in the future we will
+    # lock these down.
+    accessKey: minioaccess
+    secretKey: miniosecret

@@ -23,7 +23,6 @@ import (
 	"github.com/getoutreach/devenv/pkg/snapshoter"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -36,10 +35,7 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 
 	o.log.WithField("snapshots", len(s.Targets)).Info("Generating Snapshots")
 
-	mc, err := minio.New("127.0.0.1:61002", &minio.Options{
-		Creds:  credentials.NewStaticV4(snapshoter.MinioAccessKey, snapshoter.MinioSecretKey, ""),
-		Secure: false,
-	})
+	mc, err := snapshoter.NewSnapshotBackend(ctx, o.r, o.k)
 	if err != nil {
 		return err
 	}
@@ -127,7 +123,8 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 	return err
 }
 
-func (o *Options) uploadSnapshot(ctx context.Context, mc *minio.Client, s3c *s3.Client, name string, t *box.SnapshotTarget) (string, string, error) { //nolint:funlen,gocritic
+func (o *Options) uploadSnapshot(ctx context.Context, mc *snapshoter.SnapshotBackend, s3c *s3.Client,
+	name string, t *box.SnapshotTarget) (string, string, error) { //nolint:funlen,gocritic
 	tmpFile, err := os.CreateTemp("", "snapshot-*")
 	if err != nil {
 		return "", "", err
@@ -233,7 +230,7 @@ func (o *Options) uploadSnapshot(ctx context.Context, mc *minio.Client, s3c *s3.
 }
 
 //nolint:funlen
-func (o *Options) generateSnapshot(ctx context.Context, mc *minio.Client, s3c *s3.Client,
+func (o *Options) generateSnapshot(ctx context.Context, mc *snapshoter.SnapshotBackend, s3c *s3.Client,
 	name string, t *box.SnapshotTarget, skipUpload bool) (*box.SnapshotLockListItem, error) {
 	o.log.WithField("snapshot", name).Info("Generating Snapshot")
 

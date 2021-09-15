@@ -26,6 +26,8 @@ xattr -c $(command -v devenv)
 
 ### Defining a Box
 
+TODO. See [gobox/pkg/box](https://github.com/getoutreach/gobox) for the spec.
+
 
 ### Creating the Developer Environment
  
@@ -44,8 +46,29 @@ export KUBECONFIG="$HOME/.kube/config:$HOME/.outreach/kubeconfig.yaml"
 
 You now have a developer environment provisioned!
 
-**_Be careful_**: from now on, your dev tools look a lot like production tools. To help with this, when you want to run `kubectl` commands against your dev environment cluster it is recommended you use the built-in wrapper:
-```bash
-$ devenv kubectl <the rest of your kubectl command>
+## FAQ
+
+### Using different drivers
+
+The `devenv` supports different kubernetes runtime drivers, below are the instructions for each driver
+
+#### KinD
+
+This should work out of the box!
+
+#### Loft
+
+You will need to create a loft instance, and set it in your `box.yaml`: TODO
+
+You will need to create a vcluster template named `devenv` with the following contents:
+
+```yaml
+storage:
+  size: 50Gi
+
+syncer:
+  # Don't sync ingresses, our ingress controller will handle this, and get it's own IP address
+  # so we can address it via /etc/hosts
+  extraArgs: ["--disable-sync-resources=ingresses"]
 ```
 

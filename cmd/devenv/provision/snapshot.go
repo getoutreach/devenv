@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/getoutreach/devenv/pkg/snapshoter"
+	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
@@ -35,20 +36,29 @@ type localSnapshot struct {
 // It's stored in it's own local S3 bucket because restic isn't namespaced
 // which is used to store volume contents.
 func (o *Options) fetchSnapshot(ctx context.Context) (*box.SnapshotLockListItem, error) { //nolint:funlen
-	bucketName := fmt.Sprintf("%s-restore", snapshoter.MinioSnapshotBucketName)
-	err := snapshoter.Ensure(ctx, o.d, o.log)
+	bucketName := snapshotLocalBucket
+
+	m, err := snapshoter.NewSnapshotBackend(ctx, o.r, o.k)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to ensure snapshot local-storage was running")
+		return nil, err
+	}
+
+	for ctx.Err() == nil {
+		exists, err := m.BucketExists(ctx, bucketName) //nolint:govet // Why: We're OK shadowing err
+		if exists {
+			break
+		}
+
+		o.log.WithError(err).Info("Waiting for snapshot infra to be ready")
+		async.Sleep(ctx, 10*time.Second)
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(o.b.DeveloperEnvironmentConfig.SnapshotConfig.Region))
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to load SDK config")
-	}
-
-	m, err := snapshoter.CreateMinioClient()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create local snapshot storage client")
 	}
 
 	s3client := s3.NewFromConfig(cfg)
@@ -165,7 +175,7 @@ func (o *Options) downloadArchive(ctx context.Context, snapshot *box.SnapshotLoc
 
 // uploadFilesFromArchive uploads the files from a given tar.xz archive
 // into our local S3 bucket
-func (o *Options) uploadFilesFromArchive(ctx context.Context, m *minio.Client, bucketName string, snapshot *box.SnapshotLockListItem, s3client *s3.Client) error { //nolint:funlen
+func (o *Options) uploadFilesFromArchive(ctx context.Context, m *snapshoter.SnapshotBackend, bucketName string, snapshot *box.SnapshotLockListItem, s3client *s3.Client) error { //nolint:funlen
 	t := backoff.WithMaxRetries(backoff.WithContext(backoff.NewExponentialBackOff(), ctx), 5)
 
 	var f *os.File
@@ -231,5 +241,6 @@ func (o *Options) uploadFilesFromArchive(ctx context.Context, m *minio.Client, b
 	currentSnapshot := bytes.NewReader(currentYaml)
 
 	_, err = m.PutObject(ctx, bucketName, "current.yaml", currentSnapshot, currentSnapshot.Size(), minio.PutObjectOptions{})
+	m.Close()
 	return errors.Wrap(err, "failed to set current snapshot")
 }
