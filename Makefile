@@ -9,10 +9,11 @@ include .bootstrap/root/Makefile
 install: build
 	@devenvPath="$$(command -v devenv)"; if [[ -w "$$devenvPath" ]]; then cp -v ./bin/devenv "$$devenvPath"; else sudo cp -v ./bin/devenv "$$devenvPath"; fi
 
+.PHONY: docker-build-override
 docker-build-override:
-	docker buildx build --platform "linux/amd64" --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" --load .
+	docker buildx build --platform "linux/amd64,linux/arm64" --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" .
 
-.PHONY: docker-push
-docker-push:
-	docker buildx build --platform "linux/amd64" --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" --push .
+.PHONY: docker-push-override
+docker-push-override:
+	docker buildx build --platform "linux/amd64,linux/arm64" --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" --push .
 ###EndBlock(targets)

@@ -67,7 +67,7 @@ func (s *SnapshotUploader) CreateClients(ctx context.Context) error {
 	var err error
 	s.source, err = minio.New(s.conf.Source.S3Host, &minio.Options{
 		Creds:  credentials.NewStaticV4(s.conf.Source.AWSAccessKey, s.conf.Source.AWSSecretKey, ""),
-		Secure: false,
+		Secure: true,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create source s3 client")

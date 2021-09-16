@@ -22,6 +22,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var (
+	errNotCompleted = errors.New("job status was not completed")
+)
+
 // fetchSnapshot fetches the latest snapshot information from the box configured
 // snapshot bucket based on the provided snapshot channel and target. Then a kubernetes
 // job is kicked off that runs snapshot-uploader to actually stage the snapshot
@@ -88,6 +92,7 @@ func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem
 			Key:          s.URI,
 			AWSAccessKey: creds.AccessKeyID,
 			AWSSecretKey: creds.SecretAccessKey,
+			Digest:       s.Digest,
 		},
 	}
 
@@ -98,18 +103,22 @@ func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem
 		return errors.Wrap(err, "failed to marshal snapshot configuration")
 	}
 
+	o.log.Info("creating snapshot staging job")
 	jo, err := o.k.BatchV1().Jobs("devenv").Create(ctx, &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "snapshot-stage",
+			GenerateName: "snapshot-stage-",
 		},
 		Spec: batchv1.JobSpec{
-			Completions: aws.Int32(1),
+			Completions:  aws.Int32(1),
+			BackoffLimit: aws.Int32(3),
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
+					RestartPolicy: corev1.RestartPolicyOnFailure,
 					Containers: []corev1.Container{
 						{
-							Name:  "snapshot-stage",
-							Image: "gcr.io/outreach-docker/devenv:" + app.Info().Version,
+							Name:    "snapshot-stage",
+							Image:   "gcr.io/outreach-docker/devenv:" + app.Info().Version,
+							Command: []string{"/usr/local/bin/snapshot-uploader"},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "CONFIG",
@@ -128,23 +137,38 @@ func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem
 
 	// find a job pod and stream the logs, if any step fails
 	// find a new pod and stream the logs
+	attempt := 0
 	for ctx.Err() == nil {
+		if attempt > 10 {
+			return fmt.Errorf("reached maximum attempts")
+		}
+
 		po, err := o.findJobPod(ctx, jo)
 		if err == nil {
-			err := o.streamPodLogs(ctx, po, jo) //nolint:govet // Why: we're OK shadowing err
+			err = o.streamPodLogs(ctx, po, jo) //nolint:govet // Why: we're OK shadowing err
 			if err == nil {
 				break
 			}
+
+			// if the job status isn't completed, only try so many times
+			if errors.Is(err, errNotCompleted) {
+				// TODO(jaredallard): One day we should see if we can determine
+				// when the job has hit its own backoff
+				attempt++
+			}
 		}
 
-		o.log.WithError(err).Warn("failed to stream pod logs, or job didn't finish successfully")
-		async.Sleep(ctx, time.Second*10)
+		async.Sleep(ctx, time.Second*5)
+	}
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
 
 	return nil
 }
 
-// streamPodLogs streams a pod's logs to stdout
+// streamPodLogs streams a pod's logs to stdout and validates, when it exits
+// that the owning job finished successfully
 func (o *Options) streamPodLogs(ctx context.Context, po *corev1.Pod, jo *batchv1.Job) error {
 	req := o.k.CoreV1().Pods(po.Namespace).GetLogs(po.Name, &corev1.PodLogOptions{
 		Follow: true,
@@ -167,7 +191,7 @@ func (o *Options) streamPodLogs(ctx context.Context, po *corev1.Pod, jo *batchv1
 
 	// check if the job finished
 	if jo2.Status.CompletionTime == nil || jo2.Status.CompletionTime.Time.IsZero() {
-		return fmt.Errorf("job status was not completed")
+		return errNotCompleted
 	}
 
 	return nil

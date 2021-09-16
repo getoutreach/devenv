@@ -27,4 +27,4 @@ plugins:
     # Again using this just to get it to run on dryrun because `prepare` is skipped
     - generateNotesCmd: "make docker-build-override APP_VERSION=${nextRelease.version} >&2"
   - - "@semantic-release/exec"
-    - publishCmd: "make docker-push APP_VERSION=${nextRelease.version} >&2"
+    - publishCmd: "make docker-push-override APP_VERSION=${nextRelease.version} >&2"
