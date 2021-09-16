@@ -11,18 +11,24 @@ type S3Config struct {
 	// AWSSecretKey is the secret key to use
 	AWSSecretKey string `json:"aws_secret_key"`
 
+	// AWSSessionToken is the session token to use
+	AWSSessionToken string `json:"aws_session_token,omitempty"`
+
 	// S3Host is the host to use for connecting to S3
 	S3Host string `json:"s3_host"`
 
 	// Bucket is the bucket to use
 	Bucket string `json:"s3_bucket"`
 
+	// Region is the region of this bucket
+	Region string `json:"region"`
+
 	// Key is the key to use when accessing S3, either an object
 	// or a path depending on the expected input.
 	Key string `json:"s3_key"`
 
 	// Digest is an optional digest to use when validating an object
-	Digest string `json:"s3_md5_hash"`
+	Digest string `json:"s3_md5_hash,omitempty"`
 }
 
 type Config struct {

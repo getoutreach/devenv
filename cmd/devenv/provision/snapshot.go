@@ -87,12 +87,14 @@ func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem
 		},
 		Source: snapshot.S3Config{
 			// TODO: probably should put this in our box configuration?
-			S3Host:       "s3.amazonaws.com",
-			Bucket:       o.b.DeveloperEnvironmentConfig.SnapshotConfig.Bucket,
-			Key:          s.URI,
-			AWSAccessKey: creds.AccessKeyID,
-			AWSSecretKey: creds.SecretAccessKey,
-			Digest:       s.Digest,
+			S3Host:          "s3.amazonaws.com",
+			Bucket:          o.b.DeveloperEnvironmentConfig.SnapshotConfig.Bucket,
+			Key:             s.URI,
+			AWSAccessKey:    creds.AccessKeyID,
+			AWSSecretKey:    creds.SecretAccessKey,
+			AWSSessionToken: creds.SessionToken,
+			Digest:          s.Digest,
+			Region:          o.b.DeveloperEnvironmentConfig.SnapshotConfig.Region,
 		},
 	}
 

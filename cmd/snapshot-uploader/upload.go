@@ -66,16 +66,18 @@ func (s *SnapshotUploader) StartFromEnv(ctx context.Context, log logrus.FieldLog
 func (s *SnapshotUploader) CreateClients(ctx context.Context) error {
 	var err error
 	s.source, err = minio.New(s.conf.Source.S3Host, &minio.Options{
-		Creds:  credentials.NewStaticV4(s.conf.Source.AWSAccessKey, s.conf.Source.AWSSecretKey, ""),
+		Creds:  credentials.NewStaticV4(s.conf.Source.AWSAccessKey, s.conf.Source.AWSSecretKey, s.conf.Source.AWSSessionToken),
 		Secure: true,
+		Region: s.conf.Source.Region,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create source s3 client")
 	}
 
 	s.dest, err = minio.New(s.conf.Dest.S3Host, &minio.Options{
-		Creds:  credentials.NewStaticV4(s.conf.Dest.AWSAccessKey, s.conf.Dest.AWSSecretKey, ""),
+		Creds:  credentials.NewStaticV4(s.conf.Dest.AWSAccessKey, s.conf.Dest.AWSSecretKey, s.conf.Dest.AWSSessionToken),
 		Secure: false,
+		Region: s.conf.Dest.Region,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create dest s3 client")
