@@ -11,3 +11,5 @@ releaseOptions:
   allowPrereleases: true
 commands:
   - devenv
+  # Doesn't use the bootstrap CLI setup
+  #- snapshot-uploader

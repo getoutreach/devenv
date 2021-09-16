@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.0-experimental
-FROM gcr.io/outreach-docker/golang:1.16.2 AS builder
+FROM gcr.io/outreach-docker/golang:1.16.7 AS builder
 ARG VERSION
 ENV GOCACHE "/go-build-cache"
 ENV GOPRIVATE github.com/getoutreach/*
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/go/pkg --mount=type=cache,target=/go-build-cache 
   make BINDIR=/src/bin/ GO_EXTRA_FLAGS=-v
 
 
-FROM gcr.io/outreach-docker/golang:1.16.2
+FROM gcr.io/outreach-docker/golang:1.16.7
 ENTRYPOINT ["/usr/local/bin/devenv", "--skip-update"]
 
 LABEL "io.outreach.reporting_team"="cia-dev-tooling"
@@ -46,3 +46,4 @@ RUN wget -qO /tmp/kubecfg "https://github.com/bitnami/kubecfg/releases/download/
 ###EndBlock(afterBuild)
 
 COPY --from=builder /src/bin/devenv /usr/local/bin/devenv
+COPY --from=builder /src/bin/snapshot-uploader /usr/local/bin/snapshot-uploader

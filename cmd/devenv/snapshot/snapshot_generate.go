@@ -123,8 +123,7 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 	return err
 }
 
-func (o *Options) uploadSnapshot(ctx context.Context, mc *snapshoter.SnapshotBackend, s3c *s3.Client,
-	name string, t *box.SnapshotTarget) (string, string, error) { //nolint:funlen,gocritic
+func (o *Options) uploadSnapshot(ctx context.Context, mc *snapshoter.SnapshotBackend, s3c *s3.Client, name string, t *box.SnapshotTarget) (string, string, error) { //nolint:funlen,gocritic
 	tmpFile, err := os.CreateTemp("", "snapshot-*")
 	if err != nil {
 		return "", "", err

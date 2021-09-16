@@ -186,6 +186,7 @@ func (o *Options) applyPostRestore(ctx context.Context) error { //nolint:funlen
 	if err != nil {
 		return errors.Wrap(err, "failed to create local snapshot storage client")
 	}
+	defer m.Close()
 
 	obj, err := m.GetObject(ctx, snapshotLocalBucket, "post-restore/manifests.yaml", minio.GetObjectOptions{})
 	if err != nil {
