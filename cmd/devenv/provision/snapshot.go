@@ -4,8 +4,7 @@ import (
 	"context" //nolint:gosec // Why: We're just doing digest checking
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -20,10 +19,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-var (
-	errNotCompleted = errors.New("job status was not completed")
 )
 
 // fetchSnapshot fetches the latest snapshot information from the box configured
@@ -68,8 +63,8 @@ func (o *Options) fetchSnapshot(ctx context.Context) (*box.SnapshotLockListItem,
 	return latestSnapshotFile, o.stageSnapshot(ctx, latestSnapshotFile, &cfg)
 }
 
-// startSnapshotRestore kicks off the snapshot staging job and streams
-// its output to stdout
+// startSnapshotRestore kicks off the snapshot staging job and waits for
+// it to finish
 //nolint:funlen // Why: most of this is just structs
 func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem, cfg *aws.Config) error {
 	creds, err := cfg.Credentials.Retrieve(ctx)
@@ -105,7 +100,8 @@ func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem
 		return errors.Wrap(err, "failed to marshal snapshot configuration")
 	}
 
-	o.log.Info("creating snapshot staging job")
+	// TODO: spinner of some sort here?
+	o.log.Info("Waiting for snapshot to finish downloading")
 	jo, err := o.k.BatchV1().Jobs("devenv").Create(ctx, &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "snapshot-stage-",
@@ -137,102 +133,41 @@ func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem
 		return errors.Wrap(err, "failed to create snapshot staging job")
 	}
 
-	// find a job pod and stream the logs, if any step fails
-	// find a new pod and stream the logs
-	attempt := 0
+	return o.waitForJobToComplete(ctx, jo)
+}
+
+func (o *Options) waitForJobToComplete(ctx context.Context, jo *batchv1.Job) error {
 	for ctx.Err() == nil {
-		if attempt > 10 {
-			return fmt.Errorf("reached maximum attempts")
-		}
-
-		po, err := o.findJobPod(ctx, jo)
+		jo2, err := o.k.BatchV1().Jobs(jo.Namespace).Get(ctx, jo.Name, metav1.GetOptions{})
 		if err == nil {
-			err = o.streamPodLogs(ctx, po, jo) //nolint:govet // Why: we're OK shadowing err
-			if err == nil {
-				break
+			// check if the job finished, if so return
+			if jo2.Status.CompletionTime != nil && !jo2.Status.CompletionTime.Time.IsZero() {
+				return nil
 			}
 
-			// if the job status isn't completed, only try so many times
-			if errors.Is(err, errNotCompleted) {
-				// TODO(jaredallard): One day we should see if we can determine
-				// when the job has hit its own backoff
-				attempt++
+			for i := range jo2.Status.Conditions {
+				cond := &jo2.Status.Conditions[i]
+
+				// Exit if we find a complete job condition. In theory we should've hit this
+				// above, but it's a special catch all.
+				if cond.Type == batchv1.JobComplete && cond.Status == corev1.ConditionTrue {
+					return nil
+				}
+
+				// If we're not failed, or we're false if failed, then skip this condition
+				if cond.Type != batchv1.JobFailed || cond.Status != corev1.ConditionTrue {
+					continue
+				}
+
+				// We check here if we're BackOffLimitExceeded so we can bail out entirely.
+				// This works as backoff logic
+				if strings.Contains(cond.Reason, "BackoffLimitExceeded") {
+					return fmt.Errorf("Snapshot restore entered BackoffLimitExceeded, giving up")
+				}
 			}
 		}
 
-		async.Sleep(ctx, time.Second*5)
+		async.Sleep(ctx, time.Second*10)
 	}
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
-	return nil
-}
-
-// streamPodLogs streams a pod's logs to stdout and validates, when it exits
-// that the owning job finished successfully
-func (o *Options) streamPodLogs(ctx context.Context, po *corev1.Pod, jo *batchv1.Job) error {
-	req := o.k.CoreV1().Pods(po.Namespace).GetLogs(po.Name, &corev1.PodLogOptions{
-		Follow: true,
-	})
-
-	stream, err := req.Stream(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to create pod logs stream")
-	}
-
-	_, err = io.Copy(os.Stdout, stream)
-	if err != nil {
-		return errors.Wrap(err, "failed to stream pod logs")
-	}
-
-	jo2, err := o.k.BatchV1().Jobs(jo.Namespace).Get(ctx, jo.Name, metav1.GetOptions{})
-	if err != nil {
-		return errors.Wrap(err, "failed to get job status")
-	}
-
-	// check if the job finished
-	if jo2.Status.CompletionTime == nil || jo2.Status.CompletionTime.Time.IsZero() {
-		return errNotCompleted
-	}
-
-	return nil
-}
-
-// findJobPod finds a pod for a given job
-func (o *Options) findJobPod(ctx context.Context, jo *batchv1.Job) (*corev1.Pod, error) {
-	pods, err := o.k.CoreV1().Pods(jo.Namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list pods")
-	}
-
-	var pod *corev1.Pod
-loop:
-	for i := range pods.Items {
-		po := &pods.Items[i]
-
-		// iterate over the ownerreferences of each pod we find to see if it
-		// belongs to our job. TODO: It might also be possible to lookup the
-		// job and see if a field has this information.
-		for ii := range po.OwnerReferences {
-			or := &po.OwnerReferences[ii]
-
-			if or.Kind != "Job" {
-				continue
-			}
-
-			if or.UID != jo.UID {
-				continue
-			}
-
-			// found a pod for our job
-			pod = po
-			break loop
-		}
-	}
-	if pod == nil {
-		return nil, fmt.Errorf("no pods found")
-	}
-
-	return pod, nil
+	return ctx.Err()
 }

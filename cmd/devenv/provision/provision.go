@@ -281,6 +281,11 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		return err
 	}
 
+	// Deploy all core infrastructure because it may be different on each cloud provider.
+	if err := o.deployStages(ctx, 2); err != nil {
+		return err
+	}
+
 	snapshotTarget, err := o.fetchSnapshot(ctx)
 	if err != nil {
 		return err

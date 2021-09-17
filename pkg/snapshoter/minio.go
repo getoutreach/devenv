@@ -2,9 +2,12 @@ package snapshoter
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,7 +79,34 @@ loop:
 		return nil, errors.Wrap(err, "failed to create minio client")
 	}
 
-	return &SnapshotBackend{m, fw}, nil
+	sb := &SnapshotBackend{m, fw}
+	err = sb.waitForMinio(ctx)
+	return sb, err
+}
+
+// waitForMinio waits for minio to be accessible
+func (sb *SnapshotBackend) waitForMinio(ctx context.Context) error {
+	attempts := 0
+	for ctx.Err() == nil {
+		if attempts >= 5 {
+			return fmt.Errorf("reached maximum attempts to talk to minio")
+		}
+
+		resp, err := http.Get("http://127.0.0.1:61002/minio/health/live")
+		if err == nil {
+			resp.Body.Close()
+
+			// if 200, exit
+			if resp.StatusCode == http.StatusOK {
+				break
+			}
+		}
+
+		attempts++
+		async.Sleep(ctx, time.Second*5)
+	}
+
+	return nil
 }
 
 // Close closes the underlying snapshot backend client

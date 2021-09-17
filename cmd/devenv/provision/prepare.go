@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -30,11 +31,26 @@ func (o *Options) deployStage(ctx context.Context, stage int) error {
 	}
 
 	o.log.WithField("stage", stage).Info("Deploying Stage")
+	runtimeConf := o.KubernetesRuntime.GetConfig()
+
+	// TODO(jaredallard): the kubernetes runtime needs to be able to pass this information
+	// in somehow.
+	clusterName := "dev-environment"
+	if runtimeConf.Name == "loft" {
+		usr, err := user.Current() //nolint:govet // Why: we're OK shadowing err
+		if err != nil {
+			return err
+		}
+		clusterName = usr.Username + "-devenv"
+	}
+
 	for _, f := range files {
 		//nolint:govet // Why: we're OK shadowing err
 		o.log.WithField("manifest", f.Name()).Info("Deploying Manifest")
 		err := cmdutil.RunKubernetesCommand(ctx, stageDir, true, "kubecfg",
-			"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update", f.Name())
+			"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update",
+			"--ext-str", fmt.Sprintf("cluster_type=%s", runtimeConf.Type),
+			"--ext-str", fmt.Sprintf("cluster_name=%s", clusterName), f.Name())
 		if err != nil {
 			return err
 		}

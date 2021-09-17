@@ -355,6 +355,18 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 			RestorePVs:              boolptr.True(),
 			IncludeClusterResources: boolptr.True(),
 			PreserveNodePorts:       boolptr.True(),
+
+			// All core infrastructure should be re-applied.
+			// This should match most namespaces in manifests.jsonnet
+			ExcludedNamespaces: []string{
+				"nginx-ingress",
+				"kube-system",
+				"cert-manager",
+				"nginx-ingress",
+				"velero",
+				"minio",
+				"vault-secrets-operator",
+			},
 		},
 	}, metav1.CreateOptions{}); err != nil {
 		return err
