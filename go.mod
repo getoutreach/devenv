@@ -43,7 +43,7 @@ require (
 	k8s.io/apimachinery v0.21.3
 	k8s.io/cli-runtime v0.21.3
 	k8s.io/client-go v0.21.3
-	k8s.io/component-base v0.21.3
+	k8s.io/component-base v0.22.2
 	k8s.io/kubectl v0.21.3
 )
 
