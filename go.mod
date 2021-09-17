@@ -39,7 +39,7 @@ require (
 	// and that the replace directives are updated to match.
 	// Current version: v0.21.3
 	k8s.io/api v0.21.3
-	k8s.io/apiextensions-apiserver v0.21.3
+	k8s.io/apiextensions-apiserver v0.22.2
 	k8s.io/apimachinery v0.21.3
 	k8s.io/cli-runtime v0.21.3
 	k8s.io/client-go v0.21.3
