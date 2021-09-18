@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/getoutreach/devenv/cmd/devenv/status"
-	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/devenv/pkg/worker"
 	"github.com/getoutreach/gobox/pkg/async"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/gobox/pkg/trace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -26,21 +27,13 @@ import (
 
 // EnsureDevenvRunning returns an error if the developer
 // environment is not running.
-func EnsureDevenvRunning(ctx context.Context) error {
-	sopt, err := status.NewOptions(logrus.New())
+func EnsureDevenvRunning(ctx context.Context, b *box.Config) (kubernetesruntime.Runtime, error) {
+	runtime, err := kubernetesruntime.GetRunningRuntime(ctx, b)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("No active kubernetes runtime found, investigate with 'devenv status' or provision one")
 	}
 
-	st, err := sopt.GetStatus(ctx)
-	if err != nil {
-		return err
-	}
-	if st.Status != status.Running {
-		return fmt.Errorf("expected developer environment status to be %s, got %s instead", status.Running, st.Status)
-	}
-
-	return nil
+	return runtime, nil
 }
 
 // WaitForDevenv waits for the developer environment to be up
@@ -83,13 +76,6 @@ loop:
 	}
 
 	return nil
-}
-
-// RunKubernetesCommand runs a command with KUBECONFIG set. This command runs in the
-// provided working directory
-// Deprecated: Use cmdutil.RunKubernetesCommand instead.
-func RunKubernetesCommand(ctx context.Context, wd, name string, args ...string) error {
-	return cmdutil.RunKubernetesCommand(ctx, wd, false, name, args...)
 }
 
 type ListableType interface {

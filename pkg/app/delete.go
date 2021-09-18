@@ -7,14 +7,15 @@ import (
 	"path/filepath"
 
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-func Delete(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, appNameOrPath string) error {
-	app, err := NewApp(log, k, conf, appNameOrPath)
+func Delete(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
+	app, err := NewApp(log, k, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}

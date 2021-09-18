@@ -35,7 +35,6 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/tunnel"
 	updateapp "github.com/getoutreach/devenv/cmd/devenv/update-app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
-	"github.com/getoutreach/devenv/pkg/containerruntime"
 	oapp "github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/gobox/pkg/cfg"
@@ -208,14 +207,6 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 		updateapp.NewCmdUpdateApp(log),
 		snapshot.NewCmdSnapshot(log),
 		expose.NewCmdExpose(log),
-		{
-			// DEPRECATED: Remove on the next minor release, was undocumented
-			Name:   "remove-image",
-			Hidden: true,
-			Action: func(c *cli.Context) error {
-				return containerruntime.RemoveImage(c.Context, c.Args().First())
-			},
-		},
 		///EndBlock(commands)
 	}
 

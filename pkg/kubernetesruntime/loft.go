@@ -75,10 +75,37 @@ func (*LoftRuntime) GetConfig() RuntimeConfig {
 	}
 }
 
-func (*LoftRuntime) Status(ctx context.Context) RuntimeStatus {
+func (lr *LoftRuntime) Status(ctx context.Context) RuntimeStatus {
 	resp := RuntimeStatus{status.Status{
-		Status: status.Unknown,
+		Status: status.Unprovisioned,
 	}}
+
+	lcli, err := lr.ensureLoft(lr.log)
+	if err != nil {
+		resp.Status.Status = status.Unknown
+		resp.Status.Reason = errors.Wrap(err, "failed to get loft CLI").Error()
+		return resp
+	}
+
+	out, err := exec.CommandContext(ctx, lcli, "list", "vclusters").CombinedOutput()
+	if err != nil {
+		resp.Status.Status = status.Unknown
+		resp.Status.Reason = errors.Wrap(err, "failed to list clusters").Error()
+		return resp
+	}
+
+	clusterName, err := lr.getVclusterName()
+	if err != nil {
+		resp.Status.Status = status.Unknown
+		resp.Status.Reason = errors.Wrap(err, "failed to get cluster name").Error()
+		return resp
+	}
+
+	// TODO(jaredallard): See if we can hit loft's API instead of this
+	// hacky not totally valid contains check.
+	if strings.Contains(string(out), clusterName) {
+		resp.Status.Status = status.Running
+	}
 
 	return resp
 }
@@ -135,11 +162,8 @@ func (lr *LoftRuntime) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, loft, "delete", "vcluster", vclusterName)
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	return errors.Wrap(cmd.Run(), "failed to delete loft vcluster")
+	out, err := exec.CommandContext(ctx, loft, "delete", "vcluster", vclusterName).CombinedOutput()
+	return errors.Wrapf(err, "failed to delete loft vcluster: %s", out)
 }
 
 func (lr *LoftRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {

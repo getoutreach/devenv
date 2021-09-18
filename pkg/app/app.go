@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -28,7 +29,7 @@ const (
 	TypeBootstrap Type = "bootstrap"
 	TypeLegacy    Type = "legacy"
 
-	// TODO(Jared): Make this not specific to outreach
+	// TODO(jaredallard): Make this not specific to outreach
 	DeleteJobAnnotation = "outreach.io/db-migration-delete"
 )
 
@@ -36,6 +37,7 @@ type App struct {
 	log  logrus.FieldLogger
 	k    kubernetes.Interface
 	conf *rest.Config
+	kr   *kubernetesruntime.RuntimeConfig
 
 	// Type is the type of application this is
 	Type Type
@@ -56,7 +58,7 @@ type App struct {
 	Version string
 }
 
-func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, appNameOrPath string) (*App, error) {
+func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, appNameOrPath string, kr *kubernetesruntime.RuntimeConfig) (*App, error) {
 	version := ""
 	versionSplit := strings.SplitN(appNameOrPath, "@", 2)
 
@@ -70,6 +72,7 @@ func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, a
 	app := App{
 		k:              k,
 		conf:           conf,
+		kr:             kr,
 		Version:        version,
 		RepositoryName: appNameOrPath,
 	}

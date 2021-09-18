@@ -9,7 +9,6 @@ import (
 
 	dockerclient "github.com/docker/docker/client"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
-	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/worker"
 	"github.com/getoutreach/gobox/pkg/box"
@@ -110,42 +109,6 @@ func NewCmdSnapshot(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 			return err
 		},
 		Subcommands: []*cli.Command{
-			{
-				Name:        "create",
-				Description: "Create a new snapshot of your developer environment. Deprecated: Use generate instead.",
-				Hidden:      true,
-				Usage:       "devenv snapshot create",
-				Action: func(c *cli.Context) error {
-					if err := devenvutil.EnsureDevenvRunning(c.Context); err != nil {
-						return err
-					}
-					_, err := o.CreateSnapshot(c.Context)
-					return err
-				},
-			},
-			{
-				Name:        "restore",
-				Description: "Restore an existing snapshot of your developer environment",
-				Usage:       "devenv snapshot restore <name>",
-				Action: func(c *cli.Context) error {
-					if err := devenvutil.EnsureDevenvRunning(c.Context); err != nil {
-						log.Info("If you're looking to provision an environment with a snapshot, try 'devenv provision --snapshot <name>'")
-						return err
-					}
-					return o.RestoreSnapshot(c.Context, c.Args().First(), true)
-				},
-			},
-			{
-				Name:        "delete",
-				Description: "Delete an existing snapshot of your developer environment",
-				Usage:       "devenv snapshot delete",
-				Action: func(c *cli.Context) error {
-					if err := devenvutil.EnsureDevenvRunning(c.Context); err != nil {
-						return err
-					}
-					return o.DeleteSnapshot(c.Context, c.Args().First())
-				},
-			},
 			{
 				Name:        "generate",
 				Description: "Generate a snapshot from a snapshot definition",

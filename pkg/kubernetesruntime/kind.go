@@ -30,6 +30,10 @@ const (
 
 var configTemplate = template.Must(template.New("kind.yaml").Parse(string(embed.MustRead(embed.Config.ReadFile("config/kind.yaml")))))
 
+// Deprecated: This will be removed when there's a new way of doing this.
+// EnsureKind downloads kind
+var EnsureKind = (&KindRuntime{}).ensureKind
+
 type KindRuntime struct {
 	log logrus.FieldLogger
 }
@@ -98,7 +102,11 @@ func (kr *KindRuntime) Status(ctx context.Context) RuntimeStatus {
 		return resp
 	}
 
-	return RuntimeStatus{}
+	if cont.State.Status == "running" {
+		resp.Status.Status = status.Running
+	}
+
+	return resp
 }
 
 // Create creates a new Kind cluster

@@ -12,6 +12,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/embed"
 	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/localizer/pkg/localizer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -79,18 +80,6 @@ func NewCmdLocalApp(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 		Usage:       "Point a Kubernetes Service at a local-application",
 		Description: cmdutil.NewDescription(localAppLongDesc, localAppExample),
 		Flags: []cli.Flag{
-			// DEPRECATED: Removing in the next major release.
-			&cli.BoolFlag{
-				Name:   "not-bootstrap",
-				Hidden: true,
-				Usage:  "Equivalent to --namespace bento1a (deprecated)",
-			},
-			&cli.BoolFlag{
-				Name:   "localizer",
-				Hidden: true,
-				Usage:  "use the experimental telepresence replacement (deprecated)",
-			},
-
 			&cli.StringFlag{
 				Name:        "namespace",
 				Usage:       "Namespace your application resides in",
@@ -118,16 +107,6 @@ func NewCmdLocalApp(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 
 			for _, pstr := range c.StringSlice("port") {
 				split := strings.Split(pstr, ":")
-
-				// DEPRECATED: Remove in next major release.
-				// if we received one, this doesn't actually do anything so note that
-				// to the user. Localizer doesn't support --port how telepresence did
-				// an instead only supports _mapping_ ports, not exposing more. This
-				// is more in-line with how Kubernetes works.
-				if len(split) == 1 {
-					o.log.Warn("Providing a port without a mapped port doesn't work anymore and will be removed in a future release")
-					split = append(split, split[0])
-				}
 
 				// validate that we only got two ports
 				if len(split) != 2 {
@@ -204,7 +183,12 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	err = devenvutil.EnsureDevenvRunning(ctx)
+	b, err := box.LoadBox()
+	if err != nil {
+		return err
+	}
+
+	_, err = devenvutil.EnsureDevenvRunning(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -248,7 +232,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 	}
 
 	args = append([]string{"expose"}, args...)
-	err = devenvutil.RunKubernetesCommand(ctx, "", localizerPath, args...)
+	err = cmdutil.RunKubernetesCommand(ctx, "", false, localizerPath, args...)
 	if err != nil {
 		return err
 	}

@@ -82,7 +82,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return errors.Wrap(err, "failed to load box configuration")
 	}
 
-	err = devenvutil.EnsureDevenvRunning(ctx)
+	kr, err := devenvutil.EnsureDevenvRunning(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -93,5 +93,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Delete(ctx, o.log, o.k, o.conf, o.App)
+	return app.Delete(ctx, o.log, o.k, o.conf, o.App, kr.GetConfig())
 }

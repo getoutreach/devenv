@@ -45,6 +45,8 @@ require (
 	k8s.io/kubectl v0.21.3
 )
 
+replace github.com/getoutreach/gobox => github.com/getoutreach/gobox v1.15.1-0.20210918014459-d92ef0266c7c
+
 replace (
 	k8s.io/api => k8s.io/api v0.21.3
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.3

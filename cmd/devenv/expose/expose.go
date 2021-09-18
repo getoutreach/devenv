@@ -12,6 +12,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -257,7 +258,13 @@ func (o *Options) CreateNgrokInstance(ctx context.Context, conf *NgrokConfig) er
 }
 
 func (o *Options) Run(ctx context.Context) error {
-	if err := devenvutil.EnsureDevenvRunning(ctx); err != nil {
+	b, err := box.LoadBox()
+	if err != nil {
+		return err
+	}
+
+	//nolint:govet // Why: err shadow
+	if _, err := devenvutil.EnsureDevenvRunning(ctx, b); err != nil {
 		return err
 	}
 

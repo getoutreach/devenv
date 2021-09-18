@@ -314,7 +314,13 @@ func (o *Options) updateServices(ctx context.Context, services []*service) error
 }
 
 func (o *Options) Run(ctx context.Context) error {
-	if err := devenvutil.EnsureDevenvRunning(ctx); err != nil {
+	b, err := box.LoadBox()
+	if err != nil {
+		return err
+	}
+
+	//nolint:govet // Why: err shadow
+	if _, err := devenvutil.EnsureDevenvRunning(ctx, b); err != nil {
 		return err
 	}
 

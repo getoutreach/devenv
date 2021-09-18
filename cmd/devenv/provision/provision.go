@@ -360,6 +360,11 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	}
 
 	if o.b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
+		err = o.deployVaultSecretsOperator(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to deploy vault-secrets-operator")
+		}
+
 		o.log.Info("Ensuring Vault has valid credentials")
 		err = vault.EnsureLoggedIn(ctx, o.log, o.b, o.k)
 		if err != nil {
@@ -415,7 +420,8 @@ func (o *Options) checkPrereqs(ctx context.Context) error {
 	}
 
 	// See if a devenv already exists, only one is allowed
-	if stat := o.KubernetesRuntime.Status(ctx); stat.Status.Status != status.Unknown {
+	if stat := o.KubernetesRuntime.Status(ctx); stat.Status.Status != status.Unknown &&
+		stat.Status.Status != status.Unprovisioned {
 		return fmt.Errorf("dev-environment already exists, run devenv destroy to create a new one first")
 	}
 

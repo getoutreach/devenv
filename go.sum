@@ -486,8 +486,8 @@ github.com/function61/gokit v0.0.0-20210402130425-341c2c9ecfd0/go.mod h1:zoPwlTF
 github.com/fvbommel/sortorder v1.0.1 h1:dSnXLt4mJYH25uDDGa3biZNQsozaUWDSWeKJ0qqFfzE=
 github.com/fvbommel/sortorder v1.0.1/go.mod h1:uk88iVf1ovNn1iLfgUVU2F9o5eO30ui720w+kxuqRs0=
 github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7/go.mod h1:NR3MbYisc3/PwhQ00EMzDiPmrwpPxAn5GI05/YaO1SY=
-github.com/getoutreach/gobox v1.15.0 h1:DM5ZYnlmkwNxT4mbGoxv0PuuVDkh23tnEKn429mwEzQ=
-github.com/getoutreach/gobox v1.15.0/go.mod h1:UcoD26e6nbB7T4PCxQUQf+XPEwW7qroVusxEviJTpcI=
+github.com/getoutreach/gobox v1.15.1-0.20210918014459-d92ef0266c7c h1:U3jo+PM9nlzZB4owNu3Vk1nC4iGZ1Q163eh2JYpIkXc=
+github.com/getoutreach/gobox v1.15.1-0.20210918014459-d92ef0266c7c/go.mod h1:UcoD26e6nbB7T4PCxQUQf+XPEwW7qroVusxEviJTpcI=
 github.com/getoutreach/localizer v1.12.0 h1:GxmfsCtTXDcbceKLKs4reIw4XnZpRH5tkSGncWee5lk=
 github.com/getoutreach/localizer v1.12.0/go.mod h1:gKArRCbfSj3FmyHKmR/WnCYon62E9K9jYYMOWcyllSE=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

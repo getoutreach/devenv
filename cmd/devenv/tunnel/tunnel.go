@@ -9,6 +9,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
 	"github.com/getoutreach/gobox/pkg/async"
+	"github.com/getoutreach/gobox/pkg/box"
 	localizerapi "github.com/getoutreach/localizer/api"
 	"github.com/getoutreach/localizer/pkg/localizer"
 	"github.com/pkg/errors"
@@ -51,12 +52,6 @@ func NewCmdTunnel(log logrus.FieldLogger) *cli.Command {
 		Usage:       "Grant local access to Kubernetes Services",
 		Description: cmdutil.NewDescription(tunnelLongDesc, tunnelExample),
 		Flags: []cli.Flag{
-			// DEPRECATED: Removing in the next major release.
-			&cli.BoolFlag{
-				Name:   "localizer",
-				Hidden: true,
-				Usage:  "use the experimental telepresence replacement (deprecated: localizer is the default now)",
-			},
 			&cli.StringSliceFlag{
 				Name:  "local-app",
 				Usage: "Specify an application to run through local-app",
@@ -75,7 +70,12 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	if err2 := devenvutil.EnsureDevenvRunning(ctx); err != nil {
+	b, err := box.LoadBox()
+	if err != nil {
+		return err
+	}
+
+	if _, err2 := devenvutil.EnsureDevenvRunning(ctx, b); err2 != nil {
 		return err2
 	}
 

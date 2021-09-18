@@ -60,12 +60,6 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 				Name:  "remove-snapshot-storage",
 				Usage: "cleanup local snapshot storage",
 			},
-			// TODO: This should not be here post-MVP
-			// this should be inferred
-			&cli.StringFlag{
-				Name:  "kubernetes-runtime",
-				Usage: "Specify which kubernetes runtime to use",
-			},
 		},
 		Action: func(c *cli.Context) error {
 			o, err := NewOptions(log)
@@ -74,30 +68,32 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 			}
 			o.RemoveImageCache = c.Bool("remove-image-cache")
 			o.RemoveSnapshotStorage = c.Bool("remove-snapshot-storage")
-
-			r, err := kubernetesruntime.GetRuntime(c.String("kubernetes-runtime"))
-			if err != nil {
-				return errors.Wrap(err, "failed to find kubernetes runtime")
-			}
-			o.KubernetesRuntime = r
-
 			b, err := box.LoadBox()
 			if err != nil {
 				return errors.Wrap(err, "failed to load box configuration")
 			}
 
-			o.KubernetesRuntime.Configure(o.log, b)
+			// HACK: Right now we can't really tell which devenv was
+			// running, so we destroy them all
+			o.log.Info("Destroying devenv")
+			for _, runtime := range kubernetesruntime.GetRuntimes() {
+				runtime.Configure(o.log, b)
 
-			return o.Run(c.Context)
+				o.KubernetesRuntime = runtime
+				err := o.Run(c.Context) //nolint:govet // Why: shadowing err
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
 		},
 	}
 }
 
 func (o *Options) Run(ctx context.Context) error {
-	o.log.Info("Destroying devenv ...")
-	if err := o.KubernetesRuntime.Destroy(ctx); err != nil {
-		o.log.WithError(err).Warn("failed to remove kind cluster")
-	}
+	// nolint:errcheck // Why: Failing to remove a cluster is OK.
+	o.KubernetesRuntime.Destroy(ctx)
 
 	if o.RemoveImageCache {
 		if o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal {
@@ -115,6 +111,5 @@ func (o *Options) Run(ctx context.Context) error {
 		o.log.Warn("DEPRECATED: --remove-snapshot-storage no longer has any effect")
 	}
 
-	o.log.Info("Finished successfully")
 	return nil
 }
