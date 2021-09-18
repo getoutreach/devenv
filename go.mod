@@ -9,7 +9,7 @@ require (
 	github.com/caarlos0/env/v6 v6.7.1
 	github.com/cenkalti/backoff/v4 v4.1.1
 	github.com/docker/docker v20.10.5+incompatible
-	github.com/getoutreach/gobox v1.15.0
+	github.com/getoutreach/gobox v1.16.0
 	github.com/getoutreach/localizer v1.12.0
 	github.com/google/btree v1.0.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
@@ -44,8 +44,6 @@ require (
 	k8s.io/component-base v0.21.3
 	k8s.io/kubectl v0.21.3
 )
-
-replace github.com/getoutreach/gobox => github.com/getoutreach/gobox v1.15.1-0.20210918014459-d92ef0266c7c
 
 replace (
 	k8s.io/api => k8s.io/api v0.21.3
