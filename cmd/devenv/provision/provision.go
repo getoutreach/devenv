@@ -4,12 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
@@ -402,45 +400,6 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	}
 	if ctx.Err() != nil {
 		return ctx.Err()
-	}
-
-	if snapshotTarget.Config.ReadyAddress != "" {
-		addr := snapshotTarget.Config.ReadyAddress
-		o.log.Infof("Waiting for %s to be accessible", addr)
-
-		t := time.NewTicker(30 * time.Second)
-		for {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-t.C:
-			}
-
-			// We can't do an e2e cert validation here because Golang currently
-			// doesn't support reloading certificates from the root store, and trying
-			// to reload them ourselves would be incredibly expensive because
-			// the logic isn't exported.
-			client := &http.Client{Transport: &http.Transport{
-				//nolint:gosec // Why: see above comment
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			}}
-
-			resp, err2 := client.Get(addr) //nolint:gosec
-			if err2 == nil {
-				resp.Body.Close() // we don't need the body
-
-				// if 200, exit
-				if resp.StatusCode == http.StatusOK {
-					break
-				}
-
-				// not 200, so modify the error
-				err2 = fmt.Errorf("got status %s", resp.Status)
-			}
-
-			o.log.WithError(err2).Info("Still waiting...")
-		}
-		o.log.Info("URL was reachable")
 	}
 
 	return devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log)
