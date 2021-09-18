@@ -282,6 +282,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	}
 
 	// Deploy all core infrastructure because it may be different on each cloud provider.
+	//nolint:govet // Why: We're shadowing err wether you like it or not linter
 	if err := o.deployStages(ctx, 2); err != nil {
 		return err
 	}
@@ -446,14 +447,22 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 }
 
 func (o *Options) checkPrereqs(ctx context.Context) error {
-	// Don't need AWS credentials not using a snapshot
-	if o.Base {
-		return nil
+	// Setup the runtime
+	o.KubernetesRuntime.Configure(o.log, o.b)
+
+	// Run the pre-create command
+	if err := o.KubernetesRuntime.PreCreate(ctx); err != nil {
+		return err
 	}
 
 	// See if a devenv already exists, only one is allowed
-	if stat := o.KubernetesRuntime.Status(ctx, o.log); stat.Status.Status != status.Unknown {
+	if stat := o.KubernetesRuntime.Status(ctx); stat.Status.Status != status.Unknown {
 		return fmt.Errorf("dev-environment already exists, run devenv destroy to create a new one first")
+	}
+
+	// Don't need AWS credentials not using a snapshot
+	if o.Base {
+		return nil
 	}
 
 	copts := aws.DefaultCredentialOptions()
@@ -478,6 +487,8 @@ func (o *Options) runProvisionScripts(ctx context.Context) error {
 	}
 
 	o.log.Info("Running post-up steps")
+
+	ingressControllerIP := o.getIngressControllerIP(ctx)
 	for _, f := range files {
 		// Skip non-scripts
 		if !strings.HasSuffix(f.Name(), ".sh") {
@@ -485,7 +496,9 @@ func (o *Options) runProvisionScripts(ctx context.Context) error {
 		}
 
 		o.log.WithField("script", f.Name()).Info("Running provision.d script")
-		err2 := cmdutil.RunKubernetesCommand(ctx, shellDir, false, "/bin/bash", filepath.Join(shellDir, f.Name()))
+
+		// HACK: In the future we should just expose setting env vars
+		err2 := cmdutil.RunKubernetesCommand(ctx, shellDir, false, filepath.Join(shellDir, f.Name()), ingressControllerIP)
 		if err2 != nil {
 			return errors.Wrapf(err2, "failed to run provision.d script '%s'", f.Name())
 		}
@@ -576,6 +589,7 @@ func (o *Options) generateDockerConfig() error {
 }
 
 func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
+	// TODO: This should only be ran on kind
 	if runtime.GOOS == "darwin" && o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal {
 		if err := o.configureDockerForMac(ctx); err != nil {
 			return err
@@ -595,7 +609,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 	}
 
 	o.log.Info("Creating Kubernetes cluster")
-	if err := o.KubernetesRuntime.Create(ctx, o.log); err != nil { //nolint:govet // Why: OK w/ err shadow
+	if err := o.KubernetesRuntime.Create(ctx); err != nil { //nolint:govet // Why: OK w/ err shadow
 		return errors.Wrap(err, "failed to create kind cluster")
 	}
 

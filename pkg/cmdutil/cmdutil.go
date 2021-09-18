@@ -92,7 +92,8 @@ func RunKubernetesCommand(ctx context.Context, wd string, onlyOutputOnError bool
 	cmd.Dir = wd
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("KUBECONFIG=%s", kubeConfPath),
-		fmt.Sprintf("DEVENV_VERSION=%s", app.Version))
+		fmt.Sprintf("DEVENV_VERSION=%s", app.Version),
+	)
 	if !onlyOutputOnError {
 		cmd.Stdout = os.Stdout
 		cmd.Stdin = os.Stdin

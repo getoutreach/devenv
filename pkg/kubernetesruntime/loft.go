@@ -8,9 +8,11 @@ import (
 	"os/exec"
 	"os/user"
 	"runtime"
+	"strings"
 
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd"
@@ -26,6 +28,9 @@ type LoftRuntime struct {
 	// kubeConfig stores the kubeconfig of the last created
 	// cluster by Create()
 	kubeConfig []byte
+
+	box *box.Config
+	log logrus.FieldLogger
 }
 
 func NewLoftRuntime() *LoftRuntime {
@@ -39,6 +44,30 @@ func (*LoftRuntime) ensureLoft(log logrus.FieldLogger) (string, error) {
 	return cmdutil.EnsureBinary(log, "loft-"+loftVersion, "Kubernetes Runtime", loftDownloadURL, "")
 }
 
+func (lr *LoftRuntime) Configure(log logrus.FieldLogger, conf *box.Config) {
+	lr.box = conf
+	lr.log = log
+}
+
+func (lr *LoftRuntime) PreCreate(ctx context.Context) error {
+	lcli, err := lr.ensureLoft(lr.log)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.CommandContext(ctx, lcli, "login")
+	out, err := cmd.CombinedOutput()
+
+	// HACK: Currently `loft login` doesn't return a non-zero exit code
+	// when not logged in. Very sad.
+	if err != nil || strings.Contains(string(out), "Not logged in") {
+		lr.log.Info("Authenticating with loft")
+		return cmdutil.RunKubernetesCommand(ctx, "", false, lcli, "login", lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL)
+	}
+
+	return nil
+}
+
 func (*LoftRuntime) GetConfig() RuntimeConfig {
 	return RuntimeConfig{
 		Name: "loft",
@@ -46,7 +75,7 @@ func (*LoftRuntime) GetConfig() RuntimeConfig {
 	}
 }
 
-func (*LoftRuntime) Status(ctx context.Context, log logrus.FieldLogger) RuntimeStatus {
+func (*LoftRuntime) Status(ctx context.Context) RuntimeStatus {
 	resp := RuntimeStatus{status.Status{
 		Status: status.Unknown,
 	}}
@@ -63,8 +92,8 @@ func (*LoftRuntime) getVclusterName() (string, error) {
 	return u.Username + "-devenv", nil
 }
 
-func (lr *LoftRuntime) Create(ctx context.Context, log logrus.FieldLogger) error {
-	loft, err := lr.ensureLoft(log)
+func (lr *LoftRuntime) Create(ctx context.Context) error {
+	loft, err := lr.ensureLoft(lr.log)
 	if err != nil {
 		return err
 	}
@@ -95,8 +124,8 @@ func (lr *LoftRuntime) Create(ctx context.Context, log logrus.FieldLogger) error
 	return errors.Wrap(err, "failed to read kubeconfig")
 }
 
-func (lr *LoftRuntime) Destroy(ctx context.Context, log logrus.FieldLogger) error {
-	loft, err := lr.ensureLoft(log)
+func (lr *LoftRuntime) Destroy(ctx context.Context) error {
+	loft, err := lr.ensureLoft(lr.log)
 	if err != nil {
 		return err
 	}

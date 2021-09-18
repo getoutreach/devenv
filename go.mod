@@ -9,16 +9,15 @@ require (
 	github.com/caarlos0/env/v6 v6.7.1
 	github.com/cenkalti/backoff/v4 v4.1.1
 	github.com/docker/docker v20.10.5+incompatible
-	github.com/getoutreach/gobox v1.13.0
+	github.com/getoutreach/gobox v1.15.0
 	github.com/getoutreach/localizer v1.12.0
-	github.com/go-git/go-git/v5 v5.4.1 // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/vault/api v1.1.1
 	github.com/jetstack/cert-manager v1.5.3
 	github.com/jonboulle/clockwork v0.2.2 // indirect
-	github.com/klauspost/compress v1.11.13 // indirect
 	github.com/manifoldco/promptui v0.8.0
+	github.com/matryer/is v1.4.0 // indirect
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/novln/docker-parser v1.0.0
@@ -27,7 +26,6 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/versent/saml2aws/v2 v2.32.0
-	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/vmware-tanzu/velero v1.6.3
 	google.golang.org/genproto v0.0.0-20210716133855-ce7ef5c701ea // indirect
 	google.golang.org/grpc v1.39.0

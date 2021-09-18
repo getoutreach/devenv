@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"github.com/getoutreach/devenv/cmd/devenv/status"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -47,9 +48,11 @@ type RuntimeStatus struct {
 
 type Runtime interface {
 	GetConfig() RuntimeConfig
-	Status(context.Context, logrus.FieldLogger) RuntimeStatus
-	Create(context.Context, logrus.FieldLogger) error
-	Destroy(context.Context, logrus.FieldLogger) error
+	Status(context.Context) RuntimeStatus
+	Create(context.Context) error
+	Destroy(context.Context) error
+	PreCreate(context.Context) error
+	Configure(logrus.FieldLogger, *box.Config)
 	GetKubeConfig(context.Context) (*api.Config, error)
 }
 

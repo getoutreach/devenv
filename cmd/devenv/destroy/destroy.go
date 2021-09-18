@@ -7,6 +7,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -80,6 +81,13 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 			}
 			o.KubernetesRuntime = r
 
+			b, err := box.LoadBox()
+			if err != nil {
+				return errors.Wrap(err, "failed to load box configuration")
+			}
+
+			o.KubernetesRuntime.Configure(o.log, b)
+
 			return o.Run(c.Context)
 		},
 	}
@@ -87,7 +95,7 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 
 func (o *Options) Run(ctx context.Context) error {
 	o.log.Info("Destroying devenv ...")
-	if err := o.KubernetesRuntime.Destroy(ctx, o.log); err != nil {
+	if err := o.KubernetesRuntime.Destroy(ctx); err != nil {
 		o.log.WithError(err).Warn("failed to remove kind cluster")
 	}
 

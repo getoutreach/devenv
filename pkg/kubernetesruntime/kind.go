@@ -13,6 +13,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/embed"
 	"github.com/getoutreach/gobox/pkg/app"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd"
@@ -29,7 +30,9 @@ const (
 
 var configTemplate = template.Must(template.New("kind.yaml").Parse(string(embed.MustRead(embed.Config.ReadFile("config/kind.yaml")))))
 
-type KindRuntime struct{}
+type KindRuntime struct {
+	log logrus.FieldLogger
+}
 
 // NewKindRuntime creates a new kind runtime
 func NewKindRuntime() *KindRuntime {
@@ -43,6 +46,14 @@ func (*KindRuntime) ensureKind(log logrus.FieldLogger) (string, error) { //nolin
 	return cmdutil.EnsureBinary(log, "kind-"+KindVersion, "Kubernetes Runtime", KindDownloadURL, "")
 }
 
+func (*KindRuntime) PreCreate(ctx context.Context) error {
+	return nil
+}
+
+func (kr *KindRuntime) Configure(log logrus.FieldLogger, _ *box.Config) {
+	kr.log = log
+}
+
 func (*KindRuntime) GetConfig() RuntimeConfig {
 	return RuntimeConfig{
 		Name: "kind",
@@ -51,7 +62,7 @@ func (*KindRuntime) GetConfig() RuntimeConfig {
 }
 
 // Status gets the status of a runtime
-func (kr *KindRuntime) Status(ctx context.Context, log logrus.FieldLogger) RuntimeStatus {
+func (kr *KindRuntime) Status(ctx context.Context) RuntimeStatus {
 	resp := RuntimeStatus{status.Status{
 		Status: status.Unknown,
 	}}
@@ -91,8 +102,8 @@ func (kr *KindRuntime) Status(ctx context.Context, log logrus.FieldLogger) Runti
 }
 
 // Create creates a new Kind cluster
-func (kr *KindRuntime) Create(ctx context.Context, log logrus.FieldLogger) error {
-	kind, err := kr.ensureKind(log)
+func (kr *KindRuntime) Create(ctx context.Context) error {
+	kind, err := kr.ensureKind(kr.log)
 	if err != nil {
 		return err
 	}
@@ -133,8 +144,8 @@ func (kr *KindRuntime) Create(ctx context.Context, log logrus.FieldLogger) error
 }
 
 // Destroy destroys a kind cluster
-func (kr *KindRuntime) Destroy(ctx context.Context, log logrus.FieldLogger) error {
-	kind, err := kr.ensureKind(log)
+func (kr *KindRuntime) Destroy(ctx context.Context) error {
+	kind, err := kr.ensureKind(kr.log)
 	if err != nil {
 		return err
 	}

@@ -79,7 +79,7 @@ func ExtractAllToTempDir(ctx context.Context) (string, error) {
 		return "", err
 	}
 	tempDir := f.Name()
-	//nolint:errcheck
+	//nolint:errcheck // Why: best effort
 	f.Close()
 
 	err = os.Remove(tempDir)
