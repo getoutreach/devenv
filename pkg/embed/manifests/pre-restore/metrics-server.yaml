@@ -8,3 +8,5 @@ spec:
   version: 3.5.0
   repo: https://kubernetes-sigs.github.io/metrics-server/
   targetNamespace: kube-system
+  valuesContent: |-
+    args: [--kubelet-insecure-tls]

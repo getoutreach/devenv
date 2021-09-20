@@ -531,7 +531,8 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 		return errors.Wrap(err, "failed to setup image pull secret")
 	}
 
-	o.log.Info("Creating Kubernetes cluster")
+	o.log.WithField("runtime", o.KubernetesRuntime.GetConfig().Name).
+		Info("Creating Kubernetes cluster")
 	if err := o.KubernetesRuntime.Create(ctx); err != nil { //nolint:govet // Why: OK w/ err shadow
 		return errors.Wrap(err, "failed to create kind cluster")
 	}

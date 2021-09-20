@@ -3,14 +3,14 @@ local ok = import '../libs.libsonnet';
 local namespace = 'local-path-storage';
 
 local items = {
-  configmap: ok.Configmap('local-path-config', namespace) {
+  configmap: ok.ConfigMap('local-path-config', namespace) {
     data: {
       'config.json': std.manifestJsonEx({
         nodePathMap: [{
           node: 'DEFAULT_PATH_FOR_NON_LISTED_NODES',
           paths: ['/var/local-path-provisioner'],
         }],
-      }),
+      }, '  '),
       setup: |||
         #!/bin/sh
         while getopts "m:s:p:" opt
@@ -48,17 +48,21 @@ local items = {
 
         rm -rf ${absolutePath}
       |||,
-      'helperPod.yaml': |||
-        apiVersion: v1
-        kind: Pod
-        metadata:
-          name: helper-pod
-        spec:
-          containers:
-          - name: helper-pod
-            image: busybox
+      'helperPod.yaml': std.manifestYamlDoc({
+        apiVersion: 'v1',
+        kind: 'Pod',
+        metadata: {
+          name: 'helper-pod'
         },
-      |||,
+        spec: {
+          containers: [
+            {
+              name: 'helper-pod',
+              image: 'busybox'
+            },
+          ],
+        },
+      }),
     },
   },
   deployment: ok.Deployment('local-path-provisioner', namespace) {
@@ -77,8 +81,8 @@ local items = {
             effect: 'NoSchedule',
           }],
           serviceAccountName: 'local-path-provisioner-service-account',
-          containers_+:: {
-            default+: {
+          containers: [
+            ok.Container('local-path-provisioner') {
               image: 'gcr.io/outreach-docker/dev-tooling-team/local-path-provisioner:v0.0.19-outreach.1',
               imagePullPolicy: 'IfNotPresent',
               command: [
@@ -99,9 +103,9 @@ local items = {
                 POD_NAMESPACE: ok.FieldRef('metadata.namespace'),
               },
             },
-          },
+          ],
           volumes_+:: {
-            'config-volume': ok.ConfigMapVolume($.configmap),
+            'config-volume': ok.ConfigMapVolume(items.configmap),
           },
         },
       },

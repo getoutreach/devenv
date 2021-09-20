@@ -67,7 +67,12 @@ storage:
   size: 50Gi
 
 syncer:
-  # Don't sync ingresses, our ingress controller will handle this, and get it's own IP address
+  # Don't sync ingresses, our ingress controller will handle this, and get its own IP address
   # so we can address it via /etc/hosts
   extraArgs: ["--disable-sync-resources=ingresses"]
+
+# This allows metrics-server to function properly
+rbac:
+  clusterRole:
+    create: true
 ```

@@ -28,12 +28,12 @@ import (
 // EnsureDevenvRunning returns an error if the developer
 // environment is not running.
 func EnsureDevenvRunning(ctx context.Context, b *box.Config) (kubernetesruntime.Runtime, error) {
-	runtime, err := kubernetesruntime.GetRunningRuntime(ctx, b)
+	r, err := kubernetesruntime.GetRunningRuntime(ctx, b)
 	if err != nil {
 		return nil, fmt.Errorf("No active kubernetes runtime found, investigate with 'devenv status' or provision one")
 	}
 
-	return runtime, nil
+	return r, nil
 }
 
 // WaitForDevenv waits for the developer environment to be up
