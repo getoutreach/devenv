@@ -11,9 +11,9 @@ install: build
 
 .PHONY: docker-build-override
 docker-build-override:
-	DOCKER_BUILDKIT=1 docker build --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" .
+	docker buildx build --platform "linux/amd64" --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" .
 
 .PHONY: docker-push-override
 docker-push-override:
-	DOCKER_BUILDKIT=1 docker build --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" --push .
+	docker buildx build --platform "linux/amd64" --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" --push .
 ###EndBlock(targets)
