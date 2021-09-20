@@ -5,12 +5,6 @@ metadata:
   namespace: kube-system
 spec:
   chart: metrics-server
-  version: 5.9.3
-  repo: https://charts.bitnami.com/bitnami
+  version: 3.5.0
+  repo: https://kubernetes-sigs.github.io/metrics-server/
   targetNamespace: kube-system
-  valuesContent: |-
-    extraArgs:
-      kubelet-insecure-tls: ''
-      kubelet-preferred-address-types: InternalIP
-    apiService:
-      create: true

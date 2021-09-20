@@ -239,6 +239,14 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		return err
 	}
 
+	if o.b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
+		o.log.Info("Ensuring Vault has valid credentials")
+		err := vault.EnsureLoggedIn(ctx, o.log, o.b, o.k)
+		if err != nil {
+			return errors.Wrap(err, "failed to configure vault")
+		}
+	}
+
 	if err := devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log); err != nil {
 		return errors.Wrap(err, "failed to wait for snapshot infra to be ready")
 	}
@@ -321,14 +329,6 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	err = o.runProvisionScripts(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to run provision.d scripts")
-	}
-
-	if o.b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
-		o.log.Info("Ensuring Vault has valid credentials")
-		err = vault.EnsureLoggedIn(ctx, o.log, o.b, o.k)
-		if err != nil {
-			return errors.Wrap(err, "failed to configure vault")
-		}
 	}
 
 	o.log.Info("Regenerating certificates with local CA")
