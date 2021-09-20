@@ -136,7 +136,9 @@ func (lr *LoftRuntime) Create(ctx context.Context) error {
 	kubeConfig.Close() //nolint:errcheck
 	defer os.Remove(kubeConfig.Name())
 
-	cmd := exec.CommandContext(ctx, loft, "create", "vcluster", "--template", "devenv", lr.clusterName)
+	cmd := exec.CommandContext(ctx, loft, "create", "vcluster",
+		"--sleep-after", "3600", // sleeps after 1 hour
+		"--template", "devenv", lr.clusterName)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+kubeConfig.Name())
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
