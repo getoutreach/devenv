@@ -5,86 +5,62 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/embed"
-	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
+	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/pkg/errors"
 )
 
-func (o *Options) deployStage(ctx context.Context, stage int) error {
+func (o *Options) deployStage(ctx context.Context, stage string) error {
 	dir, err := o.extractEmbed(ctx)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(dir)
 
-	stageDir := filepath.Join(dir, "manifests", fmt.Sprintf("stage-%d", stage))
+	stageDir := filepath.Join(dir, "manifests", stage)
 
 	files, err := os.ReadDir(stageDir)
 	if err != nil {
 		return errors.Wrap(err, "failed to list files in extracted embed dir")
 	}
 
-	o.log.WithField("stage", stage).Info("Deploying Stage")
 	runtimeConf := o.KubernetesRuntime.GetConfig()
 
-	// TODO(jaredallard): the kubernetes runtime needs to be able to pass this information
-	// in somehow.
-	clusterName := "dev-environment"
-	if runtimeConf.Name == "loft" {
-		usr, err := user.Current() //nolint:govet // Why: we're OK shadowing err
-		if err != nil {
-			return err
-		}
-		clusterName = usr.Username + "-devenv"
-	}
-
 	for _, f := range files {
-		//nolint:govet // Why: we're OK shadowing err
 		o.log.WithField("manifest", f.Name()).Info("Deploying Manifest")
-		err := cmdutil.RunKubernetesCommand(ctx, stageDir, true, "kubecfg",
-			"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update",
-			"--ext-str", fmt.Sprintf("cluster_type=%s", runtimeConf.Type),
-			"--ext-str", fmt.Sprintf("cluster_name=%s", clusterName), f.Name())
-		if err != nil {
-			return err
+
+		attempts := 0
+		for ctx.Err() == nil {
+			if attempts > 3 {
+				return fmt.Errorf("ran out of attempts")
+			}
+
+			//nolint:govet // Why: we're OK shadowing err
+			err = cmdutil.RunKubernetesCommand(ctx, stageDir, true, "kubecfg",
+				"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update",
+				"--ignore-unknown", // We need to skip CRD objects, they may be created on first run
+				"--ext-str", fmt.Sprintf("cluster_type=%s", runtimeConf.Type),
+				"--ext-str", fmt.Sprintf("cluster_name=%s", runtimeConf.ClusterName),
+				"--ext-str", fmt.Sprintf("vault_addr=%s", o.b.DeveloperEnvironmentConfig.VaultConfig.Address),
+				f.Name(),
+			)
+			if err == nil {
+				break
+			}
+
+			attempts++
+			o.log.WithError(err).Warn("Failed to apply manifests, retrying ...")
+
+			async.Sleep(ctx, time.Second*2)
 		}
-	}
-
-	return nil
-}
-
-func (o *Options) deployVaultSecretsOperator(ctx context.Context) error {
-	dir, err := o.extractEmbed(ctx)
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(dir)
-
-	o.log.Info("Deploying vault-secrets-operator")
-
-	return cmdutil.RunKubernetesCommand(ctx, dir, true, "kubecfg",
-		"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update", "--ext-str",
-		fmt.Sprintf("vault_addr=%s", o.b.DeveloperEnvironmentConfig.VaultConfig.Address),
-		"manifests/vault/vault-secrets-operator.jsonnet")
-}
-
-func (o *Options) deployStages(ctx context.Context, stages int) error {
-	// e.g. stages 3
-	// stage 0, 1, 2
-	for i := 0; i != (stages + 1); i++ {
-		// Stage 0 is only for local runtimes.
-		if i == 0 && o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeRemote {
-			continue
-		}
-
-		if err := o.deployStage(ctx, i); err != nil {
-			return errors.Wrapf(err, "failed to deploy stage %d", i)
+		if ctx.Err() != nil {
+			return ctx.Err()
 		}
 	}
 

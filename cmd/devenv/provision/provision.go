@@ -21,7 +21,6 @@ import (
 	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
 	"github.com/getoutreach/devenv/cmd/devenv/snapshot"
-	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -236,53 +235,18 @@ func (o *Options) applyPostRestore(ctx context.Context) error { //nolint:funlen
 }
 
 func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,gocyclo
-	//nolint:govet // Why: We're OK shadowing err
-	err := o.deployStages(ctx, 1)
-	if err != nil {
+	if err := o.deployStage(ctx, "pre-restore"); err != nil {
 		return err
 	}
 
-	dir, err := o.extractEmbed(ctx)
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(dir)
-
-	err = cmdutil.RunKubernetesCommand(ctx, dir, true, "kubecfg",
-		"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update", "manifests/stage-2/minio.yaml")
-	if err != nil {
-		return err
-	}
-
-	err = devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log)
-	if err != nil {
+	if err := devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log); err != nil {
 		return errors.Wrap(err, "failed to wait for snapshot infra to be ready")
 	}
 
-	// TODO(jaredallard): the kubernetes runtime needs to be able to pass this information
-	// in somehow.
-	clusterName := "dev-environment"
-	if o.KubernetesRuntime.GetConfig().Name == "loft" {
-		usr, err := user.Current() //nolint:govet // Why: we're OK shadowing err
-		if err != nil {
-			return err
-		}
-		clusterName = usr.Username + "-devenv"
-	}
-
-	runtimeConf := o.KubernetesRuntime.GetConfig()
-	err = cmdutil.RunKubernetesCommand(ctx, dir, true, "kubecfg",
-		"--jurl", "https://raw.githubusercontent.com/getoutreach/jsonnet-libs/master", "update",
-		"--ext-str", fmt.Sprintf("cluster_type=%s", runtimeConf.Type),
-		"--ext-str", fmt.Sprintf("cluster_name=%s", clusterName), "manifests/stage-2/velero.jsonnet")
-	if err != nil {
+	if dir, err := o.extractEmbed(ctx); err != nil {
 		return err
-	}
-
-	// Deploy all core infrastructure because it may be different on each cloud provider.
-	//nolint:govet // Why: We're shadowing err wether you like it or not linter
-	if err := o.deployStages(ctx, 2); err != nil {
-		return err
+	} else if dir != "" {
+		defer os.RemoveAll(dir)
 	}
 
 	snapshotTarget, err := o.fetchSnapshot(ctx)
@@ -360,11 +324,6 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	}
 
 	if o.b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
-		err = o.deployVaultSecretsOperator(ctx)
-		if err != nil {
-			return errors.Wrap(err, "failed to deploy vault-secrets-operator")
-		}
-
 		o.log.Info("Ensuring Vault has valid credentials")
 		err = vault.EnsureLoggedIn(ctx, o.log, o.b, o.k)
 		if err != nil {
@@ -393,7 +352,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		}
 
 		err2 = ropts.Run(ctx, []string{})
-		if err != nil && strings.Contains(err2.Error(), "the object has been modified") {
+		if err2 != nil && strings.Contains(err2.Error(), "the object has been modified") {
 			o.log.WithError(err2).Warn("Retrying certificate regeneration operation ...")
 			async.Sleep(ctx, time.Second*5)
 			continue
@@ -419,9 +378,11 @@ func (o *Options) checkPrereqs(ctx context.Context) error {
 		return err
 	}
 
-	// See if a devenv already exists, only one is allowed
-	if stat := o.KubernetesRuntime.Status(ctx); stat.Status.Status != status.Unknown &&
-		stat.Status.Status != status.Unprovisioned {
+	// Ensure no other devenvs across all runtimes are running
+	r, err := kubernetesruntime.GetRunningRuntime(ctx, o.b)
+	if err != kubernetesruntime.ErrNotRunning {
+		o.log.WithError(err).Warn("Failed to ensure that no other devenvs were running")
+	} else if err == nil && r != nil {
 		return fmt.Errorf("dev-environment already exists, run devenv destroy to create a new one first")
 	}
 
@@ -473,11 +434,7 @@ func (o *Options) runProvisionScripts(ctx context.Context) error {
 }
 
 func (o *Options) deployBaseManifests(ctx context.Context) error {
-	if err := o.deployStages(ctx, 2); err != nil {
-		return err
-	}
-
-	if err := o.deployVaultSecretsOperator(ctx); err != nil {
+	if err := o.deployStage(ctx, "pre-restore"); err != nil {
 		return err
 	}
 
@@ -554,10 +511,11 @@ func (o *Options) generateDockerConfig() error {
 }
 
 func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
-	// TODO: This should only be ran on kind
-	if runtime.GOOS == "darwin" && o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal {
-		if err := o.configureDockerForMac(ctx); err != nil {
-			return err
+	if o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal {
+		if runtime.GOOS == "darwin" {
+			if err := o.configureDockerForMac(ctx); err != nil {
+				return err
+			}
 		}
 	}
 

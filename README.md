@@ -71,4 +71,3 @@ syncer:
   # so we can address it via /etc/hosts
   extraArgs: ["--disable-sync-resources=ingresses"]
 ```
-

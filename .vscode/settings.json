@@ -2,6 +2,12 @@
   // Please consider contributing back all added
   // settings to bootstrap!
   ///Block(settings)
+  "jsonnet.extStrs": {
+    // These are example values to make jsonnet happy.
+    "cluster_name": "jaredallard-devenv",
+    "cluster_type": "local",
+    "vault_addr": "https://vault.outreach.cloud"
+  },
   ///EndBlock(settings)
   "go.lintTool": "golangci-lint",
   "go.lintFlags": [],

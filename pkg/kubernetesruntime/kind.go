@@ -60,8 +60,9 @@ func (kr *KindRuntime) Configure(log logrus.FieldLogger, _ *box.Config) {
 
 func (*KindRuntime) GetConfig() RuntimeConfig {
 	return RuntimeConfig{
-		Name: "kind",
-		Type: RuntimeTypeLocal,
+		Name:        "kind",
+		Type:        RuntimeTypeLocal,
+		ClusterName: "dev-environment",
 	}
 }
 

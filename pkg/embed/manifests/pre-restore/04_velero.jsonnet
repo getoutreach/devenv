@@ -1,8 +1,11 @@
+local cluster = import '../cluster.libsonnet';
 local ok = import '../libs.libsonnet';
 local name = 'velero';
-local cluster_name = std.extVar('cluster_name');
-local cluster_type = std.extVar('cluster_type');
 
+local podsPath = if cluster.type == 'local' then
+  '/var/lib/kubelet/pods'
+else
+  '/var/lib/loft/%s/kubelet/pods' % cluster.name;
 
 local manifests = ok.HelmChart(name) {
   namespace:: name,
@@ -53,7 +56,7 @@ local manifests = ok.HelmChart(name) {
     },
     deployRestic: true,
     restic: {
-      podVolumePath: if cluster_type == 'local' then '/var/lib/kubelet/pods' else '/var/lib/loft/%s/kubelet/pods' % cluster_name,
+      podVolumePath: podsPath,
     },
   },
 };

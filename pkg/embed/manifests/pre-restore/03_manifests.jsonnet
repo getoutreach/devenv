@@ -13,10 +13,8 @@ local namespaces = [
   'bento1a',
 ];
 
-local items = {};
-
 ok.FilteredList() {
-  items_+:: items + {
+  items_+:: {
     [n + '_namespace']: ok.Namespace(n)
     for n in namespaces
   },

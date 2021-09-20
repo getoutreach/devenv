@@ -27,6 +27,9 @@ spec:
       requests:
         memory: 200Mi
 
+    persistence:
+      size: 5Gi
+
     # These credentials ARE INSECURE, but this is just for a local / restricted access
     # cloud devenv so this is currently acceptable. Potentially in the future we will
     # lock these down.

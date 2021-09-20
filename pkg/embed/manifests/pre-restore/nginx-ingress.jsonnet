@@ -11,20 +11,20 @@ local clusterTypeConf = {
       service+: {
         type: 'NodePort',
         annotations: {
-          "devenv.outreach.io/local-ip": "127.0.0.1",
-          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"name\":\"nginx-ingress-ingress-nginx-controller\",\"namespace\":\"nginx-ingress\"},\"spec\":{\"ports\":[{\"name\":\"http\",\"nodePort\":32080,\"port\":80,\"protocol\":\"TCP\",\"targetPort\":\"http\"},{\"name\":\"https\",\"nodePort\":32443,\"port\":443,\"protocol\":\"TCP\",\"targetPort\":\"https\"}]}}"
+          'devenv.outreach.io/local-ip': '127.0.0.1',
+          'kubectl.kubernetes.io/last-applied-configuration': '{"apiVersion":"v1","kind":"Service","metadata":{"name":"nginx-ingress-ingress-nginx-controller","namespace":"nginx-ingress"},"spec":{"ports":[{"name":"http","nodePort":32080,"port":80,"protocol":"TCP","targetPort":"http"},{"name":"https","nodePort":32443,"port":443,"protocol":"TCP","targetPort":"https"}]}}',
         },
         nodePorts: {
           http: 32080,
-          https: 32443
+          https: 32443,
         },
       },
     },
   },
-  'remote': {},
+  remote: {},
 };
 
-local manifests = ok.HelmChart("ingress-nginx") {
+local manifests = ok.HelmChart('ingress-nginx') {
   namespace:: name,
   version:: '4.0.1',
   repo:: 'https://kubernetes.github.io/ingress-nginx',
@@ -32,7 +32,7 @@ local manifests = ok.HelmChart("ingress-nginx") {
     controller: {
       watchIngressWithoutClass: true,
       admissionWebhooks: {
-        enabled: false
+        enabled: false,
       },
     },
   } + clusterTypeConf[cluster_type],

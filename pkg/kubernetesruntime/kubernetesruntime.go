@@ -39,7 +39,11 @@ type RuntimeConfig struct {
 	// Name is the name of this runtime
 	Name string
 
+	// Type is the type of runtime this is
 	Type RuntimeType
+
+	// ClusterName is the name of the cluster this runtime creates
+	ClusterName string
 }
 
 // RuntimeStatus is the status of a given runtime

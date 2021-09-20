@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -31,6 +32,9 @@ type LoftRuntime struct {
 
 	box *box.Config
 	log logrus.FieldLogger
+
+	clusterName   string
+	clusterNameMu sync.Mutex
 }
 
 func NewLoftRuntime() *LoftRuntime {
@@ -68,10 +72,26 @@ func (lr *LoftRuntime) PreCreate(ctx context.Context) error {
 	return nil
 }
 
-func (*LoftRuntime) GetConfig() RuntimeConfig {
+func (lr *LoftRuntime) GetConfig() RuntimeConfig {
+	// Generate the cluster name. Ensure that this is
+	// thread safe.
+	lr.clusterNameMu.Lock()
+	if lr.clusterName == "" {
+		u, err := user.Current()
+		if err != nil {
+			u = &user.User{
+				Username: "unknown",
+			}
+		}
+
+		lr.clusterName = u.Username + "-devenv"
+	}
+	lr.clusterNameMu.Unlock()
+
 	return RuntimeConfig{
-		Name: "loft",
-		Type: RuntimeTypeRemote,
+		Name:        "loft",
+		Type:        RuntimeTypeRemote,
+		ClusterName: lr.clusterName,
 	}
 }
 
@@ -94,38 +114,17 @@ func (lr *LoftRuntime) Status(ctx context.Context) RuntimeStatus {
 		return resp
 	}
 
-	clusterName, err := lr.getVclusterName()
-	if err != nil {
-		resp.Status.Status = status.Unknown
-		resp.Status.Reason = errors.Wrap(err, "failed to get cluster name").Error()
-		return resp
-	}
-
 	// TODO(jaredallard): See if we can hit loft's API instead of this
 	// hacky not totally valid contains check.
-	if strings.Contains(string(out), clusterName) {
+	if strings.Contains(string(out), lr.clusterName) {
 		resp.Status.Status = status.Running
 	}
 
 	return resp
 }
 
-func (*LoftRuntime) getVclusterName() (string, error) {
-	u, err := user.Current()
-	if err != nil {
-		return "", errors.Wrap(err, "failed to lookup current user")
-	}
-
-	return u.Username + "-devenv", nil
-}
-
 func (lr *LoftRuntime) Create(ctx context.Context) error {
 	loft, err := lr.ensureLoft(lr.log)
-	if err != nil {
-		return err
-	}
-
-	vclusterName, err := lr.getVclusterName()
 	if err != nil {
 		return err
 	}
@@ -137,7 +136,7 @@ func (lr *LoftRuntime) Create(ctx context.Context) error {
 	kubeConfig.Close() //nolint:errcheck
 	defer os.Remove(kubeConfig.Name())
 
-	cmd := exec.CommandContext(ctx, loft, "create", "vcluster", "--template", "devenv", vclusterName)
+	cmd := exec.CommandContext(ctx, loft, "create", "vcluster", "--template", "devenv", lr.clusterName)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+kubeConfig.Name())
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -157,12 +156,7 @@ func (lr *LoftRuntime) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	vclusterName, err := lr.getVclusterName()
-	if err != nil {
-		return err
-	}
-
-	out, err := exec.CommandContext(ctx, loft, "delete", "vcluster", vclusterName).CombinedOutput()
+	out, err := exec.CommandContext(ctx, loft, "delete", "vcluster", lr.clusterName).CombinedOutput()
 	return errors.Wrapf(err, "failed to delete loft vcluster: %s", out)
 }
 
