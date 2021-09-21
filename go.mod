@@ -26,7 +26,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.8.2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/versent/saml2aws/v2 v2.30.0
+	github.com/versent/saml2aws/v2 v2.32.0
 	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/vmware-tanzu/velero v1.6.3
 	google.golang.org/genproto v0.0.0-20210716133855-ce7ef5c701ea // indirect
