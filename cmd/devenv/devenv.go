@@ -45,9 +45,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
+
 	// Place any extra imports for your startup code here
 	///Block(imports)
+	cmdcontext "github.com/getoutreach/devenv/cmd/devenv/context"
 	///EndBlock(imports)
 )
 
@@ -104,12 +106,6 @@ func overrideConfigLoaders() {
 }
 
 func main() { //nolint:funlen // Why: We can't dwindle this down anymore without adding complexity.
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
-		}
-	}()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	log := logrus.New()
 
@@ -150,13 +146,12 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 	}
 	defer exit()
 
-	// wrap everything around a call as this ensures any panics
-	// are caught and recorded properly
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf("panic %v", r)
+			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
 		}
 	}()
+
 	ctx = trace.StartCall(ctx, "main")
 	defer trace.EndCall(ctx)
 
@@ -207,6 +202,7 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 		updateapp.NewCmdUpdateApp(log),
 		snapshot.NewCmdSnapshot(log),
 		expose.NewCmdExpose(log),
+		cmdcontext.NewCmdContext(log),
 		///EndBlock(commands)
 	}
 

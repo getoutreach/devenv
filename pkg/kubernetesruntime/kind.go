@@ -192,3 +192,25 @@ func (kr *KindRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {
 
 	return kubeconfig, nil
 }
+
+func (kr *KindRuntime) GetClusters(ctx context.Context) ([]*RuntimeCluster, error) {
+	curStatus := kr.Status(ctx).Status.Status
+
+	if curStatus == status.Unprovisioned || curStatus == status.Unknown {
+		// Only return a cluster if it's actively running
+		return []*RuntimeCluster{}, nil
+	}
+
+	kubeconfig, err := kr.GetKubeConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return []*RuntimeCluster{
+		{
+			Name:        KindClusterName,
+			RuntimeName: kr.GetConfig().Name,
+			KubeConfig:  kubeconfig,
+		},
+	}, nil
+}

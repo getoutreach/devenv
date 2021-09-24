@@ -46,6 +46,19 @@ type RuntimeConfig struct {
 	ClusterName string
 }
 
+// RuntimeCluster is a cluster that is currently provisioned / accessible by a given
+// runtime.
+type RuntimeCluster struct {
+	// RuntimeName is the name of the runtime that created this cluster
+	RuntimeName string
+
+	// Name is the name of this cluster.
+	Name string
+
+	// KubeConfig is the kubeconfig that allows access to this cluster.
+	KubeConfig *api.Config
+}
+
 // RuntimeStatus is the status of a given runtime
 type RuntimeStatus struct {
 	status.Status
@@ -77,6 +90,9 @@ type Runtime interface {
 	// GetKubeConfig returns the kube conf for the active cluster
 	// created by this runtime.
 	GetKubeConfig(context.Context) (*api.Config, error)
+
+	// GetClusters returns all clusters currently accessible by this runtime
+	GetClusters(context.Context) ([]*RuntimeCluster, error)
 }
 
 var runtimes = []Runtime{NewLoftRuntime(), NewKindRuntime()}

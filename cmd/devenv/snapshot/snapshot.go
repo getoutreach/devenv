@@ -18,7 +18,6 @@ import (
 	"gopkg.in/yaml.v2"
 
 	corev1 "k8s.io/api/core/v1"
-	apixv1client "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -53,12 +52,11 @@ var (
 )
 
 type Options struct {
-	log  logrus.FieldLogger
-	k    kubernetes.Interface
-	r    *rest.Config
-	d    dockerclient.APIClient
-	vc   veleroclient.Interface
-	apix apixv1client.Interface
+	log logrus.FieldLogger
+	k   kubernetes.Interface
+	r   *rest.Config
+	d   dockerclient.APIClient
+	vc  veleroclient.Interface
 }
 
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
@@ -86,11 +84,6 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 		opts.vc, err = veleroclient.NewForConfig(conf)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create snapshot client")
-		}
-
-		opts.apix, err = apixv1client.NewForConfig(conf)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create apix client")
 		}
 	}
 
