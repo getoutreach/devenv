@@ -7,12 +7,16 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
+	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
+	"github.com/getoutreach/devenv/pkg/devenvutil"
+	"github.com/getoutreach/devenv/pkg/embed"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -80,12 +84,43 @@ func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, cluster
 
 	o.log.Infof("Setting context to %s", o.DesiredContext)
 	conf.CurrentContext = o.DesiredContext
+
+	// Create a Kubernetes client for the new context
+	ccc := clientcmd.NewDefaultClientConfig(*cluster.KubeConfig, &clientcmd.ConfigOverrides{})
+	rconf, err := ccc.ClientConfig()
+	if err != nil {
+		return errors.Wrap(err, "failed to create rest config for context")
+	}
+	k, err := kubernetes.NewForConfig(rconf)
+	if err != nil {
+		return errors.Wrap(err, "failed to create kubernetes client for context")
+	}
+
+	// Update /etc/hosts to point to the new ingress controller
+	dir, err := embed.ExtractAllToTempDir(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to extract bundled shell scripts to a temporary directory")
+	}
+	defer os.RemoveAll(dir)
+	shellDir := filepath.Join(dir, "shell")
+	ingressControllerIP := devenvutil.GetIngressControllerIP(ctx, k, o.log)
+
+	// HACK: In the future we should just expose setting env vars
+	err = cmdutil.RunKubernetesCommand(ctx, shellDir, false, filepath.Join(shellDir, "30-etc-hosts.sh"), ingressControllerIP)
+	if err != nil {
+		return errors.Wrap(err, "failed to run script to setup /etc/hosts to point to context")
+	}
+
+	err = clientcmd.WriteToFile(*cluster.KubeConfig, filepath.Join(homeDir, ".outreach", "kubeconfig.yaml"))
+	if err != nil {
+		return errors.Wrap(err, "failed to write kubeconfig")
+	}
+
 	if err := config.SaveConfig(ctx, conf); err != nil { //nolint:govet // Why: err shadow
 		return errors.Wrap(err, "failed to save devenv config")
 	}
 
-	err = clientcmd.WriteToFile(*cluster.KubeConfig, filepath.Join(homeDir, ".outreach", "kubeconfig.yaml"))
-	return errors.Wrap(err, "failed to write kubeconfig")
+	return nil
 }
 
 func (o *Options) Run(ctx gocontext.Context) error {

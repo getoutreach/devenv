@@ -1,23 +1,26 @@
-package provision
+package devenvutil
 
 import (
 	"context"
 	"time"
 
 	"github.com/getoutreach/gobox/pkg/async"
+	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const ingressControllerIPAnnotation = "devenv.outreach.io/local-ip"
 
-// getIngressControllerIP finds the IP address of the ingress controller
+// GetIngressControllerIP finds the IP address of the ingress controller
 // being used in the devenv
-func (o *Options) getIngressControllerIP(ctx context.Context) string {
+func GetIngressControllerIP(ctx context.Context, k kubernetes.Interface, log logrus.FieldLogger) string {
 	fallbackIP := "127.0.0.1"
 
-	if o.k != nil {
-		s, err := o.k.CoreV1().Services("nginx-ingress").Get(ctx, "ingress-nginx-controller", metav1.GetOptions{})
+	if k != nil {
+		s, err := k.CoreV1().Services("nginx-ingress").Get(ctx, "ingress-nginx-controller", metav1.GetOptions{})
 		if err != nil {
 			return fallbackIP
 		}
@@ -37,7 +40,7 @@ func (o *Options) getIngressControllerIP(ctx context.Context) string {
 		// iterate over the ingress to find its IP, if it doesn't
 		// have one then we should wait until it gets one
 		for ctx.Err() == nil {
-			s, err = o.k.CoreV1().Services("nginx-ingress").Get(ctx, "ingress-nginx-controller", metav1.GetOptions{})
+			s, err = k.CoreV1().Services("nginx-ingress").Get(ctx, "ingress-nginx-controller", metav1.GetOptions{})
 			if err == nil {
 				for i := range s.Status.LoadBalancer.Ingress {
 					ing := &s.Status.LoadBalancer.Ingress[i]
@@ -45,7 +48,7 @@ func (o *Options) getIngressControllerIP(ctx context.Context) string {
 				}
 			}
 
-			o.log.Info("Waiting for ingress controller to get an IP")
+			log.Info("Waiting for ingress controller to get an IP")
 			async.Sleep(ctx, time.Second*10)
 		}
 	}

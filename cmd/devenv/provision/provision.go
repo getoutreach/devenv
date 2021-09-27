@@ -407,7 +407,7 @@ func (o *Options) runProvisionScripts(ctx context.Context) error {
 
 	o.log.Info("Running post-up steps")
 
-	ingressControllerIP := o.getIngressControllerIP(ctx)
+	ingressControllerIP := devenvutil.GetIngressControllerIP(ctx, o.k, o.log)
 	for _, f := range files {
 		// Skip non-scripts
 		if !strings.HasSuffix(f.Name(), ".sh") {

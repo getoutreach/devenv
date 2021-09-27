@@ -256,7 +256,7 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(_ context.Context, vc *managemen
 		Args:       []string{"token", "--silent", "--config", loftConfPath},
 	}
 
-	contextName := "dev-environment"
+	contextName := vc.VirtualCluster.Name
 	return &api.Config{
 		Clusters: map[string]*api.Cluster{
 			contextName: {
@@ -264,9 +264,17 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(_ context.Context, vc *managemen
 					vc.Cluster + "/" + vc.VirtualCluster.Namespace + "/" + vc.VirtualCluster.Name,
 			},
 		},
-		CurrentContext: KindClusterName,
+		// IDEA: If we ever merge this into ~/.kube/config we could support
+		// setting this to the virtual cluster name.
+		CurrentContext: "dev-environment",
 		Contexts: map[string]*api.Context{
 			contextName: {
+				Cluster:  contextName,
+				AuthInfo: contextName,
+			},
+
+			// Compat with tools that want this context.
+			"dev-environment": {
 				Cluster:  contextName,
 				AuthInfo: contextName,
 			},
