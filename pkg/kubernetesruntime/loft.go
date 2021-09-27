@@ -19,7 +19,6 @@ import (
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"k8s.io/api/node/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -28,6 +27,7 @@ import (
 	managementv1 "github.com/loft-sh/api/pkg/apis/management/v1"
 	loftapi "github.com/loft-sh/api/pkg/client/clientset_generated/clientset"
 	loftconfig "github.com/loft-sh/loftctl/pkg/client"
+	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 )
 
 const (
@@ -251,26 +251,29 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(_ context.Context, vc *managemen
 
 	authInfo := api.NewAuthInfo()
 	authInfo.Exec = &api.ExecConfig{
-		APIVersion: v1alpha1.SchemeGroupVersion.String(),
+		APIVersion: clientauthv1alpha1.SchemeGroupVersion.String(),
 		Command:    loftCLIPath,
 		Args:       []string{"token", "--silent", "--config", loftConfPath},
 	}
 
+	contextName := "dev-environment"
 	return &api.Config{
 		Clusters: map[string]*api.Cluster{
-			"vcluster": {
+			contextName: {
 				Server: lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL + "/kubernetes/virtualcluster/" +
 					vc.Cluster + "/" + vc.VirtualCluster.Namespace + "/" + vc.VirtualCluster.Name,
 			},
 		},
 		CurrentContext: KindClusterName,
 		Contexts: map[string]*api.Context{
-			"vcluster": {
-				Cluster:  "vcluster",
-				AuthInfo: "vcluster",
+			contextName: {
+				Cluster:  contextName,
+				AuthInfo: contextName,
 			},
 		},
-		AuthInfos: map[string]*api.AuthInfo{},
+		AuthInfos: map[string]*api.AuthInfo{
+			contextName: authInfo,
+		},
 	}
 }
 

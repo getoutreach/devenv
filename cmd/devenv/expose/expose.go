@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/gobox/pkg/box"
@@ -263,12 +264,17 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
+	conf, err := config.LoadConfig(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to load config")
+	}
+
 	//nolint:govet // Why: err shadow
-	if _, err := devenvutil.EnsureDevenvRunning(ctx, b); err != nil {
+	if _, err := devenvutil.EnsureDevenvRunning(ctx, conf, b); err != nil {
 		return err
 	}
 
-	conf, err := o.EnsureAuthenticated(ctx)
+	exconf, err := o.EnsureAuthenticated(ctx)
 	if err != nil {
 		return err
 	}
@@ -278,5 +284,5 @@ func (o *Options) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "failed to find service '%s', cannot create ngrok pod", fmt.Sprintf("%s/%s", o.ServiceNamespace, o.ServiceName))
 	}
 
-	return o.CreateNgrokInstance(ctx, conf)
+	return o.CreateNgrokInstance(ctx, exconf)
 }

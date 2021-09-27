@@ -6,6 +6,7 @@ import (
 
 	localapp "github.com/getoutreach/devenv/cmd/devenv/local-app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
 	"github.com/getoutreach/gobox/pkg/async"
@@ -75,7 +76,12 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	if _, err2 := devenvutil.EnsureDevenvRunning(ctx, b); err2 != nil {
+	conf, err := config.LoadConfig(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to load config")
+	}
+
+	if _, err2 := devenvutil.EnsureDevenvRunning(ctx, conf, b); err2 != nil {
 		return err2
 	}
 

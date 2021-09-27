@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/getoutreach/devenv/cmd/devenv/status"
+	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/devenv/pkg/worker"
 	"github.com/getoutreach/gobox/pkg/async"
@@ -27,8 +28,8 @@ import (
 
 // EnsureDevenvRunning returns an error if the developer
 // environment is not running.
-func EnsureDevenvRunning(ctx context.Context, b *box.Config) (kubernetesruntime.Runtime, error) {
-	r, err := kubernetesruntime.GetRunningRuntime(ctx, b)
+func EnsureDevenvRunning(ctx context.Context, conf *config.Config, b *box.Config) (kubernetesruntime.Runtime, error) {
+	r, err := kubernetesruntime.GetRuntimeFromContext(conf, b)
 	if err != nil {
 		return nil, fmt.Errorf("No active kubernetes runtime found, investigate with 'devenv status' or provision one")
 	}

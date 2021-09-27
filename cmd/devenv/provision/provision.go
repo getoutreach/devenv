@@ -24,6 +24,7 @@ import (
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
@@ -378,14 +379,6 @@ func (o *Options) checkPrereqs(ctx context.Context) error {
 		return err
 	}
 
-	// Ensure no other devenvs across all runtimes are running
-	r, err := kubernetesruntime.GetRunningRuntime(ctx, o.b)
-	if err != kubernetesruntime.ErrNotRunning {
-		o.log.WithError(err).Warn("Failed to ensure that no other devenvs were running")
-	} else if err == nil && r != nil {
-		return fmt.Errorf("dev-environment already exists, run devenv destroy to create a new one first")
-	}
-
 	// Don't need AWS credentials not using a snapshot
 	if o.Base {
 		return nil
@@ -443,7 +436,7 @@ func (o *Options) deployBaseManifests(ctx context.Context) error {
 
 func (o *Options) removeServiceImages(ctx context.Context) error {
 	// Only run this on local clusters
-	if o.KubernetesRuntime.GetConfig().Name != "kind" {
+	if o.KubernetesRuntime.GetConfig().Type != kubernetesruntime.RuntimeTypeLocal {
 		return nil
 	}
 
@@ -523,6 +516,20 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 		return errors.Wrap(err, "pre-req check failed")
 	}
 
+	// Ensure that we don't try to provision a devenv when the default one already exists
+	clusters, err := o.KubernetesRuntime.GetClusters(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure devenv didn't already exist")
+	}
+
+	// Iterate over the clusters that currently exist, if it's equal to the default cluster
+	// then throw an error -- it already exists and must be deleted with 'devenv destroy'
+	for _, c := range clusters {
+		if c.Name == o.KubernetesRuntime.GetConfig().ClusterName {
+			return fmt.Errorf("devenv already exists, run 'devenv destroy' to be able to run provision again")
+		}
+	}
+
 	if err := o.ensureImagePull(ctx); err != nil { //nolint:govet // Why: OK w/ err shadow
 		return errors.Wrap(err, "failed to setup image pull secret")
 	}
@@ -535,6 +542,20 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 		Info("Creating Kubernetes cluster")
 	if err := o.KubernetesRuntime.Create(ctx); err != nil { //nolint:govet // Why: OK w/ err shadow
 		return errors.Wrap(err, "failed to create kind cluster")
+	}
+
+	conf, err := config.LoadConfig(ctx)
+	if err != nil {
+		conf = &config.Config{}
+	}
+
+	// HACK: If we ever add support for running multiple clusters (which makes sense because of context support)
+	// we will need to update this
+	conf.CurrentContext = o.KubernetesRuntime.GetConfig().Name + ":" + o.KubernetesRuntime.GetConfig().ClusterName
+
+	err = config.SaveConfig(ctx, conf)
+	if err != nil {
+		return errors.Wrap(err, "failed to save devenv config")
 	}
 
 	kconf, err := o.KubernetesRuntime.GetKubeConfig(ctx)

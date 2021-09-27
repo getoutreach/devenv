@@ -4,18 +4,21 @@ import (
 	gocontext "context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"text/tabwriter"
 
+	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/box"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type Options struct {
-	log logrus.FieldLogger
-
-	Args []string
+	log            logrus.FieldLogger
+	DesiredContext string
 }
 
 func NewOptions(log logrus.FieldLogger) *Options {
@@ -33,16 +36,68 @@ func NewCmdContext(log logrus.FieldLogger) *cli.Command {
 		Usage:           "Change which devenv you're currently using",
 		SkipFlagParsing: true,
 		Action: func(c *cli.Context) error {
-			o.Args = c.Args().Slice()
+			o.DesiredContext = c.Args().First()
 			return o.Run(c.Context)
 		},
 	}
+}
+
+func (o *Options) displayContexts(_ gocontext.Context, conf *config.Config, clusters []*kubernetesruntime.RuntimeCluster) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "CURRENT\tCLUSTER NAME\tRUNTIME\tCONTEXT NAME")
+
+	for _, c := range clusters {
+		var current string
+		if runtime, name := conf.ParseContext(); c.RuntimeName == runtime && c.Name == name {
+			current = "*"
+		}
+
+		fmt.Fprintln(w, current+"\t"+c.Name+"\t"+c.RuntimeName+"\t"+c.RuntimeName+":"+c.Name)
+	}
+
+	return w.Flush()
+}
+
+func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, clusters []*kubernetesruntime.RuntimeCluster) error {
+	newConfig := &config.Config{CurrentContext: o.DesiredContext}
+
+	newRuntime, newClusterName := newConfig.ParseContext()
+	var cluster *kubernetesruntime.RuntimeCluster
+	for _, c := range clusters {
+		if c.RuntimeName == newRuntime && c.Name == newClusterName {
+			cluster = c
+			break
+		}
+	}
+	if cluster == nil {
+		return fmt.Errorf("unknown context '%s', check current contexts by running 'devenv context'", o.DesiredContext)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return errors.Wrap(err, "failed to get user's home directory")
+	}
+
+	o.log.Infof("Setting context to %s", o.DesiredContext)
+	conf.CurrentContext = o.DesiredContext
+	if err := config.SaveConfig(ctx, conf); err != nil { //nolint:govet // Why: err shadow
+		return errors.Wrap(err, "failed to save devenv config")
+	}
+
+	err = clientcmd.WriteToFile(*cluster.KubeConfig, filepath.Join(homeDir, ".outreach", "kubeconfig.yaml"))
+	return errors.Wrap(err, "failed to write kubeconfig")
 }
 
 func (o *Options) Run(ctx gocontext.Context) error {
 	b, err := box.LoadBox()
 	if err != nil {
 		return err
+	}
+
+	conf, err := config.LoadConfig(ctx)
+	if err != nil {
+		conf = &config.Config{}
+		o.log.WithError(err).Warn("failed to read devenv configuration")
 	}
 
 	runtimes := kubernetesruntime.GetEnabledRuntimes(b)
@@ -64,14 +119,9 @@ func (o *Options) Run(ctx gocontext.Context) error {
 		clusters = append(clusters, newClusters...)
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tRUNTIME")
-
-	for _, c := range clusters {
-		fmt.Fprintln(w, c.Name+"\t"+c.RuntimeName)
+	if o.DesiredContext != "" {
+		return o.setContext(ctx, conf, clusters)
 	}
 
-	w.Flush()
-
-	return nil
+	return o.displayContexts(ctx, conf, clusters)
 }

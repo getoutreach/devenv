@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/embed"
 	"github.com/getoutreach/devenv/pkg/kubernetestunnelruntime"
@@ -188,7 +189,12 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	_, err = devenvutil.EnsureDevenvRunning(ctx, b)
+	conf, err := config.LoadConfig(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to load config")
+	}
+
+	_, err = devenvutil.EnsureDevenvRunning(ctx, conf, b)
 	if err != nil {
 		return err
 	}

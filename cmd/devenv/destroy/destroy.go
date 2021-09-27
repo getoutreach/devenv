@@ -2,9 +2,11 @@ package destroy
 
 import (
 	"context"
+	"fmt"
 
 	dockerclient "github.com/docker/docker/client"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/box"
@@ -29,6 +31,7 @@ type Options struct {
 	d   dockerclient.APIClient
 
 	// Options
+	CurrentClusterName    string
 	RemoveImageCache      bool
 	RemoveSnapshotStorage bool
 	KubernetesRuntime     kubernetesruntime.Runtime
@@ -68,30 +71,40 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 			}
 			o.RemoveImageCache = c.Bool("remove-image-cache")
 			o.RemoveSnapshotStorage = c.Bool("remove-snapshot-storage")
+
 			b, err := box.LoadBox()
 			if err != nil {
-				return errors.Wrap(err, "failed to load box configuration")
+				return errors.Wrap(err, "failed to read box config")
 			}
 
-			// HACK: Right now we can't really tell which devenv was
-			// running, so we destroy them all
-			o.log.Info("Destroying devenv")
-			for _, runtime := range kubernetesruntime.GetRuntimes() {
-				runtime.Configure(o.log, b)
-
-				o.KubernetesRuntime = runtime
-				err := o.Run(c.Context) //nolint:govet // Why: shadowing err
-				if err != nil {
-					return err
-				}
+			conf, err := config.LoadConfig(c.Context)
+			if err != nil {
+				return errors.Wrap(err, "failed to read devenv config")
 			}
 
-			return nil
+			runtimeName, clusterName := conf.ParseContext()
+			if clusterName == "" {
+				return fmt.Errorf("invalid clusterName, was currentcontext set in devenv config?")
+			}
+
+			r, err := kubernetesruntime.GetRuntimeFromContext(conf, b)
+			if err != nil {
+				return errors.Wrapf(err, "failed to get runtime from context, was the runtime '%s' enabled?", runtimeName)
+			}
+
+			o.CurrentClusterName = clusterName
+			o.KubernetesRuntime = r
+
+			return o.Run(c.Context)
 		},
 	}
 }
 
 func (o *Options) Run(ctx context.Context) error {
+	if o.CurrentClusterName != o.KubernetesRuntime.GetConfig().ClusterName {
+		return fmt.Errorf("cannot delete clusters that don't belong to us")
+	}
+
 	// nolint:errcheck // Why: Failing to remove a cluster is OK.
 	o.KubernetesRuntime.Destroy(ctx)
 

@@ -3,12 +3,12 @@ package config
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -26,6 +26,7 @@ func (c *Config) ParseContext() (runtime, name string) {
 	return spl[0], spl[1]
 }
 
+// getConfigFile returns the path to the devenv config file
 func getConfigFile() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -44,12 +45,12 @@ func LoadConfig(ctx context.Context) (*Config, error) {
 
 	f, err := os.Open(confPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to open config file for writing")
+		return nil, errors.Wrap(err, "failed to open config file for reading")
 	}
 	defer f.Close()
 
 	var conf *Config
-	err = json.NewDecoder(f).Decode(&conf)
+	err = yaml.NewDecoder(f).Decode(&conf)
 	return conf, err
 }
 
@@ -60,11 +61,16 @@ func SaveConfig(_ context.Context, c *Config) error {
 		return errors.Wrap(err, "failed to get config file path")
 	}
 
+	err = os.MkdirAll(filepath.Dir(confPath), 0755)
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure config dirs existed")
+	}
+
 	f, err := os.Create(confPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to open config file for writing")
 	}
 	defer f.Close()
 
-	return json.NewEncoder(f).Encode(c)
+	return yaml.NewEncoder(f).Encode(c)
 }

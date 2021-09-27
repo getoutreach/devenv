@@ -6,8 +6,10 @@ package kubernetesruntime
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/getoutreach/devenv/cmd/devenv/status"
+	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -129,15 +131,27 @@ func GetEnabledRuntimes(b *box.Config) []Runtime {
 	return selectedRuntimes
 }
 
-// GetRunningRuntime returns the current running runtime based
-// on the results from Status(). If no runtime is currently running
-// ErrNoRuntime is returned as an error
-func GetRunningRuntime(ctx context.Context, b *box.Config) (Runtime, error) {
-	for _, r := range GetEnabledRuntimes(b) {
-		if r.Status(ctx).Status.Status == status.Running {
+// GetRuntimeFromContext returns the runtime from the current config.Context
+func GetRuntimeFromContext(conf *config.Config, b *box.Config) (Runtime, error) {
+	if conf == nil {
+		return nil, fmt.Errorf("no config provided")
+	}
+
+	if conf.CurrentContext == "" {
+		return nil, fmt.Errorf("no context was set in the config")
+	}
+
+	runtime, _ := conf.ParseContext()
+	if runtime == "" {
+		return nil, fmt.Errorf("failed to parse context")
+	}
+
+	runtimes := GetEnabledRuntimes(b)
+	for _, r := range runtimes {
+		if r.GetConfig().Name == runtime {
 			return r, nil
 		}
 	}
 
-	return nil, ErrNotRunning
+	return nil, fmt.Errorf("failed to find enabled runtime named '%s'", runtime)
 }
