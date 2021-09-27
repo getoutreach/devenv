@@ -1,7 +1,7 @@
 package provision
 
 import (
-	"context" //nolint:gosec // Why: We're just doing digest checking
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -81,7 +81,7 @@ func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem
 			AWSSecretKey: "miniosecret",
 		},
 		Source: snapshot.S3Config{
-			// TODO: probably should put this in our box configuration?
+			// IDEA: probably should put this in our box configuration?
 			S3Host:          "s3.amazonaws.com",
 			Bucket:          o.b.DeveloperEnvironmentConfig.SnapshotConfig.Bucket,
 			Key:             s.URI,
@@ -100,7 +100,7 @@ func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem
 		return errors.Wrap(err, "failed to marshal snapshot configuration")
 	}
 
-	// TODO: spinner of some sort here?
+	// IDEA: spinner of some sort here?
 	o.log.Info("Waiting for snapshot to finish downloading")
 	jo, err := o.k.BatchV1().Jobs("devenv").Create(ctx, &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{

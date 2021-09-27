@@ -312,7 +312,7 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 			IncludeClusterResources: boolptr.True(),
 			PreserveNodePorts:       boolptr.True(),
 
-			// This should be moved into the generation framework
+			// TODO(DTSS-829): This should be moved into the generation framework
 			ExcludedNamespaces: []string{
 				"nginx-ingress",
 				"kube-system",

@@ -9,9 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	ingressControllerIPAnnotation = "devenv.outreach.io/local-ip"
-)
+const ingressControllerIPAnnotation = "devenv.outreach.io/local-ip"
 
 // getIngressControllerIP finds the IP address of the ingress controller
 // being used in the devenv

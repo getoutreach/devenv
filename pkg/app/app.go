@@ -29,7 +29,6 @@ const (
 	TypeBootstrap Type = "bootstrap"
 	TypeLegacy    Type = "legacy"
 
-	// TODO(jaredallard): Make this not specific to outreach
 	DeleteJobAnnotation = "outreach.io/db-migration-delete"
 )
 
