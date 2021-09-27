@@ -128,16 +128,16 @@ func (o *Options) EnsureAuthenticated(ctx context.Context) (*NgrokConfig, error)
 
 	configPath := filepath.Join(homeDir, ".ngrok2", "ngrok.yml")
 
-	var config *NgrokConfig
+	var conf *NgrokConfig
 
 	f, err := os.Open(configPath)
 	if err == nil {
 		// Validate the auth token at some point, for now we ensure it's not null
-		err = yaml.NewDecoder(f).Decode(&config)
+		err = yaml.NewDecoder(f).Decode(&conf)
 		f.Close()
 		if err == nil {
-			if config.AuthToken != "" {
-				return config, nil
+			if conf.AuthToken != "" {
+				return conf, nil
 			}
 		}
 	}
@@ -157,16 +157,16 @@ func (o *Options) EnsureAuthenticated(ctx context.Context) (*NgrokConfig, error)
 		return nil, errors.Wrap(err, "provided input was empty")
 	}
 
-	config = &NgrokConfig{
+	conf = &NgrokConfig{
 		AuthToken: resp,
 	}
 
-	b, err := yaml.Marshal(config)
+	b, err := yaml.Marshal(conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal ngrok configuration")
 	}
 
-	return config, ioutil.WriteFile(configPath, b, 0600)
+	return conf, ioutil.WriteFile(configPath, b, 0600)
 }
 
 func (o *Options) CreateNgrokInstance(ctx context.Context, conf *NgrokConfig) error { //nolint:funlen

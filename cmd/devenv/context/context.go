@@ -62,7 +62,7 @@ func (o *Options) displayContexts(_ gocontext.Context, conf *config.Config, clus
 	return w.Flush()
 }
 
-func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, clusters []*kubernetesruntime.RuntimeCluster) error {
+func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, clusters []*kubernetesruntime.RuntimeCluster) error { //nolint:funlen
 	newConfig := &config.Config{CurrentContext: o.DesiredContext}
 
 	newRuntime, newClusterName := newConfig.ParseContext()
