@@ -19,7 +19,6 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pkg/errors"
-	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -106,7 +105,7 @@ func (s *SnapshotUploader) Prepare(ctx context.Context) error {
 			continue
 		}
 
-		s.log.WithField("key", obj.Key).Debug("removing old snapshot file")
+		s.log.WithField("key", obj.Key).Info("removing old snapshot file")
 		err2 := s.dest.RemoveObject(ctx, s.conf.Dest.Bucket, obj.Key, minio.RemoveObjectOptions{})
 		if err2 != nil {
 			s.log.WithError(err2).WithField("key", obj.Key).Warn("failed to remove old snapshot key")
@@ -118,21 +117,12 @@ func (s *SnapshotUploader) Prepare(ctx context.Context) error {
 
 // DownloadFile downloads a file from a given URL and returns the path to it
 func (s *SnapshotUploader) DownloadFile(ctx context.Context) error { //nolint:funlen
-	objInfo, err := s.source.StatObject(ctx, s.conf.Source.Bucket, s.conf.Source.Key, minio.StatObjectOptions{})
-	if err != nil {
-		return errors.Wrap(err, "failed to read snapshot information from remote")
-	}
-
+	s.log.Info("Starting download")
 	obj, err := s.source.GetObject(ctx, s.conf.Source.Bucket, s.conf.Source.Key, minio.GetObjectOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch the latest snapshot information")
 	}
 	defer obj.Close()
-
-	bar := progressbar.DefaultBytes(
-		objInfo.Size,
-		"downloading snapshot",
-	)
 
 	tmpFile, err := os.CreateTemp("", "devenv-snapshot-*")
 	if err != nil {
@@ -153,11 +143,12 @@ func (s *SnapshotUploader) DownloadFile(ctx context.Context) error { //nolint:fu
 	}
 
 	digest := md5.New() //nolint:gosec // Why: we're just checking the digest
-	_, err = io.Copy(io.MultiWriter(bar, f, digest), obj)
+	_, err = io.Copy(io.MultiWriter(f, digest), obj)
 	f.Close()
 	if err != nil {
 		return errors.Wrap(err, "failed to write file")
 	}
+	s.log.Info("Finished download snapshot")
 
 	gotMD5 := base64.StdEncoding.EncodeToString(digest.Sum(nil))
 	if gotMD5 != s.conf.Source.Digest {
@@ -176,18 +167,8 @@ func (s *SnapshotUploader) DownloadFile(ctx context.Context) error { //nolint:fu
 // UploadArchiveContents uploads a given archive's contents into
 // the configured destination bucket.
 func (s *SnapshotUploader) UploadArchiveContents(ctx context.Context) error {
-	info, err := s.downloadedFile.Stat()
-	if err != nil {
-		return err
-	}
-
-	bar := progressbar.DefaultBytes(
-		info.Size(),
-		"extracting snapshot",
-	)
-
-	tarReader := tar.NewReader(io.TeeReader(s.downloadedFile, bar))
-
+	s.log.Info("Extracting snapshot into minio bucket")
+	tarReader := tar.NewReader(s.downloadedFile)
 	for {
 		header, err := tarReader.Next() //nolint:govet // Why: OK shadowing err
 		if err == io.EOF {
@@ -210,7 +191,10 @@ func (s *SnapshotUploader) UploadArchiveContents(ctx context.Context) error {
 			}
 		}
 	}
+	s.log.Info("Finished extracting snapshot")
 
+	s.log.Info("Writing snapshot state to minio")
+	defer s.log.Info("Finished writing snapshot state")
 	currentYaml, err := yaml.Marshal(localSnapshot{
 		Digest: s.conf.Source.Digest,
 	})
