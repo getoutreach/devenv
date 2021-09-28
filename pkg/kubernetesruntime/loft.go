@@ -146,7 +146,7 @@ func (lr *LoftRuntime) GetConfig() RuntimeConfig {
 			}
 		}
 
-		lr.clusterName = u.Username + "-devenv"
+		lr.clusterName = strings.ReplaceAll(u.Username, ".", "-") + "-devenv"
 	}
 	lr.clusterNameMu.Unlock()
 
