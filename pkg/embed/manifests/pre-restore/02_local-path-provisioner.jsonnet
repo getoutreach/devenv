@@ -52,13 +52,13 @@ local items = {
         apiVersion: 'v1',
         kind: 'Pod',
         metadata: {
-          name: 'helper-pod'
+          name: 'helper-pod',
         },
         spec: {
           containers: [
             {
               name: 'helper-pod',
-              image: 'busybox'
+              image: 'busybox',
             },
           ],
         },
