@@ -10,13 +10,16 @@ import (
 	"time"
 
 	"github.com/getoutreach/devenv/internal/vault"
+	"github.com/getoutreach/devenv/pkg/app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/embed"
+	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/pkg/errors"
 )
 
-func (o *Options) deployStage(ctx context.Context, stage string) error {
+func (o *Options) deployStage(ctx context.Context, stage string) error { //nolint:funlen
 	dir, err := o.extractEmbed(ctx)
 	if err != nil {
 		return err
@@ -61,6 +64,27 @@ func (o *Options) deployStage(ctx context.Context, stage string) error {
 		}
 		if ctx.Err() != nil {
 			return ctx.Err()
+		}
+	}
+
+	if o.b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
+		err = vault.EnsureLoggedIn(ctx, o.log, o.b, o.k)
+		if err != nil {
+			return errors.Wrap(err, "failed to ensure vault had valid credentials")
+		}
+	}
+
+	err = devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log)
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for pods to be ready w")
+	}
+
+	// Deploy resourcer if we're a local runtime, we can only run things on a single node
+	// so we should mutate all pods to have zero resources
+	if o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal {
+		err := app.Deploy(ctx, o.log, o.k, o.r, "resourcer", o.KubernetesRuntime.GetConfig())
+		if err != nil {
+			return errors.Wrap(err, "failed to deploy resourcer")
 		}
 	}
 

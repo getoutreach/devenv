@@ -323,6 +323,7 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 				"vault-secrets-operator",
 				"local-path-storage",
 				"monitoring",
+				"resourcer--bento1a",
 			},
 		},
 	}, metav1.CreateOptions{}); err != nil {

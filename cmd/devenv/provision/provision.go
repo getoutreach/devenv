@@ -21,7 +21,6 @@ import (
 	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
 	"github.com/getoutreach/devenv/cmd/devenv/snapshot"
-	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
@@ -238,18 +237,6 @@ func (o *Options) applyPostRestore(ctx context.Context) error { //nolint:funlen
 func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,gocyclo
 	if err := o.deployStage(ctx, "pre-restore"); err != nil {
 		return err
-	}
-
-	if o.b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
-		o.log.Info("Ensuring Vault has valid credentials")
-		err := vault.EnsureLoggedIn(ctx, o.log, o.b, o.k)
-		if err != nil {
-			return errors.Wrap(err, "failed to configure vault")
-		}
-	}
-
-	if err := devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log); err != nil {
-		return errors.Wrap(err, "failed to wait for snapshot infra to be ready")
 	}
 
 	if dir, err := o.extractEmbed(ctx); err != nil {
@@ -591,6 +578,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 				return err2
 			}
 			dopts.KubernetesRuntime = o.KubernetesRuntime
+			dopts.CurrentClusterName = o.KubernetesRuntime.GetConfig().ClusterName
 
 			cctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 			defer cancel()

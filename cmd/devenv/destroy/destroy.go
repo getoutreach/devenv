@@ -105,6 +105,9 @@ func (o *Options) Run(ctx context.Context) error {
 		return fmt.Errorf("cannot delete clusters that don't belong to us")
 	}
 
+	o.log.WithField("runtime", o.KubernetesRuntime.GetConfig().Name).
+		Infof("Destroying devenv '%s'", o.CurrentClusterName)
+
 	// nolint:errcheck // Why: Failing to remove a cluster is OK.
 	o.KubernetesRuntime.Destroy(ctx)
 
