@@ -63,6 +63,7 @@ func (s *SnapshotUploader) StartFromEnv(ctx context.Context, log logrus.FieldLog
 
 // CreateClients creates the S3 clients for our dest and source
 func (s *SnapshotUploader) CreateClients(ctx context.Context) error {
+	s.log.Info("Creating snapshot clients")
 	var err error
 	s.source, err = minio.New(s.conf.Source.S3Host, &minio.Options{
 		Creds:  credentials.NewStaticV4(s.conf.Source.AWSAccessKey, s.conf.Source.AWSSecretKey, s.conf.Source.AWSSessionToken),
@@ -88,6 +89,7 @@ func (s *SnapshotUploader) CreateClients(ctx context.Context) error {
 // Prepare checks if a snapshot needs to be downloaded or not
 // and otherwise prepares the dest to receive a snapshot.
 func (s *SnapshotUploader) Prepare(ctx context.Context) error {
+	s.log.Info("Getting current snapshot information")
 	if currentResp, err := s.dest.GetObject(ctx, s.conf.Dest.Bucket, "current.yaml", minio.GetObjectOptions{}); err == nil {
 		var current *localSnapshot
 		err = yaml.NewDecoder(currentResp).Decode(&current)
@@ -99,13 +101,13 @@ func (s *SnapshotUploader) Prepare(ctx context.Context) error {
 		}
 	}
 
-	s.log.Info("preparing local storage for snapshot")
+	s.log.Info("Preparing local storage for snapshot")
 	for obj := range s.dest.ListObjects(ctx, s.conf.Dest.Bucket, minio.ListObjectsOptions{Recursive: true}) {
 		if obj.Key == "" {
 			continue
 		}
 
-		s.log.WithField("key", obj.Key).Info("removing old snapshot file")
+		s.log.WithField("key", obj.Key).Info("Removing old snapshot file")
 		err2 := s.dest.RemoveObject(ctx, s.conf.Dest.Bucket, obj.Key, minio.RemoveObjectOptions{})
 		if err2 != nil {
 			s.log.WithError(err2).WithField("key", obj.Key).Warn("failed to remove old snapshot key")
