@@ -45,6 +45,11 @@ func LoadConfig(ctx context.Context) (*Config, error) {
 
 	f, err := os.Open(confPath)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// For now stub the config and return the kind devenv. In the future
+			// we might want to do something more sophisticated here.
+			return &Config{CurrentContext: "kind:dev-environment"}, nil
+		}
 		return nil, errors.Wrap(err, "failed to open config file for reading")
 	}
 	defer f.Close()
