@@ -35,10 +35,16 @@ func NewCmdContext(log logrus.FieldLogger) *cli.Command {
 	o := NewOptions(log)
 
 	return &cli.Command{
-		Name:            "context",
-		Aliases:         []string{"c"},
-		Usage:           "Change which devenv you're currently using",
-		SkipFlagParsing: true,
+		Name:    "context",
+		Aliases: []string{"c"},
+		Usage:   "Change which devenv you're currently using (much like kubectl config use-context).",
+		Description: `
+Use the current, running, KinD devenv: 
+	devenv context kind:dev-environment
+
+Display all available contexts:
+	devenv context
+`,
 		Action: func(c *cli.Context) error {
 			o.DesiredContext = c.Args().First()
 			return o.Run(c.Context)
