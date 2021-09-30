@@ -101,136 +101,124 @@ jobs:
             - store_test_results: # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
                 path: /tmp/test-results
   release-dryrun:
-    docker:
-      - image: gcr.io/outreach-docker/bootstrap/testbed:1.17.1
-        auth:
-          username: _json_key
-          password: $GCLOUD_SERVICE_ACCOUNT
+    machine:
+      image: ubuntu-2004:202107-02
+      docker_layer_caching: true
     environment:
       GOPRIVATE: github.com/getoutreach/*
       GOPROXY: https://proxy.golang.org
     steps:
-      - with_job_span:
-          steps:
-            - setup_remote_docker:
-                docker_layer_caching: true
-                version: 20.10.7
-            - checkout
-            - add_ssh_keys
-            - run:
-                name: Setup npm Authentication
-                command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-            - restore_cache:
-                keys:
-                  - v1-release-node-cache-{{ checksum "package.json" }}
-                  - v1-release-node-cache-
-            - run:
-                name: Install semantic-release Dependencies
-                command: buildevents cmd $CIRCLE_WORKFLOW_ID $STEP_SPAN_ID install-sem-release-dependencies -- yarn --frozen-lockfile
-            - save_cache:
-                key: v1-release-node-cache-{{  checksum "package.json" }}
-                paths:
-                  - node_modules
-            ### Deviation(dockerAuth): We build our container via semantic-release for now
-            - run:
-                name: Configurate Docker Authentication
-                command: |-
-                  # Setup SSH access
-                  eval "$(ssh-agent)"
-                  ssh-add -D
+      - checkout
+      - add_ssh_keys
+      - run:
+          name: Setup npm Authentication
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - restore_cache:
+          keys:
+            - v1-release-node-cache-{{ checksum "package.json" }}
+            - v1-release-node-cache-
+      - run:
+          name: Install semantic-release Dependencies
+          command: yarn --frozen-lockfile
+      - save_cache:
+          key: v1-release-node-cache-{{  checksum "package.json" }}
+          paths:
+            - node_modules
+      ### Deviation(dockerAuth): We build our container via semantic-release for now
+      - run:
+          name: Setting up Environment
+          command: |-
+            pip3 install yq
+            ./scripts/bootstrap-lib.sh
 
-                  # HACK: This is a fragile attempt to add whatever key is for github.com to our ssh-agent
-                  grep -A 2 github.com ~/.ssh/config | grep IdentityFile | awk '{ print $2 }' | xargs -n 1 ssh-add
+            # Setup SSH access
+            source "./.bootstrap/shell/lib/ssh-auth.sh"
 
-                  # Setup Docker (GCR) Auth
-                  ./scripts/bootstrap-lib.sh
-                  source "./.bootstrap/shell/lib/docker-authn.sh"
-            - run:
-                name: Release (Dry-run)
-                command: |-
-                  # Make https://github.com/pvdlg/env-ci/blob/master/services/circleci.js
-                  # think we're not on a PR.
+            # Setup Docker (GCR) Auth
+            source "./.bootstrap/shell/lib/docker-authn.sh"
 
-                  # Store these and set them after
-                  OLD_CIRCLE_PR_NUMBER=$CIRCLE_PR_NUMBER
-                  OLD_CIRCLE_PULL_REQUEST=$CIRCLE_PULL_REQUEST
-                  OLD_CI_PULL_REQUEST=$CI_PULL_REQUEST
-                  OLD_CIRCLE_BRANCH=$CIRCLE_BRANCH
+            # Setup buildkit for arm64
+            source "./.bootstrap/shell/lib/buildx.sh"
+      - run:
+          name: Release (Dry-run)
+          command: |-
+            # Make https://github.com/pvdlg/env-ci/blob/master/services/circleci.js
+            # think we're not on a PR.
 
-                  # Fetch the API URL for usage later.
-                  # 19 comes from the length of https://github.com/
-                  export CIRCLE_PR_API_URL=$(echo "https://api.github.com/repos/${CIRCLE_PULL_REQUEST:19}" | sed "s/\/pull\//\/pulls\//")
+            # Store these and set them after
+            OLD_CIRCLE_PR_NUMBER=$CIRCLE_PR_NUMBER
+            OLD_CIRCLE_PULL_REQUEST=$CIRCLE_PULL_REQUEST
+            OLD_CI_PULL_REQUEST=$CI_PULL_REQUEST
+            OLD_CIRCLE_BRANCH=$CIRCLE_BRANCH
 
-                  # Remove evidence of us being on a PR.
-                  unset CIRCLE_PR_NUMBER
-                  unset CIRCLE_PULL_REQUEST
-                  unset CI_PULL_REQUEST
+            # Fetch the API URL for usage later.
+            # 19 comes from the length of https://github.com/
+            export CIRCLE_PR_API_URL=$(echo "https://api.github.com/repos/${CIRCLE_PULL_REQUEST:19}" | sed "s/\/pull\//\/pulls\//")
 
-                  # Fetch the base branch from the API, since CircleCI doesn't expose it.
-                  export CIRCLE_BRANCH=$(curl -s -H "Authorization: token ${OUTREACH_GITHUB_TOKEN}" "$CIRCLE_PR_API_URL" | jq -r '.base.ref')
+            # Remove evidence of us being on a PR.
+            unset CIRCLE_PR_NUMBER
+            unset CIRCLE_PULL_REQUEST
+            unset CI_PULL_REQUEST
 
-                  # Act like we're on the base branch.
-                  git branch -D "$CIRCLE_BRANCH"  || true
-                  git checkout -b "$CIRCLE_BRANCH" || true
+            # Fetch the base branch from the API, since CircleCI doesn't expose it.
+            export CIRCLE_BRANCH=$(curl -s -H "Authorization: token ${OUTREACH_GITHUB_TOKEN}" "$CIRCLE_PR_API_URL" | jq -r '.base.ref')
 
-                  # Run the releaser now.
-                  GH_TOKEN=$OUTREACH_GITHUB_TOKEN yarn --frozen-lockfile semantic-release --dry-run
+            # Act like we're on the base branch.
+            git branch -D "$CIRCLE_BRANCH"  || true
+            git checkout -b "$CIRCLE_BRANCH" || true
 
-                  export CIRCLE_PR_NUMBER=$OLD_CIRCLE_PR_NUMBER
-                  export CIRCLE_PULL_REQUEST=$OLD_CIRCLE_PULL_REQUEST
-                  export CI_PULL_REQUEST=$OLD_CI_PULL_REQUEST
-                  export CIRCLE_BRANCH=$OLD_CIRCLE_BRANCH
+            # Run the releaser now.
+            GH_TOKEN=$OUTREACH_GITHUB_TOKEN yarn --frozen-lockfile semantic-release --dry-run
+
+            export CIRCLE_PR_NUMBER=$OLD_CIRCLE_PR_NUMBER
+            export CIRCLE_PULL_REQUEST=$OLD_CIRCLE_PULL_REQUEST
+            export CI_PULL_REQUEST=$OLD_CI_PULL_REQUEST
+            export CIRCLE_BRANCH=$OLD_CIRCLE_BRANCH
   release:
-    docker:
-      - image: gcr.io/outreach-docker/bootstrap/testbed:1.17.1
-        auth:
-          username: _json_key
-          password: $GCLOUD_SERVICE_ACCOUNT
+    machine:
+      image: ubuntu-2004:202107-02
+      docker_layer_caching: true
     environment:
       GOPRIVATE: github.com/getoutreach/*
       GOPROXY: https://proxy.golang.org
     steps:
-      - with_job_span:
-          steps:
-            - setup_remote_docker:
-                docker_layer_caching: true
-                version: 20.10.7
-            - checkout
-            - add_ssh_keys
-            - run:
-                name: Setup npm Authentication
-                command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-            - restore_cache:
-                keys:
-                  - v1-release-node-cache-{{ checksum "package.json" }}
-                  - v1-release-node-cache-
-            - run:
-                name: Install semantic-release Dependencies
-                command: buildevents cmd $CIRCLE_WORKFLOW_ID $STEP_SPAN_ID install-sem-release-dependencies -- yarn --frozen-lockfile
-            - save_cache:
-                key: v1-release-node-cache-{{  checksum "package.json" }}
-                paths:
-                  - node_modules
+      - checkout
+      - add_ssh_keys
+      - run:
+          name: Setup npm Authentication
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - restore_cache:
+          keys:
+            - v1-release-node-cache-{{ checksum "package.json" }}
+            - v1-release-node-cache-
+      - run:
+          name: Install semantic-release Dependencies
+          command: yarn --frozen-lockfile
+      - save_cache:
+          key: v1-release-node-cache-{{  checksum "package.json" }}
+          paths:
+            - node_modules
 
-            ### Deviation(dockerAuth): We build our container via semantic-release for now
-            - run:
-                name: Configurate Docker Authentication
-                command: |-
-                  # Setup SSH access
-                  eval "$(ssh-agent)"
-                  ssh-add -D
+      ### Deviation(dockerAuth): We build our container via semantic-release for now
+      - run:
+          name: Setting up Environment
+          command: |-
+            pip3 install yq
+            ./scripts/bootstrap-lib.sh
 
-                  # HACK: This is a fragile attempt to add whatever key is for github.com to our ssh-agent
-                  grep -A 2 github.com ~/.ssh/config | grep IdentityFile | awk '{ print $2 }' | xargs -n 1 ssh-add
+            # Setup SSH access
+            source "./.bootstrap/shell/lib/ssh-auth.sh"
 
-                  # Setup Docker (GCR) Auth
-                  ./scripts/bootstrap-lib.sh
-                  source "./.bootstrap/shell/lib/docker-authn.sh"
-            - run:
-                name: Release
-                command: |
-                  export GH_TOKEN=$OUTREACH_GITHUB_TOKEN
-                  buildevents cmd $CIRCLE_WORKFLOW_ID $STEP_SPAN_ID semantic-release -- yarn --frozen-lockfile semantic-release
+            # Setup Docker (GCR) Auth
+            source "./.bootstrap/shell/lib/docker-authn.sh"
+
+            # Setup buildkit for arm64
+            source "./.bootstrap/shell/lib/buildx.sh"
+      - run:
+          name: Release
+          command: |
+            export GH_TOKEN=$OUTREACH_GITHUB_TOKEN
+            yarn --frozen-lockfile semantic-release
 
   trigger_documentation:
     docker:
