@@ -58,10 +58,6 @@ import (
 var HoneycombTracingKey = "NOTSET" //nolint:gochecknoglobals // Why: We can't compile in things as a const.
 
 ///Block(global)
-var defaultBoxes = []string{
-	"git@github.com:getoutreach/box",
-}
-
 ///EndBlock(global)
 
 // overrideConfigLoaders fakes certain parts of the config that usually get pulled
