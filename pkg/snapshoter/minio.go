@@ -16,6 +16,8 @@ import (
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 
+	"github.com/docker/docker/api/types"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -34,6 +36,9 @@ type SnapshotBackend struct {
 // NewSnapshotBackend creates a connection to the snapshot backend
 // and returns a client for it
 func NewSnapshotBackend(ctx context.Context, r *rest.Config, k kubernetes.Interface) (*SnapshotBackend, error) {
+	sb := &SnapshotBackend{}
+	sb.removeOldMinio(ctx)
+
 	eps, err := k.CoreV1().Endpoints("minio").Get(ctx, "minio", metav1.GetOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find minio endpoints")
@@ -68,6 +73,7 @@ loop:
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create port-forward")
 	}
+	sb.fw = fw
 
 	go fw.ForwardPorts() //nolint:errcheck // Why: Best attempt port-forward creation
 
@@ -78,10 +84,24 @@ loop:
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create minio client")
 	}
+	sb.Client = m
 
-	sb := &SnapshotBackend{m, fw}
 	err = sb.waitForMinio(ctx)
 	return sb, err
+}
+
+// removeOldMinio removes the older docker container minio
+func (sb *SnapshotBackend) removeOldMinio(ctx context.Context) {
+	d, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
+	if err != nil {
+		return
+	}
+
+	name := "minio-developer-environment"
+	timeout := 1 * time.Millisecond
+
+	d.ContainerStop(ctx, name, &timeout)                         //nolint:errcheck // Why: best effort
+	d.ContainerRemove(ctx, name, types.ContainerRemoveOptions{}) //nolint:errcheck // Why: best effort
 }
 
 // waitForMinio waits for minio to be accessible
