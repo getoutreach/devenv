@@ -46,6 +46,7 @@ func ExtractToDir(efs *goembed.FS, dir string) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to access embedded file")
 		}
+		defer f.Close()
 
 		tempFileDir := filepath.Join(dir, filepath.Dir(p))
 		err = os.MkdirAll(tempFileDir, 0755)
@@ -57,6 +58,8 @@ func ExtractToDir(efs *goembed.FS, dir string) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create temporary file")
 		}
+		defer nf.Close()
+
 		//nolint:gocritic // Why: This is an octal friendly package
 		err = nf.Chmod(0777) // Can't access orig file perms? :'(
 		if err != nil {
