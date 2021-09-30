@@ -17,6 +17,16 @@ local manifests = ok.HelmChart(name) {
       tag: 'v1.6.3',
       pullPolicy: 'IfNotPresent',
     },
+    resources: {
+      requests: {
+        cpu: '0',
+        memory: '0',
+      },
+      limits: {
+        cpu: '0',
+        memory: '0',
+      },
+    },
     initContainers: [
       {
         name: 'velero-plugin-for-aws',
@@ -56,6 +66,16 @@ local manifests = ok.HelmChart(name) {
     },
     deployRestic: true,
     restic: {
+      resources: {
+        requests: {
+          cpu: '0',
+          memory: '0',
+        },
+        limits: {
+          cpu: '0',
+          memory: '0',
+        },
+      },
       podVolumePath: podsPath,
     },
   },
