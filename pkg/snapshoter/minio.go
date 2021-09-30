@@ -35,7 +35,7 @@ type SnapshotBackend struct {
 
 // NewSnapshotBackend creates a connection to the snapshot backend
 // and returns a client for it
-func NewSnapshotBackend(ctx context.Context, r *rest.Config, k kubernetes.Interface) (*SnapshotBackend, error) {
+func NewSnapshotBackend(ctx context.Context, r *rest.Config, k kubernetes.Interface) (*SnapshotBackend, error) { //nolint:funlen
 	sb := &SnapshotBackend{}
 	sb.removeOldMinio(ctx)
 

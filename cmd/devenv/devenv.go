@@ -219,7 +219,7 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 			return err
 		}
 
-		_, err = box.EnsureBox(ctx, defaultBoxes, log)
+		_, err = box.EnsureBoxWithOptions(ctx, box.WithLogger(log), box.WithMinVersion(1))
 		if err != nil {
 			return err
 		}
