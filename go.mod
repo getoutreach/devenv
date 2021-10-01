@@ -22,7 +22,7 @@ require (
 	github.com/loft-sh/loftctl v1.14.0
 	github.com/manifoldco/promptui v0.8.0
 	github.com/matryer/is v1.4.0 // indirect
-	github.com/minio/minio-go/v7 v7.0.10
+	github.com/minio/minio-go/v7 v7.0.14
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/novln/docker-parser v1.0.0
 	github.com/pkg/errors v0.9.1
@@ -84,6 +84,7 @@ require (
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
+	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/emicklei/go-restful v2.9.5+incompatible // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
