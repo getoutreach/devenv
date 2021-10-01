@@ -111,15 +111,15 @@ func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, cluster
 	shellDir := filepath.Join(dir, "shell")
 	ingressControllerIP := devenvutil.GetIngressControllerIP(ctx, k, o.log)
 
+	err = clientcmd.WriteToFile(*cluster.KubeConfig, filepath.Join(homeDir, ".outreach", "kubeconfig.yaml"))
+	if err != nil {
+		return errors.Wrap(err, "failed to write kubeconfig")
+	}
+
 	// HACK: In the future we should just expose setting env vars
 	err = cmdutil.RunKubernetesCommand(ctx, shellDir, false, filepath.Join(shellDir, "30-etc-hosts.sh"), ingressControllerIP)
 	if err != nil {
 		return errors.Wrap(err, "failed to run script to setup /etc/hosts to point to context")
-	}
-
-	err = clientcmd.WriteToFile(*cluster.KubeConfig, filepath.Join(homeDir, ".outreach", "kubeconfig.yaml"))
-	if err != nil {
-		return errors.Wrap(err, "failed to write kubeconfig")
 	}
 
 	if err := config.SaveConfig(ctx, conf); err != nil { //nolint:govet // Why: err shadow

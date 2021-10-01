@@ -103,8 +103,7 @@ jobs:
   release-dryrun:
     machine:
       image: ubuntu-2004:202107-02
-      docker_layer_caching: true
-    resource_class: large
+    resource_class: xlarge
     environment:
       GOPRIVATE: github.com/getoutreach/*
       GOPROXY: https://proxy.golang.org
@@ -178,8 +177,7 @@ jobs:
   release:
     machine:
       image: ubuntu-2004:202107-02
-      docker_layer_caching: true
-    resource_class: large
+    resource_class: xlarge
     environment:
       GOPRIVATE: github.com/getoutreach/*
       GOPROXY: https://proxy.golang.org
