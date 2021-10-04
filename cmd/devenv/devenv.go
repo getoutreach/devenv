@@ -102,12 +102,6 @@ func overrideConfigLoaders() {
 }
 
 func main() { //nolint:funlen // Why: We can't dwindle this down anymore without adding complexity.
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
-		}
-	}()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	log := logrus.New()
 
@@ -148,13 +142,16 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 	}
 	defer exit()
 
-	// wrap everything around a call as this ensures any panics
-	// are caught and recorded properly
+	// Print a stack trace when a panic occurs and set the exit code
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf("panic %v", r)
+			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
 		}
+
+		// Go sets panic exit codes to 2
+		exitCode = 2
 	}()
+
 	ctx = trace.StartCall(ctx, "main")
 	defer trace.EndCall(ctx)
 
@@ -263,8 +260,7 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 			case "linux", "darwin":
 				cleanup = func() {
 					log.Infof("devenv has been updated")
-					osarg0 := os.Args[0]
-					err := syscall.Exec(osarg0, os.Args, os.Environ())
+					err := syscall.Exec(os.Args[0], os.Args[1:], os.Environ())
 					if err != nil {
 						log.WithError(err).Error("failed to execute updated binary")
 					}
