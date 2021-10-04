@@ -1,10 +1,9 @@
 name: devenv
 reportingTeam: cia-dev-tooling
+oss: true
 library: true
 releaseType: semver
 versions:
-  go: 1.17.1
-  goreleaser: 0.157.0
   terraform: 0.14.7
 releaseOptions:
   allowMajorVersions: true
