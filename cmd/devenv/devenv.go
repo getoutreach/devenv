@@ -260,6 +260,7 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 			case "linux", "darwin":
 				cleanup = func() {
 					log.Infof("devenv has been updated")
+					//nolint:gosec // Why: We're passing in os.Args
 					err := syscall.Exec(os.Args[0], os.Args[1:], os.Environ())
 					if err != nil {
 						log.WithError(err).Error("failed to execute updated binary")
