@@ -20,6 +20,8 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
 	devenvaws "github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
+	"github.com/getoutreach/devenv/pkg/devenvutil"
+	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/snapshoter"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/minio/minio-go/v7"
@@ -34,11 +36,6 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 	}
 
 	o.log.WithField("snapshots", len(s.Targets)).Info("Generating Snapshots")
-
-	mc, err := snapshoter.NewSnapshotBackend(ctx, o.r, o.k)
-	if err != nil {
-		return err
-	}
 
 	copts := devenvaws.DefaultCredentialOptions()
 	if b.DeveloperEnvironmentConfig.SnapshotConfig.WriteAWSRole != "" {
@@ -80,7 +77,7 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 
 	for name, t := range s.Targets {
 		//nolint:govet // Why: We're OK shadowing err
-		itm, err := o.generateSnapshot(ctx, mc, s3c, name, t, skipUpload)
+		itm, err := o.generateSnapshot(ctx, s3c, name, t, skipUpload)
 		if err != nil {
 			return err
 		}
@@ -123,7 +120,7 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 	return err
 }
 
-func (o *Options) uploadSnapshot(ctx context.Context, mc *snapshoter.SnapshotBackend, s3c *s3.Client, name string, t *box.SnapshotTarget) (string, string, error) { //nolint:funlen,gocritic
+func (o *Options) uploadSnapshot(ctx context.Context, s3c *s3.Client, name string, t *box.SnapshotTarget) (string, string, error) { //nolint:funlen,gocritic
 	tmpFile, err := os.CreateTemp("", "snapshot-*")
 	if err != nil {
 		return "", "", err
@@ -132,6 +129,16 @@ func (o *Options) uploadSnapshot(ctx context.Context, mc *snapshoter.SnapshotBac
 
 	hash := md5.New() //nolint:gosec // Why: We're just creating a digest
 	tw := tar.NewWriter(io.MultiWriter(tmpFile, hash))
+
+	o.k, err = kube.GetKubeClient()
+	if err != nil {
+		return "", "", err
+	}
+
+	mc, err := snapshoter.NewSnapshotBackend(ctx, o.r, o.k)
+	if err != nil {
+		return "", "", err
+	}
 
 	o.log.Info("creating tar archive")
 	for obj := range mc.ListObjects(ctx, SnapshotNamespace, minio.ListObjectsOptions{Recursive: true}) {
@@ -229,7 +236,7 @@ func (o *Options) uploadSnapshot(ctx context.Context, mc *snapshoter.SnapshotBac
 }
 
 //nolint:funlen
-func (o *Options) generateSnapshot(ctx context.Context, mc *snapshoter.SnapshotBackend, s3c *s3.Client,
+func (o *Options) generateSnapshot(ctx context.Context, s3c *s3.Client,
 	name string, t *box.SnapshotTarget, skipUpload bool) (*box.SnapshotLockListItem, error) {
 	o.log.WithField("snapshot", name).Info("Generating Snapshot")
 
@@ -237,13 +244,12 @@ func (o *Options) generateSnapshot(ctx context.Context, mc *snapshoter.SnapshotB
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create destroy command")
 	}
-
 	destroyOpts.RemoveImageCache = true
-	destroyOpts.RemoveSnapshotStorage = true
 	destroyOpts.Run(ctx) //nolint:errcheck
 
 	// using exec because of an import cycle, need to fix
-	err = cmdutil.RunKubernetesCommand(ctx, "", false, os.Args[0], "--skip-update", "provision", "--base")
+	err = cmdutil.RunKubernetesCommand(ctx, "", false, os.Args[0], "--skip-update", "provision",
+		"--base", "--kubernetes-runtime", "kind")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to provision developer environment")
 	}
@@ -290,10 +296,10 @@ func (o *Options) generateSnapshot(ctx context.Context, mc *snapshoter.SnapshotB
 		return nil, errors.Wrap(err, "failed to create new clients")
 	}
 
-	// TODO: Velero gets really mad if you create a backup before it's ready
-	// and will just hang. Need to write the code to actually wait for this instead of waiting 5 mins (usually way too long)
-	o.log.Info("Waiting for snapshot infrastructure to be ready")
-	time.Sleep(5 * time.Minute)
+	err = devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log)
+	if err != nil {
+		return nil, err
+	}
 
 	veleroBackupName, err := o.CreateSnapshot(ctx)
 	if err != nil {
@@ -303,7 +309,7 @@ func (o *Options) generateSnapshot(ctx context.Context, mc *snapshoter.SnapshotB
 	hash := "unknown"
 	key := "unknown"
 	if !skipUpload {
-		hash, key, err = o.uploadSnapshot(ctx, mc, s3c, name, t)
+		hash, key, err = o.uploadSnapshot(ctx, s3c, name, t)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to upload snapshot")
 		}

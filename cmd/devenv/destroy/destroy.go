@@ -29,6 +29,7 @@ var (
 type Options struct {
 	log logrus.FieldLogger
 	d   dockerclient.APIClient
+	b   *box.Config
 
 	// Options
 	CurrentClusterName    string
@@ -43,9 +44,34 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 		return nil, errors.Wrap(err, "failed to create docker client")
 	}
 
+	b, err := box.LoadBox()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read box config")
+	}
+
+	conf, err := config.LoadConfig(context.TODO())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read devenv config")
+	}
+
+	runtimeName, clusterName := conf.ParseContext()
+	if clusterName == "" {
+		return nil, fmt.Errorf("invalid clusterName, was currentcontext set in devenv config?")
+	}
+
+	r, err := kubernetesruntime.GetRuntimeFromContext(conf, b)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get runtime from context, was the runtime '%s' enabled?", runtimeName)
+	}
+
 	return &Options{
 		log: log,
 		d:   d,
+		b:   b,
+
+		// Defaults
+		CurrentClusterName: clusterName,
+		KubernetesRuntime:  r,
 	}, nil
 }
 
@@ -71,29 +97,6 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 			}
 			o.RemoveImageCache = c.Bool("remove-image-cache")
 			o.RemoveSnapshotStorage = c.Bool("remove-snapshot-storage")
-
-			b, err := box.LoadBox()
-			if err != nil {
-				return errors.Wrap(err, "failed to read box config")
-			}
-
-			conf, err := config.LoadConfig(c.Context)
-			if err != nil {
-				return errors.Wrap(err, "failed to read devenv config")
-			}
-
-			runtimeName, clusterName := conf.ParseContext()
-			if clusterName == "" {
-				return fmt.Errorf("invalid clusterName, was currentcontext set in devenv config?")
-			}
-
-			r, err := kubernetesruntime.GetRuntimeFromContext(conf, b)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get runtime from context, was the runtime '%s' enabled?", runtimeName)
-			}
-
-			o.CurrentClusterName = clusterName
-			o.KubernetesRuntime = r
 
 			return o.Run(c.Context)
 		},
