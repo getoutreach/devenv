@@ -13,7 +13,7 @@ require (
 	github.com/google/btree v1.0.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/vault/api v1.1.1
-	github.com/jetstack/cert-manager v1.5.3
+	github.com/jetstack/cert-manager v1.5.4
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 
 	// Note: Currently can't use v1.15 because of a private dependency
