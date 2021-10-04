@@ -19,7 +19,22 @@ import (
 	"strings"
 	"syscall"
 
+	oapp "github.com/getoutreach/gobox/pkg/app"
+	"github.com/getoutreach/gobox/pkg/box"
+	"github.com/getoutreach/gobox/pkg/cfg"
+	olog "github.com/getoutreach/gobox/pkg/log"
+	"github.com/getoutreach/gobox/pkg/secrets"
+	"github.com/getoutreach/gobox/pkg/trace"
+	"github.com/getoutreach/gobox/pkg/updater"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v3"
+
+	// Place any extra imports for your startup code here
+	///Block(imports)
 	"github.com/getoutreach/devenv/cmd/devenv/completion"
+	cmdcontext "github.com/getoutreach/devenv/cmd/devenv/context"
 	deleteapp "github.com/getoutreach/devenv/cmd/devenv/delete-app"
 	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
@@ -35,21 +50,6 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/tunnel"
 	updateapp "github.com/getoutreach/devenv/cmd/devenv/update-app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
-	oapp "github.com/getoutreach/gobox/pkg/app"
-	"github.com/getoutreach/gobox/pkg/box"
-	"github.com/getoutreach/gobox/pkg/cfg"
-	olog "github.com/getoutreach/gobox/pkg/log"
-	"github.com/getoutreach/gobox/pkg/secrets"
-	"github.com/getoutreach/gobox/pkg/trace"
-	"github.com/getoutreach/gobox/pkg/updater"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
-
-	// Place any extra imports for your startup code here
-	///Block(imports)
-	cmdcontext "github.com/getoutreach/devenv/cmd/devenv/context"
 	///EndBlock(imports)
 )
 
@@ -102,6 +102,12 @@ func overrideConfigLoaders() {
 }
 
 func main() { //nolint:funlen // Why: We can't dwindle this down anymore without adding complexity.
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
+		}
+	}()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	log := logrus.New()
 
@@ -142,12 +148,13 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 	}
 	defer exit()
 
+	// wrap everything around a call as this ensures any panics
+	// are caught and recorded properly
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
+			log.Errorf("panic %v", r)
 		}
 	}()
-
 	ctx = trace.StartCall(ctx, "main")
 	defer trace.EndCall(ctx)
 
