@@ -64,6 +64,8 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 		return nil, errors.Wrapf(err, "failed to get runtime from context, was the runtime '%s' enabled?", runtimeName)
 	}
 
+	r.Configure(log, b)
+
 	return &Options{
 		log: log,
 		d:   d,
