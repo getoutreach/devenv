@@ -146,10 +146,10 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
-		}
 
-		// Go sets panic exit codes to 2
-		exitCode = 2
+			// Go sets panic exit codes to 2
+			exitCode = 2
+		}
 	}()
 
 	ctx = trace.StartCall(ctx, "main")
