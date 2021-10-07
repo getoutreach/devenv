@@ -174,9 +174,8 @@ func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, err
 		po := &pods.Items[i]
 		ready := false
 
-		// Skip pods that are jobs and have succeeded
-		if po.Status.Phase == corev1.PodSucceeded &&
-			len(po.OwnerReferences) == 1 && po.OwnerReferences[0].Kind == "Job" {
+		// Skip completed pods
+		if po.Status.Phase == corev1.PodSucceeded {
 			continue
 		}
 
