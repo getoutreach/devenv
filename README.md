@@ -39,6 +39,8 @@ devenv provision
 
 Next there's a manual step that you'll need to do. You'll need to add a `KUBECONFIG` environment variable, this can be done by adding the line below to your shellrc (generally `~/.zshrc` or `~/.zsh_profile` or `~/.bashrc`):
 
+NOTE: For Outreach developers this step is already completed by [orc](https://github.com/getoutreach/orc).
+
 ```bash
 # Add the dev-environment to our kube config
 export KUBECONFIG="$HOME/.kube/config:$HOME/.outreach/kubeconfig.yaml"
