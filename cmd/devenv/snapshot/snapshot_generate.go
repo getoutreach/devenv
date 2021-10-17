@@ -248,6 +248,7 @@ func (o *Options) generateSnapshot(ctx context.Context, s3c *s3.Client,
 	destroyOpts.Run(ctx) //nolint:errcheck
 
 	// using exec because of an import cycle, need to fix
+	os.Setenv("DEVENV_SNAPSHOT_GENERATION", "true") //nolint:errcheck
 	err = cmdutil.RunKubernetesCommand(ctx, "", false, os.Args[0], "--skip-update", "provision",
 		"--base", "--kubernetes-runtime", "kind")
 	if err != nil {

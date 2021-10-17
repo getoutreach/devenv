@@ -82,7 +82,7 @@ func (o *Options) deployStage(ctx context.Context, stage string) error { //nolin
 	// Deploy resourcer if we're a local runtime, we can only run things on a single node
 	// so we should mutate all pods to have zero resources.
 	// Special exeception is when we're generating snapshots.
-	if o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal && os.Getenv("CI") == "" {
+	if o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal && os.Getenv("DEVENV_SNAPSHOT_GENERATION") == "" {
 		err := app.Deploy(ctx, o.log, o.k, o.r, "resourcer", o.KubernetesRuntime.GetConfig())
 		if err != nil {
 			return errors.Wrap(err, "failed to deploy resourcer")
