@@ -219,9 +219,10 @@ func (o *Options) applyPostRestore(ctx context.Context) error { //nolint:funlen
 	}
 	defer os.Remove(processed.Name())
 
-	err = t.Execute(processed, map[string]string{
-		"User":  u.Username,
-		"Email": strings.TrimSpace(string(rawUserEmail)),
+	err = t.Execute(processed, map[string]interface{}{
+		"User":           u.Username,
+		"Email":          strings.TrimSpace(string(rawUserEmail)),
+		"ClusterRuntime": o.KubernetesRuntime.GetConfig(),
 	})
 	if err != nil {
 		return err
