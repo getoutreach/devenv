@@ -22,7 +22,14 @@ func GetIngressControllerIP(ctx context.Context, k kubernetes.Interface, log log
 	if k != nil {
 		// iterate over the ingress to find its IP, if it doesn't
 		// have one then we should wait until it gets one
+		try := 1
 		for ctx.Err() == nil {
+			// Older devenvs would hit this (kind) and times when devenvs are totally messed up.
+			if try > 60 { // 10 minutes
+				log.Warnf("Failed to determine ingress controller IP, assuming %s", fallbackIP)
+				return fallbackIP
+			}
+
 			s, err := k.CoreV1().Services("nginx-ingress").Get(ctx, "ingress-nginx-controller", metav1.GetOptions{})
 			if err == nil {
 				// return the value of the ingress controller IP annotation if
@@ -43,8 +50,10 @@ func GetIngressControllerIP(ctx context.Context, k kubernetes.Interface, log log
 				}
 			}
 
-			log.Info("Waiting for ingress controller to get an IP")
+			log.WithField("try", try).Info("Waiting for ingress controller to get an IP")
 			async.Sleep(ctx, time.Second*10)
+
+			try++
 		}
 	}
 
