@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
+	"github.com/fatih/color"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
@@ -56,16 +57,26 @@ func (o *Options) displayContexts(_ gocontext.Context, conf *config.Config, clus
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "CURRENT\tCLUSTER NAME\tRUNTIME\tCONTEXT NAME")
 
+	foundCurrent := false
 	for _, c := range clusters {
 		var current string
 		if runtime, name := conf.ParseContext(); c.RuntimeName == runtime && c.Name == name {
 			current = "*"
+			foundCurrent = true
 		}
 
 		fmt.Fprintln(w, current+"\t"+c.Name+"\t"+c.RuntimeName+"\t"+c.RuntimeName+":"+c.Name)
 	}
+	if err := w.Flush(); err != nil {
+		return err
+	}
 
-	return w.Flush()
+	if !foundCurrent {
+		fmt.Println()
+		fmt.Printf(color.YellowString("Warning:") + " current context wasn't found in list, to set a context run: devenv context <runtime:clusterName>\n")
+	}
+
+	return nil
 }
 
 func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, clusters []*kubernetesruntime.RuntimeCluster) error { //nolint:funlen
@@ -91,6 +102,12 @@ func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, cluster
 	o.log.Infof("Setting context to %s", o.DesiredContext)
 	conf.CurrentContext = o.DesiredContext
 
+	// Write the config first so we don't run into issues with a step below
+	// failing and then not deterministically changing the context.
+	if err := config.SaveConfig(ctx, conf); err != nil { //nolint:govet // Why: err shadow
+		return errors.Wrap(err, "failed to save devenv config")
+	}
+
 	// Create a Kubernetes client for the new context
 	ccc := clientcmd.NewDefaultClientConfig(*cluster.KubeConfig, &clientcmd.ConfigOverrides{})
 	rconf, err := ccc.ClientConfig()
@@ -111,6 +128,7 @@ func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, cluster
 	shellDir := filepath.Join(dir, "shell")
 	ingressControllerIP := devenvutil.GetIngressControllerIP(ctx, k, o.log)
 
+	// Update the kube config to point to the new cluster
 	err = clientcmd.WriteToFile(*cluster.KubeConfig, filepath.Join(homeDir, ".outreach", "kubeconfig.yaml"))
 	if err != nil {
 		return errors.Wrap(err, "failed to write kubeconfig")
@@ -120,10 +138,6 @@ func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, cluster
 	err = cmdutil.RunKubernetesCommand(ctx, shellDir, false, filepath.Join(shellDir, "30-etc-hosts.sh"), ingressControllerIP)
 	if err != nil {
 		return errors.Wrap(err, "failed to run script to setup /etc/hosts to point to context")
-	}
-
-	if err := config.SaveConfig(ctx, conf); err != nil { //nolint:govet // Why: err shadow
-		return errors.Wrap(err, "failed to save devenv config")
 	}
 
 	return nil
