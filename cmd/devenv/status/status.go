@@ -23,6 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -225,21 +226,32 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 
 	var localizerResp *localizerapi.ListResponse
 	if localizer.IsRunning() {
-		gCtx, cancel := context.WithTimeout(ctx, time.Second*5)
-		defer cancel()
+		// Turn off info and warning level logging for gRPC because it's nosiy and we handle it
+		// from a higher level anyways.
+		grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, io.Discard, os.Stdout))
 
-		client, closer, err := localizer.Connect(gCtx, //nolint:govet // why: it's okay to shadow the error variable here
-			grpc.WithBlock(),
-			grpc.WithInsecure(),
-		)
-		if err != nil {
-			return errors.Wrap(err, "failed to connect to localizer daemon")
-		}
-		defer closer()
+		// We block on the connection, so only try for 2 seconds before moving on. This should
+		// be fine if localizer is actually running because its communicating over the local
+		// network.
+		gCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 
-		if localizerResp, err = client.List(ctx, &localizerapi.ListRequest{}); err != nil {
-			return err
+		client, closer, err := localizer.Connect(gCtx, grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
+		if err == nil {
+			defer closer()
+
+			if localizerResp, err = client.List(ctx, &localizerapi.ListRequest{}); err != nil {
+				// Fail silently, we warn below.
+				localizerResp = nil
+			}
 		}
+
+		if localizerResp == nil {
+			o.log.WithError(err).Warn("failed to call localizer list rpc, will not include localizer information in response.")
+			o.log.Warn("if you need localizer information, the following and then rerun:\n\tsudo kill $(pgrep localizer)\n\tsudo rm -f /var/run/localizer.sock\n\tdevenv tunnel")
+		}
+
+		// Cancel just for the sake of cancelling.
+		cancel()
 	}
 
 	for i := range nodes.Items {
