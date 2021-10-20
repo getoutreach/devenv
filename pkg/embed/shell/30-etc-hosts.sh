@@ -35,10 +35,21 @@ fi
 echo "Configuring /etc/hosts to point to ingress controller at $INGRESS_CONTROLLER_IP"
 
 modified=false
+
+# Check if the file doesn't end with a newline
+if [[ "$(tail -c 1 /etc/hosts | wc -l)" -eq 0 ]]; then
+  if [[ -z $CI ]]; then
+    echo "" >"$tempFile"
+  else
+    sudo bash -c "echo '' > '$tempFile'"
+  fi
+  modified=true
+fi
+
 for domain in "${domains[@]}"; do
-  # Remove all lines with the same domains we want, the IP
-  # may change from a remote driver
-  if grep "$domain" "$hostsFile" >/dev/null 2>&1; then
+  # If we have an entry for the domain that isn't the IP we expect, then remove the line
+  # and mark that we modified the file
+  if grep "$domain" "$hostsFile" | grep -v "$INGRESS_CONTROLLER_IP" >/dev/null 2>&1; then
     if [[ -z $CI ]]; then
       # Why: We need to use a subshell to avoid a temporary file
       # shellcheck disable=SC2005
@@ -46,14 +57,18 @@ for domain in "${domains[@]}"; do
     else
       sudo bash -c "echo '\$(grep -v \"$domain\" \"$tempFile\")' > '$tempFile'"
     fi
+    modified=true
   fi
 
-  if [[ -z $CI ]]; then
-    echo "$INGRESS_CONTROLLER_IP $domain" >>"$tempFile"
-  else
-    sudo bash -c "echo '$INGRESS_CONTROLLER_IP $domain' >>'$tempFile'"
+  # If we don't already have the entry in our hosts file, add it and mark that we modified the file.
+  if ! grep "$domain" "$hostsFile" | grep "$INGRESS_CONTROLLER_IP" >/dev/null 2>&1; then
+    if [[ -z $CI ]]; then
+      echo "$INGRESS_CONTROLLER_IP $domain" >>"$tempFile"
+    else
+      sudo bash -c "echo '$INGRESS_CONTROLLER_IP $domain' >>'$tempFile'"
+    fi
+    modified=true
   fi
-  modified=true
 done
 
 # Only replace the file when it's been updated.
