@@ -93,12 +93,20 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 	}
 
 	if localizer.IsRunning() {
-		client, closer, err := localizer.Connect(ctx, grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
+		// We block on the connection, so only try for 2 seconds before moving on. This should
+		// be fine if localizer is actually running because its communicating over the local
+		// network.
+		gCtx, cancel := context.WithTimeout(ctx, time.Second*2)
+
+		client, closer, err := localizer.Connect(gCtx, grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
 		if err != nil {
+			cancel()
 			o.log.Info("detected localizer socket, but could not connect to localizer. try the following and then rerun:\n\tsudo kill $(pgrep localizer)\n\tsudo rm -f /var/run/localizer.sock")
 			return errors.Wrap(err, "connect to localizer client to kill stale connection")
 		}
+
 		defer closer()
+		cancel()
 
 		if _, err := client.Kill(ctx, &localizerapi.Empty{}); err != nil {
 			return errors.Wrap(err, "kill stale localizer connectin")
