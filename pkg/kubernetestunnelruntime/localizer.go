@@ -10,7 +10,7 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	LocalizerVersion     = "v1.12.0"
+	LocalizerVersion     = "v1.12.1"
 	LocalizerDownloadURL = "https://github.com/getoutreach/localizer/releases/download/" +
 		LocalizerVersion + "/localizer_" + strings.TrimPrefix(LocalizerVersion, "v") + "_" +
 		runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz"
@@ -20,5 +20,6 @@ var (
 // the location of the binary. Note: this outputs text
 // if localizer is being downloaded
 func EnsureLocalizer(log logrus.FieldLogger) (string, error) { //nolint:funlen
+	log.WithField("version", LocalizerVersion).WithField("url", LocalizerDownloadURL).Info("using localizer")
 	return cmdutil.EnsureBinary(log, "localizer-"+LocalizerVersion, "Kubernetes Tunnel Runtime (localizer)", LocalizerDownloadURL, "localizer")
 }
