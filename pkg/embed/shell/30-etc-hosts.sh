@@ -39,9 +39,9 @@ modified=false
 # Check if the file doesn't end with a newline
 if [[ "$(tail -c 1 /etc/hosts | wc -l)" -eq 0 ]]; then
   if [[ -z $CI ]]; then
-    echo "" >"$tempFile"
+    echo "" >>"$tempFile"
   else
-    sudo bash -c "echo '' > '$tempFile'"
+    sudo bash -c "echo '' >> '$tempFile'"
   fi
   modified=true
 fi
