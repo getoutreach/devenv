@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
@@ -142,12 +143,23 @@ func NewCmdLocalApp(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 
 func (o *Options) handleSpecialCases() {
 	switch o.AppName {
-	case "accounts", "outreach-accounts": //nolint:goconst
+	case "accounts", "outreach-accounts": //nolint:goconst // Why: no
+		// IDEA: Remove on next major release.
+		if o.AppName == "accounts" {
+			o.log.Warn("accounts as an appname is DEPRECATED. Use outreach-accounts instead")
+		}
+
 		o.Namespace = "outreach-accounts"
 		o.AppName = "outreach-accounts"
-	case "flagship", "flagship-server":
+
+	case "flagship", "flagship-server", "outreach": //nolint:goconst // Why: No
+		// IDEA: Remove on next major release.
+		if o.AppName == "flagship" || o.AppName == "flagship-server" {
+			o.log.Warn("flagship/flagship-server as an appname is DEPRECATED. Use outreach instead")
+		}
+
 		o.Namespace = DefaultNamespace
-		o.AppName = "flagship-server"
+		o.AppName = "outreach"
 
 	// Special cases for UI related services.
 	case "flagship-client":
@@ -155,11 +167,15 @@ func (o *Options) handleSpecialCases() {
 		o.Ports = map[uint64]uint64{
 			4202: 8080,
 		}
-	case "orca", "client":
+	case "orca", "client", "orca-proxy":
+		// IDEA: Remove on next major release.
+		if o.AppName == "orca" || o.AppName == "orca-proxy" {
+			o.log.Warn("orca/orca-proxy as an appname is DEPRECATED. Use outreach instead")
+		}
+
 		o.Namespace = DefaultNamespace
-		o.AppName = "orca-proxy"
+		o.AppName = "client"
 		o.CreateManifests = "shell/local-app/orca/manifests.yaml"
-		o.OriginalManifests = "jsonnet/services/flagship/orca.jsonnet"
 	case "outlook":
 		o.Namespace = DefaultNamespace
 		o.AppName = "outlook-proxy"
@@ -266,6 +282,14 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 			if err3 != nil {
 				o.log.WithError(err3).Warn("failed to delete helper manifests")
 			}
+		} else {
+			// Otherwise we redeploy the application to remove whatever mutations may have occurred
+			// by o.CreateManifests
+			dopts, err := deployapp.NewOptions(o.log)
+			if err != nil {
+				return err
+			}
+			dopts.App = o.AppName
 		}
 	}
 
