@@ -174,8 +174,11 @@ func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, err
 		po := &pods.Items[i]
 		ready := false
 
-		// Skip completed pods
-		if po.Status.Phase == corev1.PodSucceeded {
+		// if the pod isn't running, pending, or succeeded, skip it
+		// this is for things like, shutdown pods, or OutOfcpu pods.
+		if po.Status.Phase != corev1.PodRunning &&
+			po.Status.Phase != corev1.PodPending &&
+			po.Status.Phase != corev1.PodSucceeded {
 			continue
 		}
 

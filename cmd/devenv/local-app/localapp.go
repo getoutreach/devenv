@@ -170,7 +170,7 @@ func (o *Options) handleSpecialCases() {
 	case "orca", "client", "orca-proxy":
 		// IDEA: Remove on next major release.
 		if o.AppName == "orca" || o.AppName == "orca-proxy" {
-			o.log.Warn("orca/orca-proxy as an appname is DEPRECATED. Use outreach instead")
+			o.log.Warn("orca/orca-proxy as an appname is DEPRECATED. Use client instead")
 		}
 
 		o.Namespace = DefaultNamespace
@@ -290,6 +290,9 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 				return err
 			}
 			dopts.App = o.AppName
+			if err := dopts.Run(ctx); err != nil {
+				o.log.WithError(err).Warn("Failed to re-deploy application")
+			}
 		}
 	}
 

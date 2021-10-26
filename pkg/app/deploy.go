@@ -37,8 +37,13 @@ func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 // deployLegacy attempts to deploy an application by running the file at
 // ./scripts/deploy-to-dev.sh, relative to the repository root.
 func (a *App) deployLegacy(ctx context.Context) error {
+	deployScript := "./scripts/deploy-to-dev.sh"
+
+	//nolint:errcheck // Why: best effort chmod +x here
+	os.Chmod(filepath.Join(a.Path, deployScript), 0755)
+
 	a.log.Info("Deploying application into devenv...")
-	return errors.Wrap(cmdutil.RunKubernetesCommand(ctx, a.Path, true, "./scripts/deploy-to-dev.sh", "update"), "failed to deploy changes")
+	return errors.Wrap(cmdutil.RunKubernetesCommand(ctx, a.Path, true, deployScript, "update"), "failed to deploy changes")
 }
 
 func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
@@ -70,6 +75,9 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "shell-wrapper.sh")); err == nil {
 		deployScript = "./scripts/shell-wrapper.sh"
 		deployScriptArgs = append([]string{"deploy-to-dev.sh"}, deployScriptArgs...)
+	} else {
+		//nolint:errcheck // Why: best effort chmod +x here
+		os.Chmod(filepath.Join(a.Path, deployScript), 0755)
 	}
 
 	if err := cmdutil.RunKubernetesCommand(ctx, a.Path, true, deployScript, deployScriptArgs...); err != nil {
