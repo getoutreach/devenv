@@ -134,7 +134,7 @@ require (
 	github.com/hashicorp/vault/sdk v0.2.1 // indirect
 	github.com/honeycombio/beeline-go v1.2.0 // indirect
 	github.com/honeycombio/libhoney-go v1.15.4 // indirect
-	github.com/huandu/xstrings v1.3.1 // indirect
+	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
