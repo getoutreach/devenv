@@ -167,12 +167,19 @@ func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, err
 	pods, err := k.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list pods")
-	}
+	}w
 
 	unreadyPods := []string{}
 	for i := range pods.Items {
 		po := &pods.Items[i]
 		ready := false
+
+		// Skip anything that's monitoring, that shouldn't block
+		// a cluster.
+		// IDEA: Make this an annotation on pods?
+		if po.Namespace == "monitoring" {
+			continue
+		}
 
 		// if the pod isn't running, pending, or succeeded, skip it
 		// this is for things like, shutdown pods, or OutOfcpu pods.
