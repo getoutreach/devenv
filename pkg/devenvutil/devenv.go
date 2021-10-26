@@ -167,7 +167,7 @@ func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, err
 	pods, err := k.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list pods")
-	}w
+	}
 
 	unreadyPods := []string{}
 	for i := range pods.Items {
@@ -181,11 +181,15 @@ func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, err
 			continue
 		}
 
-		// if the pod isn't running, pending, or succeeded, skip it
-		// this is for things like, shutdown pods, or OutOfcpu pods.
-		if po.Status.Phase != corev1.PodRunning &&
-			po.Status.Phase != corev1.PodPending &&
-			po.Status.Phase != corev1.PodSucceeded {
+		// Skip completed pods
+		if po.Status.Phase == corev1.PodSucceeded {
+			continue
+		}
+
+		// handle cloud edge cases
+		if po.Status.Reason == "OutOfcpu" ||
+			po.Status.Reason == "OutOfpods" ||
+			po.Status.Reason == "Shutdown" {
 			continue
 		}
 
