@@ -14,9 +14,14 @@ import (
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/embed"
+	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func (o *Options) deployStage(ctx context.Context, stage string) error { //nolint:funlen
@@ -82,10 +87,52 @@ func (o *Options) deployStage(ctx context.Context, stage string) error { //nolin
 	// Deploy resourcer if we're a local runtime, we can only run things on a single node
 	// so we should mutate all pods to have zero resources.
 	// Special exeception is when we're generating snapshots.
-	if o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeLocal && os.Getenv("DEVENV_SNAPSHOT_GENERATION") == "" {
-		err := app.Deploy(ctx, o.log, o.k, o.r, "resourcer", o.KubernetesRuntime.GetConfig())
+	if runtimeConf.Type == kubernetesruntime.RuntimeTypeLocal && os.Getenv("DEVENV_SNAPSHOT_GENERATION") == "" {
+		err := app.Deploy(ctx, o.log, o.k, o.r, "resourcer", runtimeConf)
 		if err != nil {
 			return errors.Wrap(err, "failed to deploy resourcer")
+		}
+	}
+
+	// Deploy vcluster-annotator if we're using loft, which is required for scale operations
+	// to succeed.
+	if runtimeConf.Type == kubernetesruntime.RuntimeTypeRemote && runtimeConf.Name == "loft" {
+		err := app.Deploy(ctx, o.log, o.k, o.r, "vcluster-annotator", runtimeConf)
+		if err != nil {
+			return errors.Wrap(err, "failed to deploy resourcer")
+		}
+
+		_, kconf, err := kube.GetKubeClientWithConfig()
+		if err != nil {
+			return errors.Wrap(err, "failed to get kube client config")
+		}
+
+		// Delete all pods so that they are mutated to have changes we want
+		err = devenvutil.DeleteObjects(ctx, o.log, o.k, kconf, devenvutil.DeleteObjectsObjects{
+			Type: &corev1.Pod{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Pod",
+					APIVersion: "v1",
+				},
+			},
+			Validator: func(o *unstructured.Unstructured) bool {
+				var po *corev1.Pod
+				err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.Object, &po)
+				if err != nil {
+					return false
+				}
+
+				// Don't delete the vcluster-annotator pod because otherwise
+				// pods cannot come up
+				return strings.Contains(po.Name, "vcluster-annotator")
+			},
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to delete all pods after adding vcluster-annotator")
+		}
+
+		if err := devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log); err != nil {
+			return errors.Wrap(err, "failed to wait for all pods to be ready")
 		}
 	}
 

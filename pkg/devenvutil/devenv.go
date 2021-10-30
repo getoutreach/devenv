@@ -84,9 +84,15 @@ type ListableType interface {
 }
 
 type DeleteObjectsObjects struct {
-	Type       runtime.Object
+	// Type is the type of object that should be deleted.
+	Type runtime.Object
+
+	// Namespaces is a list of namespaces that objects should be deleted in
 	Namespaces []string
-	Validator  func(obj *unstructured.Unstructured) (filter bool)
+
+	// Validator is a function that returns if an item should be filtered
+	// or not.
+	Validator func(obj *unstructured.Unstructured) (filter bool)
 }
 
 func DeleteObjects(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, opts DeleteObjectsObjects) error { //nolint:funlen
