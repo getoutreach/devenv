@@ -22,6 +22,7 @@ import (
 	oapp "github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/gobox/pkg/cfg"
+	"github.com/getoutreach/gobox/pkg/exec"
 	olog "github.com/getoutreach/gobox/pkg/log"
 	"github.com/getoutreach/gobox/pkg/secrets"
 	"github.com/getoutreach/gobox/pkg/trace"
@@ -255,15 +256,26 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 
 		// restart when updated
 		if updater.NeedsUpdate(traceCtx, log, "", oapp.Version, c.Bool("skip-update"), c.Bool("debug"), c.Bool("enable-prereleases"), c.Bool("force-update-check")) {
-			// replace running process(execve)
 			switch runtime.GOOS {
 			case "linux", "darwin":
 				cleanup = func() {
-					log.Infof("devenv has been updated")
-					//nolint:gosec // Why: We're passing in os.Args
-					err := syscall.Exec(os.Args[0], os.Args[1:], os.Environ())
+					binPath, err := exec.ResolveExecuable(os.Args[0])
 					if err != nil {
-						log.WithError(err).Error("failed to execute updated binary")
+						log.WithError(err).Warn("Failed to find binary location, please re-run your command manually")
+						return
+					}
+
+					args := []string{}
+					if len(os.Args) > 1 {
+						args = os.Args[1:]
+					}
+
+					log.WithField("bin.path", binPath).Infof("devenv has been updated, re-running automatically")
+
+					//nolint:gosec // Why: We're passing in os.Args
+					if err := syscall.Exec(binPath, args, os.Environ()); err != nil {
+						log.WithError(err).Warn("failed to re-run binary, please re-run your command manually")
+						return
 					}
 				}
 			default:

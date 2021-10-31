@@ -10,7 +10,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.1
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/fatih/color v1.12.0
-	github.com/getoutreach/gobox v1.18.1
+	github.com/getoutreach/gobox v1.21.0
 	github.com/getoutreach/localizer v1.12.0
 	github.com/google/btree v1.0.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
