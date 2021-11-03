@@ -81,6 +81,12 @@ type Runtime interface {
 	// Destroy destroys a kubernetes cluster from this runtime
 	Destroy(context.Context) error
 
+	// Stop stops (sleeps) a kubernetes cluster from this runtime
+	Stop(context.Context) error
+
+	// Start starts (awakens) a kubernetes cluster from this runtime
+	Start(context.Context) error
+
 	// PreCreate is ran before creating a kubernetes cluster, useful
 	// for implementing pre-requirements.
 	PreCreate(context.Context) error

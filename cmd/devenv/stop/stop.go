@@ -2,14 +2,11 @@ package stop
 
 import (
 	"context"
-	"time"
 
-	dockerclient "github.com/docker/docker/client"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
-	"github.com/getoutreach/devenv/pkg/containerruntime"
-	"github.com/getoutreach/devenv/pkg/worker"
-	olog "github.com/getoutreach/gobox/pkg/log"
-	"github.com/getoutreach/gobox/pkg/trace"
+	"github.com/getoutreach/devenv/pkg/config"
+	"github.com/getoutreach/devenv/pkg/devenvutil"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -28,19 +25,11 @@ var (
 
 type Options struct {
 	log logrus.FieldLogger
-
-	d dockerclient.APIClient
 }
 
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
-	d, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create docker client")
-	}
-
 	return &Options{
 		log: log,
-		d:   d,
 	}, nil
 }
 
@@ -61,53 +50,26 @@ func NewCmdStop(log logrus.FieldLogger) *cli.Command {
 	}
 }
 
-func (o *Options) StopContainers(ctx context.Context, containers []string) error {
-	ctx = trace.StartCall(ctx, "stop.RemoveContainers")
-	defer trace.EndCall(ctx)
-
-	containersInf := make([]interface{}, len(containers))
-	for i, cont := range containers {
-		containersInf[i] = cont
+func (o *Options) Run(ctx context.Context) error {
+	b, err := box.LoadBox()
+	if err != nil {
+		return errors.Wrap(err, "failed to load box configuration")
 	}
 
-	timeout := time.Duration(0)
-	_, err := worker.ProcessArray(ctx, containersInf, func(ctx context.Context, data interface{}) (interface{}, error) {
-		cont := data.(string)
-		ctx = trace.StartCall(ctx, "docker.ContainerStop", olog.F{"container": cont})
-		defer trace.EndCall(ctx)
+	conf, err := config.LoadConfig(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to load config")
+	}
 
-		err := o.d.ContainerStop(ctx, cont, &timeout)
-		if err != nil && !dockerclient.IsErrNotFound(err) {
-			err = trace.SetCallStatus(ctx, err)
-			return nil, err
-		}
-
-		return nil, nil
-	})
-
-	return err
-}
-
-func (o *Options) Run(ctx context.Context) error {
-	o.log.Info("Stopping Developer Environment ...")
-	err := o.StopContainers(ctx, []string{
-		"k3s",
-		containerruntime.ContainerName,
-
-		// older containers
-		"proxy",
-		"proxy-http",
-		"proxy-https",
-
-		// new proxy containers
-		"proxy-6443",
-		"proxy-443",
-		"proxy-80",
-	})
+	kr, err := devenvutil.EnsureDevenvRunning(ctx, conf, b)
 	if err != nil {
 		return err
 	}
 
+	o.log.Info("Stopping Developer Environment ...")
+	if err := kr.Stop(ctx); err != nil {
+		return errors.Wrap(err, "failed to stop developer environment")
+	}
 	o.log.Info("Developer Environment stopped successfully")
 
 	return nil

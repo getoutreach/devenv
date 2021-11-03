@@ -220,8 +220,28 @@ func (lr *LoftRuntime) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	out, err := exec.CommandContext(ctx, loft, "delete", "vcluster", lr.clusterName).CombinedOutput()
+	out, err := exec.CommandContext(ctx, loft, "delete", "vcluster", "--delete-space", lr.clusterName).CombinedOutput()
 	return errors.Wrapf(err, "failed to delete loft vcluster: %s", out)
+}
+
+func (lr *LoftRuntime) Stop(ctx context.Context) error {
+	loft, err := lr.ensureLoft(lr.log)
+	if err != nil {
+		return err
+	}
+
+	out, err := exec.CommandContext(ctx, loft, "sleep", "vcluster-"+lr.clusterName).CombinedOutput()
+	return errors.Wrapf(err, "failed to put loft vcluster to sleep: %s", out)
+}
+
+func (lr *LoftRuntime) Start(ctx context.Context) error {
+	loft, err := lr.ensureLoft(lr.log)
+	if err != nil {
+		return err
+	}
+
+	out, err := exec.CommandContext(ctx, loft, "wakeup", "vcluster-"+lr.clusterName).CombinedOutput()
+	return errors.Wrapf(err, "failed to wakeup loft vcluster: %s", out)
 }
 
 func (lr *LoftRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {
