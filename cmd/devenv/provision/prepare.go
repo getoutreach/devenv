@@ -163,18 +163,14 @@ func (o *Options) ensureImagePull(ctx context.Context) error {
 		return nil
 	}
 
-	// We need to take the user's key and inject data after the KV store, e.g.
-	// dev/devenv/image-pull-secret becomes dev/data/devenv/...
-	paths := strings.Split(o.b.DeveloperEnvironmentConfig.ImagePullSecret, "/")
-	secretPath := strings.Join(append([]string{paths[0], "data"}, paths[1:]...), "/")
-
 	storagePath := filepath.Join(o.homeDir, imagePullSecretPath)
 	if _, err := os.Stat(storagePath); err == nil {
 		// we already have it, so exit
 		return nil
 	}
 
-	o.log.WithField("secretPath", secretPath).Info("Fetching image pull secret via Vault")
+	o.log.WithField("secretPath", o.b.DeveloperEnvironmentConfig.ImagePullSecret).
+		Info("Fetching image pull secret via Vault")
 	if err := vault.EnsureLoggedIn(ctx, o.log, o.b, nil); err != nil {
 		return errors.Wrap(err, "failed to login to vault")
 	}
@@ -184,12 +180,12 @@ func (o *Options) ensureImagePull(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create vault client")
 	}
 
-	sec, err := v.Logical().Read(secretPath)
+	paths := strings.Split(o.b.DeveloperEnvironmentConfig.ImagePullSecret, "/")
+	sec, err := v.GetKV2Secret(ctx, paths[0], strings.Join(paths[1:], "/"))
 	if err != nil {
 		return errors.Wrap(err, "failed to read image pull secret from Vault")
 	}
-
-	imageSecret := sec.Data["data"].(map[string]interface{})["secret"].(string)
+	imageSecret := sec.Data["secret"].(string)
 
 	err = os.MkdirAll(filepath.Dir(storagePath), 0755)
 	if err != nil {

@@ -15,16 +15,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	vault "github.com/hashicorp/vault/api"
+	vault "github.com/getoutreach/vault-client"
 )
 
 func EnsureLoggedIn(ctx context.Context, log logrus.FieldLogger, b *box.Config, k kubernetes.Interface) error {
 	// Check if we need to issue a new token
-	err := exec.CommandContext(ctx, "vault", "token", "lookup").Run()
+	// IDEA: Move to use vault-client for this, minus SSO authentication
+	//nolint:gosec // Why: Passing in the vault address
+	err := exec.CommandContext(ctx, "vault", "token", "lookup", "-address", b.DeveloperEnvironmentConfig.VaultConfig.Address).Run()
 	if err != nil {
 		// We did, so issue a new token using our authentication method
-		//nolint:gosec // Why: Gotta do what you've gotta do :'(
-		cmd := exec.CommandContext(ctx, "vault", "login", "-method", b.DeveloperEnvironmentConfig.VaultConfig.AuthMethod)
+		//nolint:gosec // Why: passing in the auth method and vault address
+		cmd := exec.CommandContext(ctx, "vault", "login",
+			"-method",
+			b.DeveloperEnvironmentConfig.VaultConfig.AuthMethod,
+			"-address", b.DeveloperEnvironmentConfig.VaultConfig.Address,
+		)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -104,21 +110,10 @@ func refreshKubernetesAuth(ctx context.Context, b *box.Config, k kubernetes.Inte
 	return nil
 }
 
+// NewClient creates a new vault client
 func NewClient(ctx context.Context, b *box.Config) (*vault.Client, error) {
-	vconf := vault.DefaultConfig()
-	vconf.Address = b.DeveloperEnvironmentConfig.VaultConfig.Address
-
-	v, err := vault.NewClient(vconf)
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := exec.CommandContext(ctx, "vault", "print", "token").CombinedOutput()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get vault token: %s", string(token))
-	}
-
-	v.SetToken(strings.TrimSpace(string(token)))
-
-	return v, nil
+	return vault.New(
+		vault.WithAddress(b.DeveloperEnvironmentConfig.VaultConfig.Address),
+		vault.WithTokenFileAuth(nil),
+	), nil
 }
