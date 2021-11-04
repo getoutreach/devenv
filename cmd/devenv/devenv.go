@@ -45,7 +45,7 @@ import (
 var HoneycombTracingKey = "NOTSET" //nolint:gochecknoglobals // Why: We can't compile in things as a const.
 
 ///Block(honeycombDataset)
-const HoneycombDataset = ""
+const HoneycombDataset = "dev-tooling-team"
 
 ///EndBlock(honeycombDataset)
 

@@ -231,8 +231,7 @@ require (
 
 replace (
 	// Temporary
-	github.com/getoutreach/gobox => github.com/getoutreach/gobox v1.21.2-0.20211104221941-a62641f1478b
-
+	github.com/getoutreach/gobox => github.com/getoutreach/gobox v1.21.2-0.20211104232226-d7042f002e76
 	// Incompat w/ loft: see https://github.com/google/trillian/issues/2195
 	// and https://github.com/kubernetes-sigs/controller-runtime/issues/1498
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1

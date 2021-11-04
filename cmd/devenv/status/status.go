@@ -378,7 +378,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 	if o.k != nil {
 		fmt.Fprintln(w, "\ndevenv kubectl top nodes output:\n---")
 
-		err = cmdutil.RunKubernetesCommand(ctx, "", false, "kubectl", "top", "nodes")
+		err = cmdutil.RunKubernetesCommand(ctx, "", false, os.Args[0], "--skip-update", "kubectl", "top", "nodes", "--use-protocol-buffers")
 		if err != nil {
 			o.log.WithError(err).Warn("kubectl metrics unavailable currently, check again later")
 		}

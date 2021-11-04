@@ -632,8 +632,8 @@ github.com/fvbommel/sortorder v1.0.1/go.mod h1:uk88iVf1ovNn1iLfgUVU2F9o5eO30ui72
 github.com/gammazero/deque v0.0.0-20190130191400-2afb3858e9c7/go.mod h1:GeIq9qoE43YdGnDXURnmKTnGg15pQz4mYkXSTChbneI=
 github.com/gammazero/workerpool v0.0.0-20190406235159-88d534f22b56/go.mod h1:w9RqFVO2BM3xwWEcAB8Fwp0OviTBBEiRmSBDfbXnd3w=
 github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7/go.mod h1:NR3MbYisc3/PwhQ00EMzDiPmrwpPxAn5GI05/YaO1SY=
-github.com/getoutreach/gobox v1.21.2-0.20211104221941-a62641f1478b h1:8PA0juTV6UkVpjO7vDC3pC5pv3zOY17Fj61h2UEjKQ0=
-github.com/getoutreach/gobox v1.21.2-0.20211104221941-a62641f1478b/go.mod h1:EE8fgkMKThmSnZR9t/1oeKQQFVqspWkMJXSZAMEQsfY=
+github.com/getoutreach/gobox v1.21.2-0.20211104232226-d7042f002e76 h1:CL33vYTChdLA/AVGrLGcwYsDAZfTK5cMA2m4MDkjSLE=
+github.com/getoutreach/gobox v1.21.2-0.20211104232226-d7042f002e76/go.mod h1:EE8fgkMKThmSnZR9t/1oeKQQFVqspWkMJXSZAMEQsfY=
 github.com/getoutreach/localizer v1.12.0 h1:GxmfsCtTXDcbceKLKs4reIw4XnZpRH5tkSGncWee5lk=
 github.com/getoutreach/localizer v1.12.0/go.mod h1:gKArRCbfSj3FmyHKmR/WnCYon62E9K9jYYMOWcyllSE=
 github.com/getoutreach/vault-client v1.2.1 h1:caaZAB7fuzXePSLLd/fAib091lHHNVhzLcxWZnhopqw=
