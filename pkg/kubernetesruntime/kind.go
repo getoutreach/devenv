@@ -219,8 +219,8 @@ func (kr *KindRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {
 func (kr *KindRuntime) GetClusters(ctx context.Context) ([]*RuntimeCluster, error) {
 	curStatus := kr.Status(ctx).Status.Status
 
-	if curStatus == status.Unprovisioned || curStatus == status.Unknown {
-		// Only return a cluster if it's actively running
+	if curStatus == status.Unprovisioned {
+		// Only return a cluster if it's no unprovisioned
 		return []*RuntimeCluster{}, nil
 	}
 
