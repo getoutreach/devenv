@@ -61,9 +61,9 @@ jobs:
                 # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
                 keys:
                   # looks for the cache for this go.sum
-                  - v2-pkg-cache-{{ checksum "go.sum" }}
+                  - v3-pkg-cache-{{ checksum "go.sum" }}
                   # fallback to the latest cached versions
-                  - v2-pkg-cache-
+                  - v3-pkg-cache-
 
             # we make this a seperate step to prevent obscure SSH error messages
             - run:
@@ -86,9 +86,9 @@ jobs:
                   fi
 
             - save_cache:
-                key: v2-pkg-cache-{{ checksum "go.sum" }}
+                key: v3-pkg-cache-{{ checksum "go.sum" }}
                 paths:
-                  - "~/go/pkg"
+                  - "~/go/pkg/mod"
 
             - store_artifacts: # Upload test coverage for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
                 path: /tmp/coverage.out
@@ -102,6 +102,7 @@ jobs:
                 path: /tmp/test-results
   release-dryrun:
     machine:
+      docker_layer_caching: true
       image: ubuntu-2004:202107-02
     resource_class: xlarge
     environment:
@@ -176,6 +177,7 @@ jobs:
             export CIRCLE_BRANCH=$OLD_CIRCLE_BRANCH
   release:
     machine:
+      docker_layer_caching: true
       image: ubuntu-2004:202107-02
     resource_class: xlarge
     environment:
@@ -231,20 +233,10 @@ jobs:
           steps:
             - add_ssh_keys
             - checkout
-
-            # This is needed to download dependencies, which go list needs for some reason.
             - restore_cache:
                 keys:
-                  - v2-pkg-cache-{{ checksum "go.sum" }}
-                  - v2-pkg-cache-
-            - run:
-                name: Install Dependencies
-                command: buildevents cmd $CIRCLE_WORKFLOW_ID $STEP_SPAN_ID install-go-dependencies -- make dep
-            - save_cache:
-                key: v2-pkg-cache-{{ checksum "go.sum" }}
-                paths:
-                  - "~/go/pkg"
-
+                  - v3-pkg-cache-{{ checksum "go.sum" }}
+                  - v3-pkg-cache-
             - run:
                 name: Trigger Documentation Update
                 command: |-
