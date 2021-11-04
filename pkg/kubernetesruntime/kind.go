@@ -220,7 +220,7 @@ func (kr *KindRuntime) GetClusters(ctx context.Context) ([]*RuntimeCluster, erro
 	curStatus := kr.Status(ctx).Status.Status
 
 	if curStatus == status.Unprovisioned {
-		// Only return a cluster if it's no unprovisioned
+		// Only return a cluster if it's not unprovisioned
 		return []*RuntimeCluster{}, nil
 	}
 
