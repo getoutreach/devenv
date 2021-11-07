@@ -8,28 +8,11 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/signal"
-	"os/user"
-	"path/filepath"
-	"runtime"
-	"runtime/debug"
-	"strings"
-	"syscall"
 
 	oapp "github.com/getoutreach/gobox/pkg/app"
-	"github.com/getoutreach/gobox/pkg/box"
-	"github.com/getoutreach/gobox/pkg/cfg"
-	olog "github.com/getoutreach/gobox/pkg/log"
-	"github.com/getoutreach/gobox/pkg/secrets"
-	"github.com/getoutreach/gobox/pkg/trace"
-	"github.com/getoutreach/gobox/pkg/updater"
-	"github.com/pkg/errors"
+	gcli "github.com/getoutreach/gobox/pkg/cli"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
 
 	// Place any extra imports for your startup code here
 	///Block(imports)
@@ -57,103 +40,20 @@ import (
 // down by devconfig.sh.
 var HoneycombTracingKey = "NOTSET" //nolint:gochecknoglobals // Why: We can't compile in things as a const.
 
+///Block(honeycombDataset)
+const HoneycombDataset = ""
+
+///EndBlock(honeycombDataset)
+
 ///Block(global)
 ///EndBlock(global)
 
-// overrideConfigLoaders fakes certain parts of the config that usually get pulled
-// in via mechanisms that don't make sense to use in CLIs.
-func overrideConfigLoaders() {
-	var fallbackSecretLookup func(context.Context, string) ([]byte, error)
-	fallbackSecretLookup = secrets.SetDevLookup(func(ctx context.Context, key string) ([]byte, error) {
-		if key == "APIKey" {
-			return []byte(HoneycombTracingKey), nil
-		}
-
-		return fallbackSecretLookup(ctx, key)
-	})
-
-	olog.SetOutput(ioutil.Discard)
-
-	fallbackConfigReader := cfg.DefaultReader()
-	cfg.SetDefaultReader(func(fileName string) ([]byte, error) {
-		if fileName == "trace.yaml" {
-			traceConfig := &trace.Config{
-				Honeycomb: trace.Honeycomb{
-					Enabled: true,
-					APIHost: "https://api.honeycomb.io",
-					APIKey: cfg.Secret{
-						Path: "APIKey",
-					},
-					///Block(dataset)
-					Dataset: "dev-tooling-team",
-					///EndBlock(dataset)
-					SamplePercent: 100,
-				},
-			}
-			b, err := yaml.Marshal(&traceConfig)
-			if err != nil {
-				panic(err)
-			}
-			return b, nil
-		}
-
-		return fallbackConfigReader(fileName)
-	})
-}
-
-func main() { //nolint:funlen // Why: We can't dwindle this down anymore without adding complexity.
+func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	log := logrus.New()
 
-	exitCode := 0
-	cli.OsExiter = func(code int) { exitCode = code }
-
-	oapp.SetName("devenv")
-	overrideConfigLoaders()
-
-	// handle ^C gracefully
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-	go func() {
-		out := <-c
-		log.Debugf("shutting down: %v", out)
-		cancel()
-	}()
-
-	if err := trace.InitTracer(ctx, "devenv"); err != nil {
-		log.WithError(err).Debugf("failed to start tracer")
-	}
-	ctx = trace.StartTrace(ctx, "devenv")
-
 	///Block(init)
 	///EndBlock(init)
-
-	// optional cleanup function for use after NeedsUpdate
-	// this function is re-defined later when NeedsUpdate is true
-	cleanup := func() {}
-
-	exit := func() {
-		trace.End(ctx)
-		trace.CloseTracer(ctx)
-		///Block(exit)
-		///EndBlock(exit)
-		cleanup()
-		os.Exit(exitCode)
-	}
-	defer exit()
-
-	// Print a stack trace when a panic occurs and set the exit code
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
-
-			// Go sets panic exit codes to 2
-			exitCode = 2
-		}
-	}()
-
-	ctx = trace.StartCall(ctx, "main")
-	defer trace.EndCall(ctx)
 
 	app := cli.App{
 		Version: oapp.Version,
@@ -166,22 +66,6 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 		///EndBlock(app)
 	}
 	app.Flags = []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "skip-update",
-			Usage: "skips the updater check",
-		},
-		&cli.BoolFlag{
-			Name:  "debug",
-			Usage: "enables debug logging for all components (i.e updater)",
-		},
-		&cli.BoolFlag{
-			Name:  "enable-prereleases",
-			Usage: "Enable considering pre-releases when checking for updates",
-		},
-		&cli.BoolFlag{
-			Name:  "force-update-check",
-			Usage: "Force checking for an update",
-		},
 		///Block(flags)
 		///EndBlock(flags)
 	}
@@ -206,85 +90,9 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 		///EndBlock(commands)
 	}
 
-	app.Before = func(c *cli.Context) error {
-		///Block(before)
-		// ensure our storage directory exists
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return errors.Wrap(err, "failed to get user home dir")
-		}
+	///Block(postApp)
+	///EndBlock(postApp)
 
-		err = os.MkdirAll(filepath.Join(homeDir, ".local", "dev-environment"), 0755)
-		if err != nil {
-			return err
-		}
-
-		_, err = box.EnsureBoxWithOptions(ctx, box.WithLogger(log), box.WithMinVersion(1))
-		if err != nil {
-			return err
-		}
-		///EndBlock(before)
-
-		// add info to the root trace about our command and args
-		cargs := c.Args().Slice()
-		command := ""
-		args := make([]string, 0)
-		if len(cargs) > 0 {
-			command = c.Args().Slice()[0]
-		}
-		if len(cargs) > 1 {
-			args = cargs[1:]
-		}
-
-		userName := ""
-		if u, err := user.Current(); err == nil {
-			userName = u.Username
-		}
-		trace.AddInfo(ctx, olog.F{
-			"devenv.subcommand": command,
-			"devenv.args":       strings.Join(args, " "),
-			"os.user":           userName,
-			"os.name":           runtime.GOOS,
-			///Block(trace)
-			///EndBlock(trace)
-		})
-
-		// restart when updated
-		traceCtx := trace.StartCall(c.Context, "updater.NeedsUpdate")
-		defer trace.EndCall(traceCtx)
-
-		// restart when updated
-		if updater.NeedsUpdate(traceCtx, log, "", oapp.Version, c.Bool("skip-update"), c.Bool("debug"), c.Bool("enable-prereleases"), c.Bool("force-update-check")) {
-			// replace running process(execve)
-			switch runtime.GOOS {
-			case "linux", "darwin":
-				cleanup = func() {
-					log.Infof("devenv has been updated")
-					//nolint:gosec // Why: We're passing in os.Args
-					err := syscall.Exec(os.Args[0], os.Args[1:], os.Environ())
-					if err != nil {
-						log.WithError(err).Error("failed to execute updated binary")
-					}
-				}
-			default:
-				log.Infof("devenv has been updated, please re-run your command")
-			}
-
-			exitCode = 5
-			trace.EndCall(traceCtx)
-			exit()
-			return nil
-		}
-
-		return nil
-	}
-
-	if err := app.RunContext(ctx, os.Args); err != nil {
-		log.Errorf("failed to run: %v", err)
-		//nolint:errcheck // Why: We're attaching the error to the trace.
-		trace.SetCallStatus(ctx, err)
-		exitCode = 1
-
-		return
-	}
+	// Insert global flags, tracing, updating and start the application.
+	gcli.HookInUrfaveCLI(ctx, cancel, &app, log, HoneycombTracingKey, HoneycombDataset)
 }
