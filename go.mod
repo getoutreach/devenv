@@ -229,6 +229,9 @@ require (
 )
 
 replace (
+	// Testing
+	github.com/getoutreach/gobox => ../gobox
+
 	// Incompat w/ loft: see https://github.com/google/trillian/issues/2195
 	// and https://github.com/kubernetes-sigs/controller-runtime/issues/1498
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
