@@ -32,7 +32,6 @@ import (
 	"github.com/getoutreach/devenv/pkg/snapshoter"
 	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/getoutreach/gobox/pkg/box"
-	"github.com/manifoldco/promptui"
 	"github.com/minio/minio-go/v7"
 
 	"github.com/pkg/errors"
@@ -153,6 +152,7 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 			&cli.StringFlag{
 				Name:  "kubernetes-runtime",
 				Usage: "Specify which kubernetes runtime to use (options: kind, loft)",
+				Value: "kind",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -168,31 +168,6 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 			o.SnapshotChannel = box.SnapshotLockChannel(c.String("snapshot-channel"))
 
 			runtimeName := c.String("kubernetes-runtime")
-			if runtimeName == "" {
-				if _, ok := os.LookupEnv("CI"); !ok {
-					prompt := promptui.Select{
-						Label: "Kubernetes Runtime",
-						Items: b.DeveloperEnvironmentConfig.RuntimeConfig.EnabledRuntimes,
-					}
-
-					// prompt the user for which runtime they want to use
-					o.log.Info("Please select a Kubernetes Runtime to use")
-					if _, result, err := prompt.Run(); err != nil {
-						if errors.Is(err, promptui.ErrInterrupt) || errors.Is(err, promptui.ErrAbort) || errors.Is(err, promptui.ErrEOF) {
-							return fmt.Errorf("interrupt")
-						}
-
-						o.log.Warn("failed to prompt for user input on which runtime to use, will fallback to kind")
-						runtimeName = "kind"
-					} else {
-						runtimeName = result
-					}
-				} else {
-					// default to kind in CI
-					runtimeName = "kind"
-				}
-			}
-
 			k8sRuntime, err := kubernetesruntime.GetRuntime(runtimeName)
 			if err != nil {
 				return errors.Wrap(err, "failed to load kubernetes runtime")
