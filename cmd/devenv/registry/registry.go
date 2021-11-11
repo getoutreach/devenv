@@ -106,7 +106,7 @@ func (o *Options) getDevenvName(ctx context.Context, b *box.Config) (string, err
 }
 
 // RunGet runs the get command
-func (o *Options) RunGet(ctx context.Context) error {
+func (o *Options) RunGet(ctx context.Context) error { //nolint:funlen // Why: acceptable size atm
 	b, err := box.LoadBox()
 	if err != nil {
 		return errors.Wrap(err, "failed to load box configuration")
