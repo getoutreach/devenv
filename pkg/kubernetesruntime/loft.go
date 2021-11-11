@@ -17,6 +17,7 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/gobox/pkg/box"
+	"github.com/getoutreach/gobox/pkg/region"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -185,6 +186,35 @@ func (lr *LoftRuntime) Status(ctx context.Context) RuntimeStatus {
 	return resp
 }
 
+// getPreferredCluster returns the backing cluster that should be used for this devenv
+func (lr *LoftRuntime) getPreferredCluster(ctx context.Context) string {
+	loftConfig := &lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft
+	clusters := loftConfig.Clusters
+	regions := clusters.Regions()
+	cloudName := loftConfig.DefaultCloud
+
+	cloud := region.CloudFromCloudName(cloudName)
+	if cloud == nil {
+		lr.log.Warn("failed to get cloud from box config, this may result in issues")
+		return ""
+	}
+
+	regionName, err := cloud.Regions(ctx).Filter(regions).Nearest(ctx, lr.log)
+	if err != nil {
+		regionName = loftConfig.DefaultRegion
+		lr.log.WithError(err).Warnf("failed to determine nearest region, will fallback to '%s'", regionName)
+	}
+
+	for _, c := range clusters {
+		if c.Region == regionName {
+			return c.Name
+		}
+	}
+
+	lr.log.WithField("region", regionName).Warn("failed to find backing cluster for region")
+	return ""
+}
+
 func (lr *LoftRuntime) Create(ctx context.Context) error {
 	loft, err := lr.ensureLoft(lr.log)
 	if err != nil {
@@ -198,9 +228,20 @@ func (lr *LoftRuntime) Create(ctx context.Context) error {
 	kubeConfig.Close() //nolint:errcheck
 	defer os.Remove(kubeConfig.Name())
 
-	cmd := exec.CommandContext(ctx, loft, "create", "vcluster",
+	args := []string{"create", "vcluster",
 		"--sleep-after", "3600", // sleeps after 1 hour
-		"--template", "devenv", lr.clusterName)
+		"--template", "devenv"}
+
+	backingCluster := lr.getPreferredCluster(ctx)
+	if backingCluster == "" {
+		lr.log.Warn(
+			"failed to find a cluster in your region, will fallback to a random one, this may result in a degraded user experience. This should be reported as it's likely a box configuration issue",
+		)
+	}
+	args = append(args, "--cluster", backingCluster, lr.clusterName)
+
+	lr.log.WithField("args", args).Info("Creating vcluster")
+	cmd := exec.CommandContext(ctx, loft, args...)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+kubeConfig.Name())
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin

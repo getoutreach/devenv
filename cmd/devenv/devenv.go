@@ -42,6 +42,7 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/kubectl"
 	localapp "github.com/getoutreach/devenv/cmd/devenv/local-app"
 	"github.com/getoutreach/devenv/cmd/devenv/provision"
+	"github.com/getoutreach/devenv/cmd/devenv/registry"
 	"github.com/getoutreach/devenv/cmd/devenv/snapshot"
 	"github.com/getoutreach/devenv/cmd/devenv/start"
 	"github.com/getoutreach/devenv/cmd/devenv/status"
@@ -203,6 +204,7 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 		snapshot.NewCmdSnapshot(log),
 		expose.NewCmdExpose(log),
 		cmdcontext.NewCmdContext(log),
+		registry.NewCmdRegistry(log),
 		///EndBlock(commands)
 	}
 
@@ -219,7 +221,7 @@ func main() { //nolint:funlen // Why: We can't dwindle this down anymore without
 			return err
 		}
 
-		_, err = box.EnsureBoxWithOptions(ctx, box.WithLogger(log), box.WithMinVersion(1))
+		_, err = box.EnsureBoxWithOptions(ctx, box.WithLogger(log), box.WithMinVersion(2))
 		if err != nil {
 			return err
 		}
