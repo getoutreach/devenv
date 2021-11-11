@@ -306,7 +306,8 @@ func (lr *LoftRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {
 	return kubeconfig, nil
 }
 
-func (lr *LoftRuntime) getKubeConfigForVCluster(_ context.Context, vc *managementv1.ClusterVirtualCluster) *api.Config {
+//nolint:funlen // Why: It's OK.
+func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *managementv1.ClusterVirtualCluster) *api.Config {
 	loftCLIPath, _ := lr.ensureLoft(lr.log)   //nolint:errcheck
 	loftConfPath, _ := lr.getLoftConfigPath() //nolint:errcheck
 
@@ -317,12 +318,30 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(_ context.Context, vc *managemen
 		Args:       []string{"token", "--silent", "--config", loftConfPath},
 	}
 
+	isDirectEndpoint := false
+	endpoint := lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL
+	paths := []string{vc.VirtualCluster.Namespace, vc.VirtualCluster.Name}
+
+	// Check if this backend cluster has a direct endpoint configured
+	if backingCluster, err := lr.loft.ManagementV1().Clusters().Get(ctx, vc.Cluster, metav1.GetOptions{}); err == nil {
+		if directEndpoint, ok := backingCluster.Annotations["loft.sh/direct-cluster-endpoint"]; ok {
+			endpoint = "https://" + directEndpoint
+			isDirectEndpoint = true
+		}
+	}
+
+	if isDirectEndpoint {
+		authInfo.Exec.Args = append(authInfo.Exec.Args, "--direct-cluster-endpoint")
+	} else {
+		paths = append([]string{vc.Cluster}, paths...)
+	}
+
 	contextName := vc.VirtualCluster.Name
 	return &api.Config{
 		Clusters: map[string]*api.Cluster{
 			contextName: {
-				Server: lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL + "/kubernetes/virtualcluster/" +
-					vc.Cluster + "/" + vc.VirtualCluster.Namespace + "/" + vc.VirtualCluster.Name,
+				Server: endpoint +
+					path.Join(append([]string{"/kubernetes/virtualcluster"}, paths...)...),
 			},
 		},
 		// IDEA: If we ever merge this into ~/.kube/config we could support
