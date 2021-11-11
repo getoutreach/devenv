@@ -110,7 +110,7 @@ local items = {
           containers: [
             {
               name: 'helm-controller',
-              image: 'rancher/helm-controller:v0.10.6',
+              image: 'rancher/helm-controller:v0.11.7',
               command: [
                 'helm-controller',
               ],
