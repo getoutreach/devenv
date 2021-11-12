@@ -3,4 +3,4 @@
 version: v8.7.3
 generated: 2021-11-12T00:14:49Z
 versions:
-  devbase: v1.30.4
+  devbase: jaredallard/fix/release-dry-run
