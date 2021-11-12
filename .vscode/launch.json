@@ -12,10 +12,7 @@
       "program": "${workspaceRoot}/cmd/devenv/devenv.go",
       "buildFlags": "-tags=or_dev",
       "cwd": "${workspaceRoot}",
-      "args": [
-        "registry",
-        "get"
-      ]
+      "args": ["registry", "get"]
     }
   ]
 }
