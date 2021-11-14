@@ -10,7 +10,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.1
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/fatih/color v1.13.0
-	github.com/getoutreach/gobox v1.23.0
+	github.com/getoutreach/gobox v1.24.0
 	github.com/getoutreach/localizer v1.12.0
 	github.com/getoutreach/vault-client v1.2.1
 	github.com/google/btree v1.0.1 // indirect
@@ -42,7 +42,7 @@ require (
 	// and that the replace directives are updated to match.
 	// Current version: v0.21.3
 	k8s.io/api v0.21.3
-	k8s.io/apimachinery v0.21.3
+	k8s.io/apimachinery v0.22.3
 	k8s.io/cli-runtime v0.22.2
 	k8s.io/client-go v0.21.3
 	k8s.io/component-base v0.21.3
