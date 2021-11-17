@@ -10,7 +10,7 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	LocalizerVersion     = "v1.12.1"
+	LocalizerVersion     = "v1.13.0"
 	LocalizerDownloadURL = "https://github.com/getoutreach/localizer/releases/download/" +
 		LocalizerVersion + "/localizer_" + strings.TrimPrefix(LocalizerVersion, "v") + "_" +
 		runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz"
