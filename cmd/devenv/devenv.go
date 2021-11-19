@@ -73,7 +73,7 @@ func main() {
 			// in before to see if that command is being run, you would be wrong
 			// Using the args passed in to see if the completion command
 			// was provided. Other global flags are just ignored.
-			if c.Args().Len() > 0 && c.Args().First() == "completion" {
+			if c.Args().First() == "completion" {
 				return nil
 			}
 
