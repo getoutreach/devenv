@@ -69,6 +69,14 @@ func main() {
 		`),
 		EnableBashCompletion: true,
 		Before: func(c *cli.Context) error {
+			// NOTE: You would think you can check the the c.Command.Name == "completion"
+			// in before to see if that command is being run, you would be wrong
+			// Using the args passed in to see if the completion command
+			// was provided. Other global flags are just ignored.
+			if c.Args().First() == "completion" {
+				return nil
+			}
+
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				return errors.Wrap(err, "failed to get user home dir")
