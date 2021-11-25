@@ -36,5 +36,10 @@ spec:
     # These credentials ARE INSECURE, but this is just for a local / restricted access
     # cloud devenv so this is currently acceptable. Potentially in the future we will
     # lock these down.
-    accessKey: minioaccess
-    secretKey: miniosecret
+    users:
+    - accessKey: console
+      secretKey: console123
+      policy: consoleAdmin
+    - accessKey: minioaccess
+      secretKey: miniosecret
+      policy: readwrite
