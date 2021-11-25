@@ -5,8 +5,8 @@ metadata:
   namespace: kube-system
 spec:
   chart: minio
-  version: 8.0.10
-  repo: https://helm.min.io/
+  version: 3.2.0
+  repo: https://charts.min.io/
   targetNamespace: minio
   valuesContent: |-
     # From: https://hub.docker.com/r/minio/minio/tags/?page=1&ordering=last_updated
@@ -22,6 +22,8 @@ spec:
     - name: velero-restore
       policy: none
       purge: false
+
+    replicas: 1
 
     resources:
       requests:
