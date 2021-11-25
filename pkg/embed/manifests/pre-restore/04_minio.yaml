@@ -23,6 +23,7 @@ spec:
       policy: none
       purge: false
 
+    mode: standalone
     replicas: 1
 
     resources:
