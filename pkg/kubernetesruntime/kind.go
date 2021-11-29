@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"text/template"
+	"time"
 
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -19,6 +20,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
+	"github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
 )
 
@@ -161,6 +163,27 @@ func (kr *KindRuntime) Destroy(ctx context.Context) error {
 
 	b, err := exec.CommandContext(ctx, kind, "delete", "cluster", "--name", KindClusterName).CombinedOutput()
 	return errors.Wrapf(err, "failed to run kind: %s", b)
+}
+
+// Stop stops a kind cluster
+func (kr *KindRuntime) Stop(ctx context.Context) error {
+	d, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
+	if err != nil {
+		return errors.Wrap(err, "failed to create docker client")
+	}
+
+	timeout := time.Duration(0)
+	return d.ContainerStop(ctx, containerruntime.ContainerName, &timeout)
+}
+
+// Start starts a kind cluster
+func (kr *KindRuntime) Start(ctx context.Context) error {
+	d, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
+	if err != nil {
+		return errors.Wrap(err, "failed to create docker client")
+	}
+
+	return d.ContainerStart(ctx, containerruntime.ContainerName, types.ContainerStartOptions{})
 }
 
 // GetKubeConfig reads a kubeconfig from Kind and returns it

@@ -17,6 +17,7 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/gobox/pkg/box"
+	"github.com/getoutreach/gobox/pkg/region"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -185,6 +186,35 @@ func (lr *LoftRuntime) Status(ctx context.Context) RuntimeStatus {
 	return resp
 }
 
+// getPreferredCluster returns the backing cluster that should be used for this devenv
+func (lr *LoftRuntime) getPreferredCluster(ctx context.Context) string {
+	loftConfig := &lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft
+	clusters := loftConfig.Clusters
+	regions := clusters.Regions()
+	cloudName := loftConfig.DefaultCloud
+
+	cloud := region.CloudFromCloudName(cloudName)
+	if cloud == nil {
+		lr.log.Warn("failed to get cloud from box config, this may result in issues")
+		return ""
+	}
+
+	regionName, err := cloud.Regions(ctx).Filter(regions).Nearest(ctx, lr.log)
+	if err != nil {
+		regionName = loftConfig.DefaultRegion
+		lr.log.WithError(err).Warnf("failed to determine nearest region, will fallback to '%s'", regionName)
+	}
+
+	for _, c := range clusters {
+		if c.Region == regionName {
+			return c.Name
+		}
+	}
+
+	lr.log.WithField("region", regionName).Warn("failed to find backing cluster for region")
+	return ""
+}
+
 func (lr *LoftRuntime) Create(ctx context.Context) error {
 	loft, err := lr.ensureLoft(lr.log)
 	if err != nil {
@@ -198,9 +228,20 @@ func (lr *LoftRuntime) Create(ctx context.Context) error {
 	kubeConfig.Close() //nolint:errcheck
 	defer os.Remove(kubeConfig.Name())
 
-	cmd := exec.CommandContext(ctx, loft, "create", "vcluster",
+	args := []string{"create", "vcluster",
 		"--sleep-after", "3600", // sleeps after 1 hour
-		"--template", "devenv", lr.clusterName)
+		"--template", "devenv"}
+
+	backingCluster := lr.getPreferredCluster(ctx)
+	if backingCluster == "" {
+		lr.log.Warn(
+			"failed to find a cluster in your region, will fallback to a random one, this may result in a degraded user experience. This should be reported as it's likely a box configuration issue",
+		)
+	}
+	args = append(args, "--cluster", backingCluster, lr.clusterName)
+
+	lr.log.WithField("args", args).Info("Creating vcluster")
+	cmd := exec.CommandContext(ctx, loft, args...)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+kubeConfig.Name())
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -220,8 +261,28 @@ func (lr *LoftRuntime) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	out, err := exec.CommandContext(ctx, loft, "delete", "vcluster", lr.clusterName).CombinedOutput()
+	out, err := exec.CommandContext(ctx, loft, "delete", "vcluster", "--delete-space", lr.clusterName).CombinedOutput()
 	return errors.Wrapf(err, "failed to delete loft vcluster: %s", out)
+}
+
+func (lr *LoftRuntime) Stop(ctx context.Context) error {
+	loft, err := lr.ensureLoft(lr.log)
+	if err != nil {
+		return err
+	}
+
+	out, err := exec.CommandContext(ctx, loft, "sleep", "vcluster-"+lr.clusterName).CombinedOutput()
+	return errors.Wrapf(err, "failed to put loft vcluster to sleep: %s", out)
+}
+
+func (lr *LoftRuntime) Start(ctx context.Context) error {
+	loft, err := lr.ensureLoft(lr.log)
+	if err != nil {
+		return err
+	}
+
+	out, err := exec.CommandContext(ctx, loft, "wakeup", "vcluster-"+lr.clusterName).CombinedOutput()
+	return errors.Wrapf(err, "failed to wakeup loft vcluster: %s", out)
 }
 
 func (lr *LoftRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {
@@ -245,7 +306,8 @@ func (lr *LoftRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {
 	return kubeconfig, nil
 }
 
-func (lr *LoftRuntime) getKubeConfigForVCluster(_ context.Context, vc *managementv1.ClusterVirtualCluster) *api.Config {
+//nolint:funlen // Why: It's OK.
+func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *managementv1.ClusterVirtualCluster) *api.Config {
 	loftCLIPath, _ := lr.ensureLoft(lr.log)   //nolint:errcheck
 	loftConfPath, _ := lr.getLoftConfigPath() //nolint:errcheck
 
@@ -256,12 +318,30 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(_ context.Context, vc *managemen
 		Args:       []string{"token", "--silent", "--config", loftConfPath},
 	}
 
+	isDirectEndpoint := false
+	endpoint := lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL
+	paths := []string{vc.VirtualCluster.Namespace, vc.VirtualCluster.Name}
+
+	// Check if this backend cluster has a direct endpoint configured
+	if backingCluster, err := lr.loft.ManagementV1().Clusters().Get(ctx, vc.Cluster, metav1.GetOptions{}); err == nil {
+		if directEndpoint, ok := backingCluster.Annotations["loft.sh/direct-cluster-endpoint"]; ok {
+			endpoint = "https://" + directEndpoint
+			isDirectEndpoint = true
+		}
+	}
+
+	if isDirectEndpoint {
+		authInfo.Exec.Args = append(authInfo.Exec.Args, "--direct-cluster-endpoint")
+	} else {
+		paths = append([]string{vc.Cluster}, paths...)
+	}
+
 	contextName := vc.VirtualCluster.Name
 	return &api.Config{
 		Clusters: map[string]*api.Cluster{
 			contextName: {
-				Server: lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL + "/kubernetes/virtualcluster/" +
-					vc.Cluster + "/" + vc.VirtualCluster.Namespace + "/" + vc.VirtualCluster.Name,
+				Server: endpoint +
+					path.Join(append([]string{"/kubernetes/virtualcluster"}, paths...)...),
 			},
 		},
 		// IDEA: If we ever merge this into ~/.kube/config we could support

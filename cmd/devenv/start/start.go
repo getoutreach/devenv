@@ -2,14 +2,13 @@ package start
 
 import (
 	"context"
-	"fmt"
+	"io"
 
-	"github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
-	"github.com/getoutreach/devenv/pkg/containerruntime"
+	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/gobox/pkg/box"
@@ -80,37 +79,42 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return errors.Wrap(err, "failed to load box configuration")
 	}
 
-	cont, err := o.d.ContainerInspect(ctx, containerruntime.ContainerName)
-	if dockerclient.IsErrNotFound(err) {
-		if _, err = o.d.ContainerInspect(ctx, "k3s"); err == nil {
-			o.log.Info("Please destroy and reprovision your cluster. This will greatly increase the stability.")
-			return fmt.Errorf("found older kubernetes runtime environment (k3s)")
-		}
+	conf, err := config.LoadConfig(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to load config")
+	}
 
-		o.log.Info("Hint: Try running 'devenv provision'")
-		return fmt.Errorf("developer environment not found")
-	} else if err != nil {
+	kr, err := devenvutil.EnsureDevenvRunning(ctx, conf, b)
+	if err != nil {
 		return err
 	}
 
-	if cont.State.Running {
-		return fmt.Errorf("developer environment is already started")
-	}
-
 	o.log.Info("Starting Developer Environment")
-	err = o.d.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{})
-	if err != nil {
+	if err := kr.Start(ctx); err != nil {
 		return errors.Wrap(err, "failed to start developer environment")
 	}
+	o.log.Info("Started Developer Environment")
 
+	o.log.Info("Waiting for Kubernetes to accessible ...")
 	sopt, err := status.NewOptions(o.log)
 	if err != nil {
 		return err
 	}
 
-	o.log.Info("Waiting for developer environment to be up ...")
-	err = devenvutil.WaitForDevenv(ctx, sopt, o.log)
+	// Wait for the devenv to be "ready" so that we can create a Kubernetes client that works
+	noopLogger := logrus.New()
+	noopLogger.Out = io.Discard
+	err = devenvutil.WaitForDevenv(ctx, sopt, noopLogger)
 	if err != nil {
+		return err
+	}
+
+	k, err := kube.GetKubeClient()
+	if err != nil {
+		return err
+	}
+
+	if err := devenvutil.WaitForAllPodsToBeReady(ctx, k, o.log); err != nil {
 		return err
 	}
 
@@ -120,6 +124,5 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		}
 	}
 
-	o.log.Info("Developer Environment has started (note: services may take longer to start)")
 	return nil
 }

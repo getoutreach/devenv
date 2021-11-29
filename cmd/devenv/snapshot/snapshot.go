@@ -447,8 +447,8 @@ func (o *Options) CreateSnapshot(ctx context.Context) (string, error) { //nolint
 			Name: backupName,
 		},
 		Spec: velerov1api.BackupSpec{
-			// Don't include velero, we need to install it before the backup
-			ExcludedNamespaces: []string{"velero"},
+			// Don't include velero, we need to install it before the backup. Skip minio because it's the snapshot backend
+			ExcludedNamespaces: []string{"velero", "minio"},
 			// Skip helm chart resources, since they've already been rendered at
 			// this point.
 			ExcludedResources:       []string{"HelmChart"},

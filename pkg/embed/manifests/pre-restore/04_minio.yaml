@@ -5,8 +5,8 @@ metadata:
   namespace: kube-system
 spec:
   chart: minio
-  version: 8.0.10
-  repo: https://helm.min.io/
+  version: 3.2.0
+  repo: https://charts.min.io/
   targetNamespace: minio
   valuesContent: |-
     # From: https://hub.docker.com/r/minio/minio/tags/?page=1&ordering=last_updated
@@ -23,6 +23,9 @@ spec:
       policy: none
       purge: false
 
+    mode: standalone
+    replicas: 1
+
     resources:
       requests:
         memory: 200Mi
@@ -33,5 +36,10 @@ spec:
     # These credentials ARE INSECURE, but this is just for a local / restricted access
     # cloud devenv so this is currently acceptable. Potentially in the future we will
     # lock these down.
-    accessKey: minioaccess
-    secretKey: miniosecret
+    users:
+    - accessKey: console
+      secretKey: console123
+      policy: consoleAdmin
+    - accessKey: minioaccess
+      secretKey: miniosecret
+      policy: readwrite
