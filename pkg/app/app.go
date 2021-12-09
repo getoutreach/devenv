@@ -113,7 +113,7 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 		return cleanup, err
 	}
 
-	args := []string{"clone", "--recursive", "git@github.com:getoutreach/" + a.RepositoryName, tempDir}
+	args := []string{"clone", "--recurse-submodules", "git@github.com:getoutreach/" + a.RepositoryName, tempDir}
 	if a.Version != "" {
 		args = append(args, "--branch", a.Version, "--depth", "1")
 	}
