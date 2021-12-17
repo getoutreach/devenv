@@ -11,6 +11,7 @@ jobs:
     executor:
       name: shared/testbed-docker
       docker_tag: stable
+    resource_class: large
     docker:
       - image: gcr.io/outreach-docker/bootstrap/ci:stable
         auth:
