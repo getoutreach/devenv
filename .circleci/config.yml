@@ -1,20 +1,7 @@
 version: 2.1
 
 orbs:
-  shared: getoutreach/shared@1.30.5
-
-# DEPRECATED: Use the devbase orb instead:
-# https://github.com/getoutreach/devbase/tree/main/orbs/shared
-commands:
-  with_job_span:
-    parameters:
-      steps:
-        type: steps
-    steps:
-      - run:
-          name: DEPRECATION NOTICE
-          command: echo "with_job_span is deprecated and should be removed"
-      - steps: << parameters.steps >>
+  shared: getoutreach/shared@1.38.1
 
 jobs:
   ###Block(circleJobs)
@@ -23,9 +10,9 @@ jobs:
   test:
     executor:
       name: shared/testbed-docker
-      go_version: 1.17.1
+      docker_tag: stable
     docker:
-      - image: gcr.io/outreach-docker/bootstrap/testbed:1.17.1
+      - image: gcr.io/outreach-docker/bootstrap/ci:stable
         auth:
           username: _json_key
           password: $GCLOUD_SERVICE_ACCOUNT
@@ -92,7 +79,7 @@ jobs:
   trigger_documentation:
     executor:
       name: shared/testbed-docker
-      go_version: 1.17.1
+      docker_tag: stable
     steps:
       - shared/setup_environment
       - shared/with_go_cache
@@ -111,6 +98,7 @@ workflows:
       - release:
           context:
             - docker-registry
+            - ghaccesstoken
             - npm-credentials
           requires:
             - test
@@ -125,6 +113,7 @@ workflows:
       - release-dryrun:
           context:
             - docker-registry
+            - ghaccesstoken
             - npm-credentials
           filters:
             branches:
@@ -135,10 +124,12 @@ workflows:
       - test:
           context:
             - docker-registry
+            - ghaccesstoken
             - npm-credentials
       - trigger_documentation:
           context:
             - docker-registry
+            - ghaccesstoken
           filters:
             branches:
               ignore: /.*/
