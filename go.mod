@@ -42,12 +42,12 @@ require (
 	// Ensure that the versions here are always the same
 	// and that the replace directives are updated to match.
 	// Current version: v0.21.3
-	k8s.io/api v0.22.4
-	k8s.io/apimachinery v0.22.4
+	k8s.io/api v0.22.2
+	k8s.io/apimachinery v0.22.2
 	k8s.io/cli-runtime v0.22.2
-	k8s.io/client-go v0.22.4
-	k8s.io/component-base v0.22.4
-	k8s.io/kubectl v0.22.4
+	k8s.io/client-go v0.22.2
+	k8s.io/component-base v0.22.2
+	k8s.io/kubectl v0.21.3
 )
 
 require (
@@ -212,7 +212,7 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	k8s.io/apiextensions-apiserver v0.22.4 // indirect
+	k8s.io/apiextensions-apiserver v0.22.2 // indirect
 	k8s.io/apiserver v0.21.3 // indirect
 	k8s.io/component-helpers v0.21.3 // indirect
 	k8s.io/klog v1.0.0 // indirect
@@ -263,4 +263,5 @@ replace (
 	k8s.io/metrics => k8s.io/metrics v0.21.3
 	k8s.io/mount-utils => k8s.io/mount-utils v0.21.3
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.21.3
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.9.0
 )
