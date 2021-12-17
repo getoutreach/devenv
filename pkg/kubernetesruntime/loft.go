@@ -25,14 +25,17 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
-	managementv1 "github.com/loft-sh/api/pkg/apis/management/v1"
-	loftapi "github.com/loft-sh/api/pkg/client/clientset_generated/clientset"
-	loftconfig "github.com/loft-sh/loftctl/pkg/client"
+	clusterv1 "github.com/loft-sh/agentapi/v2/pkg/apis/loft/cluster/v1"
+	agentloftclient "github.com/loft-sh/agentapi/v2/pkg/client/loft/clientset_generated/clientset"
+	managementv1 "github.com/loft-sh/api/v2/pkg/apis/management/v1"
+	loftapi "github.com/loft-sh/api/v2/pkg/client/clientset_generated/clientset"
+	loftconfig "github.com/loft-sh/loftctl/v2/pkg/client"
+	corev1 "k8s.io/api/core/v1"
 	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 )
 
 const (
-	loftVersion     = "v1.15.0"
+	loftVersion     = "v2.0.2"
 	loftDownloadURL = "https://github.com/loft-sh/loft/releases/download/" + loftVersion + "/loft-" + runtime.GOOS + "-" + runtime.GOARCH
 )
 
@@ -41,10 +44,11 @@ type LoftRuntime struct {
 	// cluster by Create()
 	kubeConfig []byte
 
-	box      *box.Config
-	log      logrus.FieldLogger
-	loft     loftapi.Interface
-	loftUser *managementv1.Self
+	box       *box.Config
+	log       logrus.FieldLogger
+	loft      loftapi.Interface
+	agentloft agentloftclient.Interface
+	loftUser  *managementv1.Self
 
 	clusterName   string
 	clusterNameMu sync.Mutex
@@ -117,7 +121,7 @@ func (lr *LoftRuntime) PreCreate(ctx context.Context) error { //nolint:funlen //
 	}
 
 	self, err := loftClient.ManagementV1().Selves().Create(ctx, &managementv1.Self{}, metav1.CreateOptions{})
-	if err != nil || self.Status.User == "" { // auth token likely expired, so just refresh it
+	if err != nil || self.Status.User == nil || self.Status.User.Username == "" { // auth token likely expired, so just refresh it
 		lr.log.WithError(err).Info("Authenticating with loft")
 		err = cmdutil.RunKubernetesCommand(ctx, "", false, lcli, "login", conf.Host)
 		if err != nil {
@@ -307,7 +311,7 @@ func (lr *LoftRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {
 }
 
 //nolint:funlen // Why: It's OK.
-func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *managementv1.ClusterVirtualCluster) *api.Config {
+func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *clusterv1.VirtualCluster) *api.Config {
 	loftCLIPath, _ := lr.ensureLoft(lr.log)   //nolint:errcheck
 	loftConfPath, _ := lr.getLoftConfigPath() //nolint:errcheck
 
@@ -320,10 +324,10 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *managem
 
 	isDirectEndpoint := false
 	endpoint := lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL
-	paths := []string{vc.VirtualCluster.Namespace, vc.VirtualCluster.Name}
+	paths := []string{vc.Namespace, vc.Name}
 
 	// Check if this backend cluster has a direct endpoint configured
-	if backingCluster, err := lr.loft.ManagementV1().Clusters().Get(ctx, vc.Cluster, metav1.GetOptions{}); err == nil {
+	if backingCluster, err := lr.loft.ManagementV1().Clusters().Get(ctx, vc.ClusterName, metav1.GetOptions{}); err == nil {
 		if directEndpoint, ok := backingCluster.Annotations["loft.sh/direct-cluster-endpoint"]; ok {
 			endpoint = "https://" + directEndpoint
 			isDirectEndpoint = true
@@ -333,10 +337,10 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *managem
 	if isDirectEndpoint {
 		authInfo.Exec.Args = append(authInfo.Exec.Args, "--direct-cluster-endpoint")
 	} else {
-		paths = append([]string{vc.Cluster}, paths...)
+		paths = append([]string{vc.ClusterName}, paths...)
 	}
 
-	contextName := vc.VirtualCluster.Name
+	contextName := vc.Name
 	return &api.Config{
 		Clusters: map[string]*api.Cluster{
 			contextName: {
@@ -368,18 +372,18 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *managem
 // GetClusters gets a list of current devenv clusters that are available
 // to the current user.
 func (lr *LoftRuntime) GetClusters(ctx context.Context) ([]*RuntimeCluster, error) {
-	clusters, err := lr.loft.ManagementV1().Users().ListVirtualClusters(ctx, lr.loftUser.Status.User, metav1.GetOptions{})
+	clusters, err := lr.agentloft.ClusterV1().VirtualClusters(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list available clusters")
 	}
 
-	rclusters := make([]*RuntimeCluster, len(clusters.VirtualClusters))
-	for i := range clusters.VirtualClusters {
-		c := &clusters.VirtualClusters[i]
+	rclusters := make([]*RuntimeCluster, len(clusters.Items))
+	for i := range clusters.Items {
+		c := &clusters.Items[i]
 
 		rclusters[i] = &RuntimeCluster{
 			RuntimeName: lr.GetConfig().Name,
-			Name:        c.VirtualCluster.Name,
+			Name:        c.Name,
 			KubeConfig:  lr.getKubeConfigForVCluster(ctx, c),
 		}
 	}

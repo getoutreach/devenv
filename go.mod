@@ -17,11 +17,12 @@ require (
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/jetstack/cert-manager v1.5.4
 	github.com/jonboulle/clockwork v0.2.2 // indirect
+	github.com/loft-sh/agentapi/v2 v2.0.3-beta.5
 
 	// Note: Currently can't use v1.15 because of a private dependency
 	// being `replace`-d.
-	github.com/loft-sh/api v1.14.0
-	github.com/loft-sh/loftctl v1.14.0
+	github.com/loft-sh/api/v2 v2.0.3-beta.5.0.20211217083256-15810588030e
+	github.com/loft-sh/loftctl/v2 v2.0.3-beta.5.0.20211217083256-42224ddca958
 	github.com/manifoldco/promptui v0.8.0
 	github.com/matryer/is v1.4.0 // indirect
 	github.com/minio/minio-go/v7 v7.0.14
@@ -113,6 +114,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/go-github/v30 v30.1.0 // indirect
 	github.com/google/go-github/v34 v34.0.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -141,7 +143,6 @@ require (
 	github.com/lithammer/dedent v1.1.0 // indirect
 	github.com/loft-sh/apiserver v0.0.0-20210607160412-10c99558fdeb // indirect
 	github.com/loft-sh/jspolicy v0.1.0 // indirect
-	github.com/loft-sh/kiosk v0.2.7 // indirect
 	github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.11 // indirect
@@ -170,6 +171,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.31.1 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
+	github.com/rhysd/go-github-selfupdate v1.2.2 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rs/xid v1.2.1 // indirect
 	github.com/russross/blackfriday v1.5.2 // indirect
@@ -181,6 +183,8 @@ require (
 	github.com/spf13/cobra v1.2.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/tcnksm/go-gitconfig v0.1.2 // indirect
+	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.4 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.0 // indirect
@@ -211,6 +215,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.21.3 // indirect
 	k8s.io/apiserver v0.21.3 // indirect
 	k8s.io/component-helpers v0.21.3 // indirect
+	k8s.io/klog v1.0.0 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-aggregator v0.21.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20210527164424-3c818078ee3d // indirect
