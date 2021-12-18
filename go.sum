@@ -638,6 +638,7 @@ github.com/getoutreach/localizer v1.12.0/go.mod h1:gKArRCbfSj3FmyHKmR/WnCYon62E9
 github.com/getoutreach/vault-client v1.2.1 h1:caaZAB7fuzXePSLLd/fAib091lHHNVhzLcxWZnhopqw=
 github.com/getoutreach/vault-client v1.2.1/go.mod h1:xvOKSMl9q4KJ4/qBL2U/4huCUjhNvEWvLodw31vDfgU=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
+github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 h1:Mn26/9ZMNWSw9C9ERFA1PUxfmGpolnw2v0bKOREu5ew=
 github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32/go.mod h1:GIjDIg/heH5DOkXY3YJ/wNhfHsQHoXGjl8G8amsYQ1I=
 github.com/gin-contrib/sse v0.1.0/go.mod h1:RHrZQHXnP2xjPF+u1gW/2HnVO7nvIa9PG3Gm+fLHvGI=
 github.com/gin-gonic/gin v1.7.2/go.mod h1:jD2toBW3GZUr5UMcdrwQA10I7RuaFOl/SGeDjXkfUtY=

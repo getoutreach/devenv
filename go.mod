@@ -21,7 +21,7 @@ require (
 
 	// Note: Currently can't use v1.15 because of a private dependency
 	// being `replace`-d.
-	github.com/loft-sh/api/v2 v2.0.3-beta.5.0.20211217083256-15810588030e
+	github.com/loft-sh/api/v2 v2.0.3-beta.5.0.20211217083256-15810588030e // indirect
 	github.com/loft-sh/loftctl/v2 v2.0.3-beta.5.0.20211217083256-42224ddca958
 	github.com/manifoldco/promptui v0.8.0
 	github.com/matryer/is v1.4.0 // indirect
@@ -230,7 +230,10 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-require gopkg.in/square/go-jose.v2 v2.6.0 // indirect
+require (
+	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
+	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
+)
 
 replace (
 	// Incompat w/ loft: see https://github.com/google/trillian/issues/2195

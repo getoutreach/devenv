@@ -2,7 +2,6 @@ package kubernetesruntime
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -21,16 +20,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
-	clusterv1 "github.com/loft-sh/agentapi/v2/pkg/apis/loft/cluster/v1"
-	agentloftclient "github.com/loft-sh/agentapi/v2/pkg/client/loft/clientset_generated/clientset"
-	managementv1 "github.com/loft-sh/api/v2/pkg/apis/management/v1"
-	loftapi "github.com/loft-sh/api/v2/pkg/client/clientset_generated/clientset"
-	loftconfig "github.com/loft-sh/loftctl/v2/pkg/client"
-	corev1 "k8s.io/api/core/v1"
+	v1 "github.com/loft-sh/agentapi/v2/pkg/apis/loft/storage/v1"
+	loftctlclient "github.com/loft-sh/loftctl/v2/pkg/client"
+	loftctlhelper "github.com/loft-sh/loftctl/v2/pkg/client/helper"
+	loftctllog "github.com/loft-sh/loftctl/v2/pkg/log"
 	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 )
 
@@ -44,14 +40,20 @@ type LoftRuntime struct {
 	// cluster by Create()
 	kubeConfig []byte
 
-	box       *box.Config
-	log       logrus.FieldLogger
-	loft      loftapi.Interface
-	agentloft agentloftclient.Interface
-	loftUser  *managementv1.Self
+	box *box.Config
+	log logrus.FieldLogger
+
+	// loftctl is a client provided by loftctl, this is much easier
+	// than writing the logic ourselves but may potentially make future
+	// upgrades harder.
+	loftctl loftctlclient.Client
 
 	clusterName   string
 	clusterNameMu sync.Mutex
+}
+
+func newLoftLogger() loftctllog.Logger {
+	return loftctllog.NewStreamLogger(os.Stderr, logrus.InfoLevel)
 }
 
 func NewLoftRuntime() *LoftRuntime {
@@ -80,63 +82,29 @@ func (lr *LoftRuntime) getLoftConfigPath() (string, error) {
 }
 
 func (lr *LoftRuntime) PreCreate(ctx context.Context) error { //nolint:funlen // Why: will address later
-	lcli, err := lr.ensureLoft(lr.log)
-	if err != nil {
-		return err
-	}
-
 	loftConf, err := lr.getLoftConfigPath()
 	if err != nil {
 		return errors.Wrap(err, "failed to determine loft config path")
 	}
 
-	f, err := os.Open(loftConf)
+	lr.loftctl, err = loftctlclient.NewClientFromPath(loftConf)
 	if err != nil {
-		lr.log.WithError(err).Info("Authenticating with loft")
-		err = cmdutil.RunKubernetesCommand(ctx, "", false, lcli, "login", lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL)
-		if err != nil {
-			return errors.Wrap(err, "failed to authenticate with loft")
+		return err
+	}
+
+	// Check if we're authenticated already
+	if lr.loftctl != nil {
+		managementClient, err := lr.loftctl.Management()
+		if err == nil {
+			if _, _, err := loftctlhelper.GetCurrentUser(ctx, managementClient); err == nil {
+				return nil
+			}
 		}
-
-		f, err = os.Open(loftConf)
-		if err != nil {
-			return errors.Wrap(err, "failed to read loft config after authenticating")
-		}
-	}
-	defer f.Close()
-
-	var conf loftconfig.Config
-	if err := json.NewDecoder(f).Decode(&conf); err != nil { //nolint:govet // Why: We're OK shadowing error.
-		return errors.Wrap(err, "failed to read loft config")
 	}
 
-	restConf := &rest.Config{
-		Host:        "https://" + path.Join(strings.TrimPrefix(conf.Host, "https://"), "kubernetes", "management"),
-		BearerToken: conf.AccessKey,
-	}
-
-	loftClient, err := loftapi.NewForConfig(restConf)
-	if err != nil {
-		return errors.Wrap(err, "failed to create client to talk to loft apiserver")
-	}
-
-	self, err := loftClient.ManagementV1().Selves().Create(ctx, &managementv1.Self{}, metav1.CreateOptions{})
-	if err != nil || self.Status.User == nil || self.Status.User.Username == "" { // auth token likely expired, so just refresh it
-		lr.log.WithError(err).Info("Authenticating with loft")
-		err = cmdutil.RunKubernetesCommand(ctx, "", false, lcli, "login", conf.Host)
-		if err != nil {
-			return errors.Wrap(err, "failed to authenticate with loft")
-		}
-
-		// ensure that the new credentials are valid
-		return lr.PreCreate(ctx)
-	}
-
-	// we have valid credentials, so set the client.
-	lr.loft = loftClient
-	lr.loftUser = self
-
-	return nil
+	// We're probably not, re-authenticate
+	return lr.loftctl.Login(lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL, false,
+		loftctllog.NewStreamLogger(os.Stderr, logrus.InfoLevel))
 }
 
 func (lr *LoftRuntime) GetConfig() RuntimeConfig {
@@ -162,31 +130,38 @@ func (lr *LoftRuntime) GetConfig() RuntimeConfig {
 	}
 }
 
+// Status returns the status of our cluster
 func (lr *LoftRuntime) Status(ctx context.Context) RuntimeStatus {
 	resp := RuntimeStatus{status.Status{
 		Status: status.Unprovisioned,
 	}}
 
-	lcli, err := lr.ensureLoft(lr.log)
+	clusters, err := loftctlhelper.GetVirtualClusters(lr.loftctl, newLoftLogger())
 	if err != nil {
 		resp.Status.Status = status.Unknown
-		resp.Status.Reason = errors.Wrap(err, "failed to get loft CLI").Error()
+		resp.Status.Reason = errors.Wrap(err, "failed to list vclusters").Error()
 		return resp
 	}
 
-	out, err := exec.CommandContext(ctx, lcli, "list", "vclusters").CombinedOutput()
-	if err != nil {
+	for i := range clusters {
+		c := &clusters[i]
+
+		// Skip clusters that we don't have access to
+		if c.Name != lr.clusterName {
+			continue
+		}
+
+		if c.Status.Phase == v1.VirtualClusterDeployed {
+			resp.Status.Status = status.Running
+			return resp
+		}
+
 		resp.Status.Status = status.Unknown
-		resp.Status.Reason = errors.Wrap(err, "failed to list clusters").Error()
+		resp.Status.Reason = fmt.Errorf("unknown phase '%s'", c.Status.Phase).Error()
 		return resp
 	}
 
-	// TODO(jaredallard): See if we can hit loft's API instead of this
-	// hacky not totally valid contains check.
-	if strings.Contains(string(out), lr.clusterName) {
-		resp.Status.Status = status.Running
-	}
-
+	// Assume we're unprovisioned at this point
 	return resp
 }
 
@@ -219,6 +194,7 @@ func (lr *LoftRuntime) getPreferredCluster(ctx context.Context) string {
 	return ""
 }
 
+// TODO(jaredallard): Move to use loftctlcmdcreate
 func (lr *LoftRuntime) Create(ctx context.Context) error {
 	loft, err := lr.ensureLoft(lr.log)
 	if err != nil {
@@ -239,6 +215,7 @@ func (lr *LoftRuntime) Create(ctx context.Context) error {
 	backingCluster := lr.getPreferredCluster(ctx)
 	if backingCluster == "" {
 		lr.log.Warn(
+			//nolint:lll // Why: Not much we can do here.
 			"failed to find a cluster in your region, will fallback to a random one, this may result in a degraded user experience. This should be reported as it's likely a box configuration issue",
 		)
 	}
@@ -310,8 +287,9 @@ func (lr *LoftRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {
 	return kubeconfig, nil
 }
 
+// TODO: Move this to use the loftctl code.
 //nolint:funlen // Why: It's OK.
-func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *clusterv1.VirtualCluster) *api.Config {
+func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *loftctlhelper.ClusterVirtualCluster) *api.Config {
 	loftCLIPath, _ := lr.ensureLoft(lr.log)   //nolint:errcheck
 	loftConfPath, _ := lr.getLoftConfigPath() //nolint:errcheck
 
@@ -327,7 +305,13 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *cluster
 	paths := []string{vc.Namespace, vc.Name}
 
 	// Check if this backend cluster has a direct endpoint configured
-	if backingCluster, err := lr.loft.ManagementV1().Clusters().Get(ctx, vc.ClusterName, metav1.GetOptions{}); err == nil {
+	managementClient, err := lr.loftctl.Management()
+	if err != nil {
+		return nil
+	}
+
+	if backingCluster, err := managementClient.Loft().ManagementV1().Clusters().Get(ctx,
+		vc.ClusterName, metav1.GetOptions{}); err == nil {
 		if directEndpoint, ok := backingCluster.Annotations["loft.sh/direct-cluster-endpoint"]; ok {
 			endpoint = "https://" + directEndpoint
 			isDirectEndpoint = true
@@ -372,14 +356,14 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *cluster
 // GetClusters gets a list of current devenv clusters that are available
 // to the current user.
 func (lr *LoftRuntime) GetClusters(ctx context.Context) ([]*RuntimeCluster, error) {
-	clusters, err := lr.agentloft.ClusterV1().VirtualClusters(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	clusters, err := loftctlhelper.GetVirtualClusters(lr.loftctl, newLoftLogger())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list available clusters")
+		return nil, err
 	}
 
-	rclusters := make([]*RuntimeCluster, len(clusters.Items))
-	for i := range clusters.Items {
-		c := &clusters.Items[i]
+	rclusters := make([]*RuntimeCluster, len(clusters))
+	for i := range clusters {
+		c := &clusters[i]
 
 		rclusters[i] = &RuntimeCluster{
 			RuntimeName: lr.GetConfig().Name,
