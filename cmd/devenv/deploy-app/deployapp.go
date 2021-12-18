@@ -21,7 +21,8 @@ import (
 //nolint:gochecknoglobals
 var (
 	deployAppLongDesc = `
-		deploy-app deploys an Outreach application into your developer environment. The application name (appName) provided should match, exactly, an Outreach repository name.
+		deploy-app deploys an Outreach application into your developer environment.
+		The application name (appName) provided should match, exactly, an Outreach repository name.
 	`
 	deployAppExample = `
 		# Deploy an application to the developer environment

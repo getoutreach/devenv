@@ -14,7 +14,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func Delete(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
+func Delete(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
+	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
 	app, err := NewApp(log, k, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")

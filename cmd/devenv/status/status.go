@@ -243,8 +243,10 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 			}
 		}
 
-		if localizerResp == nil { //nolint:lll // Why: Not much we can do here
+		if localizerResp == nil {
+			//nolint:lll // Why: Not much we can do here
 			o.log.WithError(err).Warn("failed to call localizer list rpc, will not include localizer information in response.")
+			//nolint:lll // Why: Not much we can do here
 			o.log.Warn("if you need localizer information, the following and then rerun:\n\tsudo kill $(pgrep localizer)\n\tsudo rm -f /var/run/localizer.sock\n\tdevenv tunnel")
 		}
 
@@ -301,7 +303,8 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 			continue
 		}
 
-		deployments, err := o.k.AppsV1().Deployments(namespaces.Items[i].Name).List(ctx, metav1.ListOptions{}) //nolint:govet // why: it's okay to shadow the error variable here
+		deployments, err := o.k.AppsV1().Deployments(namespaces.Items[i].Name).
+			List(ctx, metav1.ListOptions{}) //nolint:govet // why: it's okay to shadow the error variable here
 		if err != nil {
 			return err
 		}

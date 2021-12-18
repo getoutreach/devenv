@@ -230,10 +230,7 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-require (
-	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
-	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
-)
+require gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 
 replace (
 	// Incompat w/ loft: see https://github.com/google/trillian/issues/2195

@@ -29,7 +29,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, skipUpload bool, channel box.SnapshotLockChannel) error { //nolint:funlen
+func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig,
+	skipUpload bool, channel box.SnapshotLockChannel) error { //nolint:funlen
 	b, err := box.LoadBox()
 	if err != nil {
 		return errors.Wrap(err, "failed to load box configuration")
@@ -120,7 +121,9 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig, s
 	return err
 }
 
-func (o *Options) uploadSnapshot(ctx context.Context, s3c *s3.Client, name string, t *box.SnapshotTarget) (string, string, error) { //nolint:funlen,gocritic
+//nolint:funlen,gocritic
+func (o *Options) uploadSnapshot(ctx context.Context, s3c *s3.Client,
+	name string, t *box.SnapshotTarget) (string, string, error) {
 	tmpFile, err := os.CreateTemp("", "snapshot-*")
 	if err != nil {
 		return "", "", err

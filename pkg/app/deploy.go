@@ -25,7 +25,8 @@ import (
 )
 
 // Deploy deploys an application by name, to the devenv.
-func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
+func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
+	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
 	app, err := NewApp(log, k, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
@@ -38,7 +39,8 @@ func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 // ./scripts/deploy-to-dev.sh, relative to the repository root.
 func (a *App) deployLegacy(ctx context.Context) error {
 	a.log.Info("Deploying application into devenv...")
-	return errors.Wrap(cmdutil.RunKubernetesCommand(ctx, a.Path, true, "./scripts/deploy-to-dev.sh", "update"), "failed to deploy changes")
+	return errors.Wrap(cmdutil.RunKubernetesCommand(ctx, a.Path, true,
+		"./scripts/deploy-to-dev.sh", "update"), "failed to deploy changes")
 }
 
 func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
