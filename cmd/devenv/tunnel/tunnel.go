@@ -24,7 +24,8 @@ var (
 	tunnelLongDesc = `
 		Tunnel uses localizer to create port-forwards into your Kubernetes cluster on your local-machine.
 
-		These tunnels are then hooked up to DNS via your /etc/hosts file, which points to aliased ip addresses in the 127.0.0.1/8 space.
+		These tunnels are then hooked up to DNS via your /etc/hosts file, 
+		which points to aliased ip addresses in the 127.0.0.1/8 space.
 	`
 	tunnelExample = `
 		# Grant local access to Kubernetes Services running inside of the 
@@ -98,9 +99,11 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		// network.
 		gCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 
-		client, closer, err := localizer.Connect(gCtx, grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
+		client, closer, err := localizer.Connect(gCtx,
+			grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
 		if err != nil {
 			cancel()
+			//nolint:lll // Why: Not much we can do here
 			o.log.Info("detected localizer socket, but could not connect to localizer. try the following and then rerun:\n\tsudo kill $(pgrep localizer)\n\tsudo rm -f /var/run/localizer.sock")
 			return errors.Wrap(err, "connect to localizer client to kill stale connection")
 		}

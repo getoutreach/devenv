@@ -73,13 +73,15 @@ func (o *Options) displayContexts(_ gocontext.Context, conf *config.Config, clus
 
 	if !foundCurrent {
 		fmt.Println()
+		//nolint:lll // Why: Not much we can do here
 		fmt.Printf(color.YellowString("Warning:") + " current context wasn't found in list, to set a context run: devenv context <runtime:clusterName>\n")
 	}
 
 	return nil
 }
 
-func (o *Options) setContext(ctx gocontext.Context, conf *config.Config, clusters []*kubernetesruntime.RuntimeCluster) error { //nolint:funlen
+func (o *Options) setContext(ctx gocontext.Context, conf *config.Config,
+	clusters []*kubernetesruntime.RuntimeCluster) error { //nolint:funlen
 	newConfig := &config.Config{CurrentContext: o.DesiredContext}
 
 	newRuntime, newClusterName := newConfig.ParseContext()

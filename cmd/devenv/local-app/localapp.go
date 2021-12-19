@@ -23,7 +23,8 @@ import (
 //nolint:gochecknoglobals
 var (
 	localAppLongDesc = `
-		local-app creates a tunnel into your developer environment that receives traffic from Kubernetes and tunnels it to your local application instance
+		local-app creates a tunnel into your developer environment that 
+		receives traffic from Kubernetes and tunnels it to your local application instance
 	`
 	localAppExample = `
 		# Point a Kubernetes Service at your local application instance

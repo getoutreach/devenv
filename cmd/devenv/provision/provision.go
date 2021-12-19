@@ -531,7 +531,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 	o.log.WithField("runtime", o.KubernetesRuntime.GetConfig().Name).
 		Info("Creating Kubernetes cluster")
 	if err := o.KubernetesRuntime.Create(ctx); err != nil { //nolint:govet // Why: OK w/ err shadow
-		return errors.Wrap(err, "failed to create kind cluster")
+		return errors.Wrap(err, "failed to create kubernetes cluster")
 	}
 
 	conf, err := config.LoadConfig(ctx)
@@ -550,7 +550,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 
 	kconf, err := o.KubernetesRuntime.GetKubeConfig(ctx)
 	if err != nil { //nolint:govet // Why: OK w/ err shadow
-		return errors.Wrap(err, "failed to create kind cluster")
+		return errors.Wrap(err, "failed to create kubernetes cluster")
 	}
 
 	//nolint:govet // Why: OK w/ err shadow
