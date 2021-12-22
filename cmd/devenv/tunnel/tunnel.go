@@ -99,9 +99,9 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 			case <-ctx.Done():
 			case <-done:
 				return
-			default:
+			case <-time.After(time.Second * 15):
 				// Sleep for 15 seconds between each alert after the first one.
-				async.Sleep(ctx, time.Second*15)
+				continue
 			}
 		}
 	}(ctx)
