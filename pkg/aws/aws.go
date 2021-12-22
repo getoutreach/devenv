@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getoutreach/devenv/internal/alert"
+	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/versent/saml2aws/v2/pkg/awsconfig"
@@ -97,6 +99,23 @@ func EnsureValidCredentials(ctx context.Context, copts *CredentialOptions) error
 			copts.Log.WithField("reason", reason).Info("Obtaining AWS credentials via Okta")
 		}
 
+		var loggedInToAWS bool
+		go func(ctx context.Context) {
+			// Sleep for 15 seconds the first time before checking to alert for AWS login.
+			async.Sleep(ctx, time.Second*15)
+			for {
+				if loggedInToAWS {
+					// Is logged in, don't alert.
+					return
+				}
+
+				alert.Alert("Your tunnel needs elevated permissions!")
+
+				// Sleep for 25 seconds between each alert after the first one.
+				async.Sleep(ctx, time.Second*25)
+			}
+		}(ctx)
+
 		//nolint:gosec // Why: What other option do I have
 		cmd := exec.CommandContext(ctx, "saml2aws", "login", "--profile", copts.Profile, "--role", copts.Role, "--force")
 		cmd.Stderr = os.Stderr
@@ -105,6 +124,7 @@ func EnsureValidCredentials(ctx context.Context, copts *CredentialOptions) error
 		if err := cmd.Run(); err != nil {
 			return errors.Wrap(err, "failed to refresh AWS credentials via saml2aws")
 		}
+		loggedInToAWS = true
 	}
 
 	return nil

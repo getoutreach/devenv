@@ -5,6 +5,7 @@ import (
 	"time"
 
 	localapp "github.com/getoutreach/devenv/cmd/devenv/local-app"
+	"github.com/getoutreach/devenv/internal/alert"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
@@ -86,12 +87,30 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return err2
 	}
 
+	var elevatedPermissions bool
+	go func(ctx context.Context) {
+		// Sleep for 7 seconds the first time before checking to alert for permissions.
+		async.Sleep(ctx, time.Second*7)
+		for {
+			if elevatedPermissions {
+				// Got elevated permissions, don't alert.
+				return
+			}
+
+			alert.Alert("Your tunnel needs elevated permissions!")
+
+			// Sleep for 15 seconds between each alert after the first one.
+			async.Sleep(ctx, time.Second*15)
+		}
+	}(ctx)
+
 	// Preemptively ask for sudo to prevent input mangaling with o.LocalApps
 	o.log.Info("You may get a sudo prompt, this is so localizer can create tunnels")
 	err = cmdutil.RunKubernetesCommand(ctx, "", true, "sudo", "echo", "Hello, world!")
 	if err != nil {
 		return errors.Wrap(err, "failed to get sudo")
 	}
+	elevatedPermissions = true
 
 	if localizer.IsRunning() {
 		// We block on the connection, so only try for 2 seconds before moving on. This should
