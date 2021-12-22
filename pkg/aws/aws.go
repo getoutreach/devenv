@@ -109,7 +109,7 @@ func EnsureValidCredentials(ctx context.Context, copts *CredentialOptions) error
 					return
 				}
 
-				alert.Alert("Waiting for AWS authentication still!")
+				alert.Alert("Waiting for AWS authentication!")
 
 				// Sleep for 25 seconds between each alert after the first one.
 				async.Sleep(ctx, time.Second*25)
