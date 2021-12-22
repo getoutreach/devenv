@@ -97,6 +97,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 
 			select {
 			case <-ctx.Done():
+			case <-done:
 				return
 			default:
 				// Sleep for 15 seconds between each alert after the first one.

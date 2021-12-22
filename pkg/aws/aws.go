@@ -109,6 +109,7 @@ func EnsureValidCredentials(ctx context.Context, copts *CredentialOptions) error
 
 				select {
 				case <-ctx.Done():
+				case <-done:
 					return
 				default:
 					// Sleep for 25 seconds between each alert after the first one.
