@@ -99,20 +99,21 @@ func EnsureValidCredentials(ctx context.Context, copts *CredentialOptions) error
 			copts.Log.WithField("reason", reason).Info("Obtaining AWS credentials via Okta")
 		}
 
-		var loggedInToAWS bool
+		var done chan struct{}
 		go func(ctx context.Context) {
-			// Sleep for 15 seconds the first time before checking to alert for AWS login.
+			// Sleep for 7 seconds the first time before checking to alert for AWS login.
 			async.Sleep(ctx, time.Second*15)
-			for {
-				if loggedInToAWS {
-					// Is logged in, don't alert.
-					return
-				}
 
+			for ctx.Err() == nil {
 				alert.Alert("Waiting for AWS authentication!")
 
-				// Sleep for 25 seconds between each alert after the first one.
-				async.Sleep(ctx, time.Second*25)
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					// Sleep for 25 seconds between each alert after the first one.
+					async.Sleep(ctx, time.Second*25)
+				}
 			}
 		}(ctx)
 
@@ -124,7 +125,7 @@ func EnsureValidCredentials(ctx context.Context, copts *CredentialOptions) error
 		if err := cmd.Run(); err != nil {
 			return errors.Wrap(err, "failed to refresh AWS credentials via saml2aws")
 		}
-		loggedInToAWS = true
+		close(done)
 	}
 
 	return nil
