@@ -87,7 +87,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return err2
 	}
 
-	var done chan struct{}
+	done := make(chan struct{})
 	go func(ctx context.Context) {
 		// Sleep for 7 seconds the first time before checking to alert for permissions.
 		async.Sleep(ctx, time.Second*7)

@@ -99,7 +99,7 @@ func EnsureValidCredentials(ctx context.Context, copts *CredentialOptions) error
 			copts.Log.WithField("reason", reason).Info("Obtaining AWS credentials via Okta")
 		}
 
-		var done chan struct{}
+		done := make(chan struct{})
 		go func(ctx context.Context) {
 			// Sleep for 7 seconds the first time before checking to alert for AWS login.
 			async.Sleep(ctx, time.Second*15)
