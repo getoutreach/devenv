@@ -88,6 +88,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 	if err != nil {
 		return err
 	}
+	kr.Configure(o.log, b)
 
 	o.log.Info("Starting Developer Environment")
 	if err := kr.Start(ctx); err != nil {
