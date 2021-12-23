@@ -89,18 +89,18 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 
 	done := make(chan struct{})
 	go func(ctx context.Context) {
-		// Sleep for 7 seconds the first time before checking to alert for permissions.
-		async.Sleep(ctx, time.Second*7)
+		// Sleep for 20 seconds the first time before checking to alert for permissions.
+		async.Sleep(ctx, time.Second*20)
 
 		for ctx.Err() == nil {
-			alert.Alert("Your tunnel needs elevated permissions!")
+			alert.Alert("Your tunnel needs elevated permissions.")
 
 			select {
 			case <-ctx.Done():
 			case <-done:
 				return
-			case <-time.After(time.Second * 15):
-				// Sleep for 15 seconds between each alert after the first one.
+			case <-time.After(time.Second * 60):
+				// Sleep for 60 seconds between each alert after the first one.
 				continue
 			}
 		}
