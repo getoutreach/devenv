@@ -21,7 +21,8 @@ import (
 //nolint:gochecknoglobals
 var (
 	deployAppLongDesc = `
-		delete-app deletes an Outreach application into your developer environment. The application name (appName) provided should match, exactly, an Outreach repository name.
+		delete-app deletes an Outreach application into your developer environment. 
+		The application name (appName) provided should match, exactly, an Outreach repository name.
 	`
 	deployAppExample = `
 		# Delete an application in of the developer environment

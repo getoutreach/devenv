@@ -30,7 +30,8 @@ import (
 //nolint:gochecknoglobals
 var (
 	startLongDesc = `
-		Expose exposes a service to the outside world via an external address. This is currently powered by ngrok. This does not currently support TCP tunnels.
+		Expose exposes a service to the outside world via an external address. 
+		This is currently powered by ngrok. This does not currently support UDP tunnels.
 	`
 	startExample = `
 		# Expose the flagship on a ngrok.io subdomain

@@ -57,7 +57,8 @@ type App struct {
 	Version string
 }
 
-func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, appNameOrPath string, kr *kubernetesruntime.RuntimeConfig) (*App, error) {
+func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config,
+	appNameOrPath string, kr *kubernetesruntime.RuntimeConfig) (*App, error) {
 	version := ""
 	versionSplit := strings.SplitN(appNameOrPath, "@", 2)
 
@@ -113,14 +114,14 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 		return cleanup, err
 	}
 
-	args := []string{"clone", "git@github.com:getoutreach/" + a.RepositoryName, tempDir}
+	args := []string{"clone", "--recurse-submodules", "git@github.com:getoutreach/" + a.RepositoryName, tempDir}
 	if a.Version != "" {
 		args = append(args, "--branch", a.Version, "--depth", "1")
 	}
 
 	a.log.Info("Fetching Application")
 
-	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // Why: We're using git here because of it's ability to better handle mixed input
+	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec,lll // Why: We're using git here because of it's ability to better handle mixed input
 	b, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println(string(b))

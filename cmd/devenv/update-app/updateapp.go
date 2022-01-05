@@ -30,7 +30,8 @@ import (
 //nolint:gochecknoglobals
 var (
 	updateAppLongDesc = `
-		update-app(s) updates your applications running in your developer environment. This is done by finding all pods that have your Docker repository, and do not have a tag.
+		update-app(s) updates your applications running in your developer environment. 
+		This is done by finding all pods that have your Docker repository, and do not have a tag.
 	`
 	updateAppExample = `
 		# Update all your applications

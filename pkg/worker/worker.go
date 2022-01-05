@@ -10,7 +10,8 @@ import (
 // ProcessArray asynchronously processes an array, spinning up n (n being number of CPUs) goroutine worker
 // instances. ProcessArray blocks until the workers have all finished
 //nolint:funlen
-func ProcessArray(ctx context.Context, data []interface{}, fn func(context.Context, interface{}) (interface{}, error)) ([]interface{}, error) {
+func ProcessArray(ctx context.Context, data []interface{},
+	fn func(context.Context, interface{}) (interface{}, error)) ([]interface{}, error) {
 	wg := sync.WaitGroup{}
 
 	maxProcs := runtime.GOMAXPROCS(0)

@@ -72,15 +72,11 @@ type Options struct {
 }
 
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
-	k, err := kube.GetKubeClient()
-	if err != nil {
-		log.WithError(err).Warn("failed to create a kubernetes client")
-	}
+	//nolint:errcheck // Why: We handle errors
+	k, _ := kube.GetKubeClient()
 
-	d, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
-	if err != nil {
-		log.WithError(err).Warn("failed to create a docker client")
-	}
+	//nolint:errcheck // Why: We handle errors
+	d, _ := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
 
 	return &Options{
 		d:   d,
@@ -103,7 +99,8 @@ func NewCmdStatus(log logrus.FieldLogger) *cli.Command {
 			&cli.StringSliceFlag{
 				Name:    "namespace",
 				Aliases: []string{"n"},
-				Usage:   "Which namespace to print information about, can be duplicated to show multiple namespaces. If omitted, all namespaces will be printed.",
+				//nolint:lll // Why: Not much we can do here.
+				Usage: "Which namespace to print information about, can be duplicated to show multiple namespaces. If omitted, all namespaces will be printed.",
 			},
 			&cli.BoolFlag{
 				Name:  "kube-system",
@@ -235,7 +232,8 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 		// network.
 		gCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 
-		client, closer, err := localizer.Connect(gCtx, grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
+		client, closer, err := localizer.Connect(gCtx,
+			grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
 		if err == nil {
 			defer closer()
 
@@ -246,7 +244,9 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 		}
 
 		if localizerResp == nil {
+			//nolint:lll // Why: Not much we can do here
 			o.log.WithError(err).Warn("failed to call localizer list rpc, will not include localizer information in response.")
+			//nolint:lll // Why: Not much we can do here
 			o.log.Warn("if you need localizer information, the following and then rerun:\n\tsudo kill $(pgrep localizer)\n\tsudo rm -f /var/run/localizer.sock\n\tdevenv tunnel")
 		}
 
@@ -272,6 +272,7 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 
 		fmt.Fprintln(w, "Conditions:")
 		for j := range nodes.Items[i].Status.Conditions {
+			//nolint:lll // Why: Not much we can do here
 			fmt.Fprintf(w, "\t%s: %s (%s)\n", nodes.Items[i].Status.Conditions[j].Type, nodes.Items[i].Status.Conditions[j].Status, nodes.Items[i].Status.Conditions[j].Message)
 		}
 
@@ -302,7 +303,8 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 			continue
 		}
 
-		deployments, err := o.k.AppsV1().Deployments(namespaces.Items[i].Name).List(ctx, metav1.ListOptions{}) //nolint:govet // why: it's okay to shadow the error variable here
+		deployments, err := o.k.AppsV1().Deployments(namespaces.Items[i].Name).
+			List(ctx, metav1.ListOptions{}) //nolint:govet // why: it's okay to shadow the error variable here
 		if err != nil {
 			return err
 		}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	localapp "github.com/getoutreach/devenv/cmd/devenv/local-app"
+	"github.com/getoutreach/devenv/internal/alert"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
@@ -24,7 +25,8 @@ var (
 	tunnelLongDesc = `
 		Tunnel uses localizer to create port-forwards into your Kubernetes cluster on your local-machine.
 
-		These tunnels are then hooked up to DNS via your /etc/hosts file, which points to aliased ip addresses in the 127.0.0.1/8 space.
+		These tunnels are then hooked up to DNS via your /etc/hosts file, 
+		which points to aliased ip addresses in the 127.0.0.1/8 space.
 	`
 	tunnelExample = `
 		# Grant local access to Kubernetes Services running inside of the 
@@ -85,12 +87,32 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		return err2
 	}
 
+	done := make(chan struct{})
+	go func(ctx context.Context) {
+		// Sleep for 20 seconds the first time before checking to alert for permissions.
+		async.Sleep(ctx, time.Second*20)
+
+		for ctx.Err() == nil {
+			alert.Alert("Your tunnel needs elevated permissions.")
+
+			select {
+			case <-ctx.Done():
+			case <-done:
+				return
+			case <-time.After(time.Second * 60):
+				// Sleep for 60 seconds between each alert after the first one.
+				continue
+			}
+		}
+	}(ctx)
+
 	// Preemptively ask for sudo to prevent input mangaling with o.LocalApps
 	o.log.Info("You may get a sudo prompt, this is so localizer can create tunnels")
 	err = cmdutil.RunKubernetesCommand(ctx, "", true, "sudo", "echo", "Hello, world!")
 	if err != nil {
 		return errors.Wrap(err, "failed to get sudo")
 	}
+	close(done)
 
 	if localizer.IsRunning() {
 		// We block on the connection, so only try for 2 seconds before moving on. This should
@@ -98,9 +120,11 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		// network.
 		gCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 
-		client, closer, err := localizer.Connect(gCtx, grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
+		client, closer, err := localizer.Connect(gCtx,
+			grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
 		if err != nil {
 			cancel()
+			//nolint:lll // Why: Not much we can do here
 			o.log.Info("detected localizer socket, but could not connect to localizer. try the following and then rerun:\n\tsudo kill $(pgrep localizer)\n\tsudo rm -f /var/run/localizer.sock")
 			return errors.Wrap(err, "connect to localizer client to kill stale connection")
 		}

@@ -95,7 +95,8 @@ type DeleteObjectsObjects struct {
 	Validator func(obj *unstructured.Unstructured) (filter bool)
 }
 
-func DeleteObjects(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config, opts DeleteObjectsObjects) error { //nolint:funlen
+func DeleteObjects(ctx context.Context, log logrus.FieldLogger,
+	k kubernetes.Interface, conf *rest.Config, opts DeleteObjectsObjects) error { //nolint:funlen
 	traceCtx := trace.StartCall(ctx, "kubernetes.GetPods")
 
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(k.Discovery()))
@@ -159,7 +160,8 @@ func DeleteObjects(ctx context.Context, log logrus.FieldLogger, k kubernetes.Int
 	_, err = worker.ProcessArray(traceCtx, objs, func(ctx context.Context, obj interface{}) (interface{}, error) {
 		unstruct := obj.(unstructured.Unstructured)
 
-		log.WithField("key", fmt.Sprintf("%s/%s", unstruct.GetNamespace(), unstruct.GetName())).Infof("deleting %s", mapping.Resource.GroupResource().String())
+		log.WithField("key", fmt.Sprintf("%s/%s", unstruct.GetNamespace(),
+			unstruct.GetName())).Infof("deleting %s", mapping.Resource.GroupResource().String())
 		namespacedDr := dyn.Resource(mapping.Resource).Namespace(unstruct.GetNamespace())
 		err := namespacedDr.Delete(ctx, unstruct.GetName(), metav1.DeleteOptions{}) //nolint:govet // Why: We're OK shadowing err
 		return errors.Wrap(trace.SetCallStatus(ctx, err), "failed to delete object"), nil
