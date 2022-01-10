@@ -55,6 +55,10 @@ Pulumi.*.yaml
 # CircleCI cache version
 /cache-version.txt
 
+# DevSpace files
+/.devspace # temp dir
+/deployments/devenv.yaml
+
 ###Block(extras)
 # Created by dev-env when ran in this directory
 .deps
