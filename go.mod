@@ -32,7 +32,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.8.3
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/versent/saml2aws/v2 v2.32.0
+	github.com/versent/saml2aws/v2 v2.33.0
 	github.com/vmware-tanzu/velero v1.6.3
 	google.golang.org/genproto v0.0.0-20210716133855-ce7ef5c701ea // indirect
 	google.golang.org/grpc v1.41.0
@@ -237,7 +237,6 @@ require (
 	github.com/gopherjs/gopherwasm v1.1.0 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
-	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
 
