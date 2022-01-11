@@ -11,7 +11,7 @@ require (
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/getoutreach/gobox v1.29.1
-	github.com/getoutreach/localizer v1.12.0
+	github.com/getoutreach/localizer v1.13.0
 	github.com/getoutreach/vault-client v1.2.1
 	github.com/google/btree v1.0.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
