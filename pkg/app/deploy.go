@@ -182,10 +182,8 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 	}
 
 	// Delete all jobs with a db-migration annotation.
-
 	err := devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
 		Namespaces: []string{a.RepositoryName, fmt.Sprintf("%s--bento1a", a.RepositoryName)},
-		// TODO: We have to be able to get this information elsewhere.
 		Type: &batchv1.Job{
 			TypeMeta: v1.TypeMeta{
 				Kind:       "Job",

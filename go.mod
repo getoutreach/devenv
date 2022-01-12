@@ -229,7 +229,10 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-require github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
+require (
+	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
+	gotest.tools/v3 v3.0.3
+)
 
 require (
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
