@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
@@ -43,6 +44,7 @@ func (a *App) deployLegacy(ctx context.Context) error {
 		"./scripts/deploy-to-dev.sh", "update"), "failed to deploy changes")
 }
 
+// deployBootstrap deploys an application created by Bootstrap
 func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 	if err := a.determineRepositoryName(); err != nil {
 		return errors.Wrap(err, "determine repository name")
@@ -218,5 +220,9 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	return devenvutil.WaitForAllPodsToBeReady(ctx, a.k, a.log)
+	if err := devenvutil.WaitForAllPodsToBeReady(ctx, a.k, a.log); err != nil {
+		return err
+	}
+
+	return a.appsClient.Set(ctx, &apps.App{Name: a.RepositoryName, Version: a.Version})
 }

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -33,10 +34,11 @@ const (
 )
 
 type App struct {
-	log  logrus.FieldLogger
-	k    kubernetes.Interface
-	conf *rest.Config
-	kr   *kubernetesruntime.RuntimeConfig
+	log        logrus.FieldLogger
+	k          kubernetes.Interface
+	appsClient apps.Interface
+	conf       *rest.Config
+	kr         *kubernetesruntime.RuntimeConfig
 
 	// Type is the type of application this is
 	Type Type
@@ -71,6 +73,7 @@ func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config,
 	// run as local
 	app := App{
 		k:              k,
+		appsClient:     apps.NewKubernetesConfigmapClient(k, ""),
 		conf:           conf,
 		kr:             kr,
 		Version:        version,
@@ -135,6 +138,7 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 		ver := strings.TrimSpace(string(b))
 		if ver != a.Version {
 			a.log.WithField("app.version", ver).Info("Detected potential application version")
+			a.Version = ver
 		}
 	}
 
