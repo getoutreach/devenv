@@ -71,12 +71,24 @@ func (k *KubernetesConfigmapClient) serializeConfigmap(ctx context.Context, apps
 		serializedData[a.Name] = string(b)
 	}
 
-	_, err := k.k.CoreV1().ConfigMaps(k.namespace).Update(ctx, &corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: k.configmapName,
 		},
 		Data: serializedData,
-	}, metav1.UpdateOptions{})
+	}
+
+	exists := false
+	if _, err := k.k.CoreV1().ConfigMaps(k.namespace).Get(ctx, cm.Name, metav1.GetOptions{}); err == nil {
+		exists = true
+	}
+
+	var err error
+	if exists {
+		_, err = k.k.CoreV1().ConfigMaps(k.namespace).Update(ctx, cm, metav1.UpdateOptions{})
+	} else {
+		_, err = k.k.CoreV1().ConfigMaps(k.namespace).Create(ctx, cm, metav1.CreateOptions{})
+	}
 
 	return err
 }
