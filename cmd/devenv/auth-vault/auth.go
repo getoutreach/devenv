@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -56,15 +55,11 @@ func NewCmdAuthVault(log logrus.FieldLogger) *cli.Command {
 		Description: cmdutil.NewDescription(authVault, authVaultExample),
 		Flags:       []cli.Flag{},
 		Action: func(c *cli.Context) error {
-			if c.Args().Len() == 0 {
-				return fmt.Errorf("missing application")
-			}
 			o, err := NewOptions(log)
 			if err != nil {
 				return err
 			}
 
-			o.App = c.Args().First()
 			return o.Run(c.Context)
 		},
 	}
