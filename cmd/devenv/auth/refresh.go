@@ -7,55 +7,48 @@ import (
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
-	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 //nolint:gochecknoglobals
 var (
-	authVault = `
-		auth-vault ensures Vault operator has valid credentials for creating/updating secrets.
+	refresh = `
+		Refresh ensures Vault operator has valid credentials for creating/updating secrets.
 	`
-	authVaultExample = `
+	refreshExample = `
 		# Reauthenticate Vault operator
-		devenv auth-vault
+		devenv auth refresh
 	`
 )
 
-type Options struct {
-	log  logrus.FieldLogger
-	k    kubernetes.Interface
-	conf *rest.Config
+// RefreshOptions the options for the auth refresh command.
+type RefreshOptions struct {
+	log logrus.FieldLogger
+	k   kubernetes.Interface
 
 	App string
 }
 
-func NewOptions(log logrus.FieldLogger) (*Options, error) {
-	k, conf, err := kube.GetKubeClientWithConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create kubernetes client")
-	}
-
-	return &Options{
-		k:    k,
-		conf: conf,
-		log:  log,
+// NewRefreshOptions creates a new instance of the auth refresh options.
+func NewRefreshOptions(log logrus.FieldLogger) (*RefreshOptions, error) {
+	return &RefreshOptions{
+		log: log,
 	}, nil
 }
 
-func NewCmdAuthVault(log logrus.FieldLogger) *cli.Command {
+// NewCmdAuthRefresh returns a new instance of the auth refresh command.
+func NewCmdAuthRefresh(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
-		Name:        "auth-vault",
-		Usage:       "Reauthenticate Vault operator",
-		Description: cmdutil.NewDescription(authVault, authVaultExample),
+		Name:        "refresh",
+		Usage:       "Refresh Vault token used by devenv vault operator",
+		Description: cmdutil.NewDescription(refresh, refreshExample),
 		Flags:       []cli.Flag{},
 		Action: func(c *cli.Context) error {
-			o, err := NewOptions(log)
+			o, err := NewRefreshOptions(log)
 			if err != nil {
 				return err
 			}
@@ -65,7 +58,8 @@ func NewCmdAuthVault(log logrus.FieldLogger) *cli.Command {
 	}
 }
 
-func (o *Options) Run(ctx context.Context) error {
+// Run executes the auth refresh command.
+func (o *RefreshOptions) Run(ctx context.Context) error {
 	b, err := box.LoadBox()
 	if err != nil {
 		return errors.Wrap(err, "failed to load box configuration")
