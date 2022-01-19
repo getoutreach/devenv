@@ -20,6 +20,7 @@ import (
 
 	// Place any extra imports for your startup code here
 	///Block(imports)
+	"github.com/getoutreach/devenv/cmd/devenv/auth-vault"
 	"github.com/getoutreach/devenv/cmd/devenv/completion"
 	cmdcontext "github.com/getoutreach/devenv/cmd/devenv/context"
 	deleteapp "github.com/getoutreach/devenv/cmd/devenv/delete-app"
@@ -98,6 +99,7 @@ func main() {
 	}
 	app.Commands = []*cli.Command{
 		///Block(commands)
+		auth.NewCmdAuthVault(log),
 		provision.NewCmdProvision(log),
 		deployapp.NewCmdDeployApp(log),
 		deleteapp.NewCmdDeleteApp(log),
