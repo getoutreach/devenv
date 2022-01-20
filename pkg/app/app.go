@@ -148,6 +148,7 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 	return cleanup, nil
 }
 
+// determineType determines the type of repository a service is
 func (a *App) determineType() error {
 	serviceYamlPath := filepath.Join(a.Path, "service.yaml")
 	deployScriptPath := filepath.Join(a.Path, "scripts", "deploy-to-dev.sh")
@@ -163,6 +164,8 @@ func (a *App) determineType() error {
 	return nil
 }
 
+// determineRepository name determines a repositories name from the path
+// or from a service.yaml
 func (a *App) determineRepositoryName() error {
 	if a.Type != TypeBootstrap {
 		if a.Path != "" && a.Path != "." && a.Path != ".." && a.Path != "../" {
