@@ -10,6 +10,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// !!!
+// !!! NOTE: This is deprecated. It doesn't work for all types of devenv.
+// !!!
+
 //nolint:gochecknoglobals
 var (
 	topLongDesc = `
@@ -34,7 +38,8 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 func NewCmdTop(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
 		Name:        "top",
-		Usage:       "Htop for devenv",
+		Usage:       "DEPRECATED: htop for devenv",
+		Hidden:      true,
 		Description: cmdutil.NewDescription(topLongDesc, topExample),
 		Flags:       []cli.Flag{},
 		Action: func(c *cli.Context) error {

@@ -20,6 +20,7 @@ import (
 
 	// Place any extra imports for your startup code here
 	///Block(imports)
+	"github.com/getoutreach/devenv/cmd/devenv/apps"
 	"github.com/getoutreach/devenv/cmd/devenv/completion"
 	cmdcontext "github.com/getoutreach/devenv/cmd/devenv/context"
 	deleteapp "github.com/getoutreach/devenv/cmd/devenv/delete-app"
@@ -115,6 +116,7 @@ func main() {
 		expose.NewCmdExpose(log),
 		cmdcontext.NewCmdContext(log),
 		registry.NewCmdRegistry(log),
+		apps.NewCmd(log),
 		///EndBlock(commands)
 	}
 
