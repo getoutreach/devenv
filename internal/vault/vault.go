@@ -27,7 +27,7 @@ func EnsureLoggedIn(ctx context.Context, log logrus.FieldLogger, b *box.Config, 
 	if err != nil {
 		// We did, so issue a new token using our authentication method
 		//nolint:gosec // Why: passing in the auth method and vault address
-		cmd := exec.CommandContext(ctx, "vault", "login",
+		cmd := exec.CommandContext(ctx, "vault", "login", "-no-print",
 			"-method",
 			b.DeveloperEnvironmentConfig.VaultConfig.AuthMethod,
 			"-address", b.DeveloperEnvironmentConfig.VaultConfig.Address,
