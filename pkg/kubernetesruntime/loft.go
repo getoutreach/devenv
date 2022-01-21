@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -19,7 +18,6 @@ import (
 	"github.com/getoutreach/gobox/pkg/region"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
@@ -27,7 +25,6 @@ import (
 	loftctlclient "github.com/loft-sh/loftctl/v2/pkg/client"
 	loftctlhelper "github.com/loft-sh/loftctl/v2/pkg/client/helper"
 	loftctllog "github.com/loft-sh/loftctl/v2/pkg/log"
-	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 )
 
 const (
@@ -287,70 +284,43 @@ func (lr *LoftRuntime) GetKubeConfig(ctx context.Context) (*api.Config, error) {
 	return kubeconfig, nil
 }
 
-// TODO: Move this to use the loftctl code.
-//nolint:funlen // Why: It's OK.
+// TODO(jaredallard): plumb error information, share between provision and switch
 func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *loftctlhelper.ClusterVirtualCluster) *api.Config {
-	loftCLIPath, _ := lr.ensureLoft(lr.log)   //nolint:errcheck
-	loftConfPath, _ := lr.getLoftConfigPath() //nolint:errcheck
+	loft, _ := lr.ensureLoft(lr.log) //nolint:errcheck
 
-	authInfo := api.NewAuthInfo()
-	authInfo.Exec = &api.ExecConfig{
-		APIVersion: clientauthv1alpha1.SchemeGroupVersion.String(),
-		Command:    loftCLIPath,
-		Args:       []string{"token", "--silent", "--config", loftConfPath},
+	kubeConfig, err := os.CreateTemp("", "loft-kubeconfig-*")
+	if err != nil {
+		return nil
+	}
+	kubeConfig.Close() //nolint:errcheck
+	defer os.Remove(kubeConfig.Name())
+
+	cmd := exec.CommandContext(ctx, loft, "use", "vcluster", "--cluster",
+		vc.ClusterName, vc.Name)
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+kubeConfig.Name())
+	if err := cmd.Run(); err != nil {
+		return nil
 	}
 
-	isDirectEndpoint := false
-	endpoint := lr.box.DeveloperEnvironmentConfig.RuntimeConfig.Loft.URL
-	paths := []string{vc.Namespace, vc.Name}
-
-	// Check if this backend cluster has a direct endpoint configured
-	managementClient, err := lr.loftctl.Management()
+	out, err := ioutil.ReadFile(kubeConfig.Name())
 	if err != nil {
 		return nil
 	}
 
-	if backingCluster, err := managementClient.Loft().ManagementV1().Clusters().Get(ctx,
-		vc.ClusterName, metav1.GetOptions{}); err == nil {
-		if directEndpoint, ok := backingCluster.Annotations["loft.sh/direct-cluster-endpoint"]; ok {
-			endpoint = "https://" + directEndpoint
-			isDirectEndpoint = true
-		}
+	kubeconfig, err := clientcmd.Load(out)
+	if err != nil {
+		return nil
 	}
 
-	if isDirectEndpoint {
-		authInfo.Exec.Args = append(authInfo.Exec.Args, "--direct-cluster-endpoint")
-	} else {
-		paths = append([]string{vc.ClusterName}, paths...)
+	// Assume the first context is the one we want
+	for k := range kubeconfig.Contexts {
+		kubeconfig.Contexts[KindClusterName] = kubeconfig.Contexts[k]
+		delete(kubeconfig.Contexts, k)
+		break
 	}
+	kubeconfig.CurrentContext = KindClusterName
 
-	contextName := vc.Name
-	return &api.Config{
-		Clusters: map[string]*api.Cluster{
-			contextName: {
-				Server: endpoint +
-					path.Join(append([]string{"/kubernetes/virtualcluster"}, paths...)...),
-			},
-		},
-		// IDEA: If we ever merge this into ~/.kube/config we could support
-		// setting this to the virtual cluster name.
-		CurrentContext: "dev-environment",
-		Contexts: map[string]*api.Context{
-			contextName: {
-				Cluster:  contextName,
-				AuthInfo: contextName,
-			},
-
-			// Compat with tools that want this context.
-			"dev-environment": {
-				Cluster:  contextName,
-				AuthInfo: contextName,
-			},
-		},
-		AuthInfos: map[string]*api.AuthInfo{
-			contextName: authInfo,
-		},
-	}
+	return kubeconfig
 }
 
 // GetClusters gets a list of current devenv clusters that are available
@@ -359,6 +329,21 @@ func (lr *LoftRuntime) GetClusters(ctx context.Context) ([]*RuntimeCluster, erro
 	clusters, err := loftctlhelper.GetVirtualClusters(lr.loftctl, newLoftLogger())
 	if err != nil {
 		return nil, err
+	}
+
+	// Remove all clusters other than our own.
+	// TODO(jaredallard): Re-enable when it's possible to share clusters.
+	// We will also need to change this interface to be more performant
+	// don't create kubeconfig for each cluster...
+	for i := range clusters {
+		cluster := &clusters[i]
+		if cluster.Name == lr.clusterName {
+			clusters = []loftctlhelper.ClusterVirtualCluster{*cluster}
+			break
+		}
+	}
+	if len(clusters) != 1 {
+		return nil, nil
 	}
 
 	rclusters := make([]*RuntimeCluster, len(clusters))
