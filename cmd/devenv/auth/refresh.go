@@ -7,6 +7,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
+	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -35,8 +36,14 @@ type RefreshOptions struct {
 
 // NewRefreshOptions creates a new instance of the auth refresh options.
 func NewRefreshOptions(log logrus.FieldLogger) (*RefreshOptions, error) {
+	k, _, err := kube.GetKubeClientWithConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create kubernetes client")
+	}
+
 	return &RefreshOptions{
 		log: log,
+		k:   k,
 	}, nil
 }
 
