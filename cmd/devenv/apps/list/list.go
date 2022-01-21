@@ -1,11 +1,12 @@
-package deploy
+package list
 
 import (
 	"context"
 	"fmt"
+	"os"
+	"text/tabwriter"
 
-	"github.com/getoutreach/devenv/internal/vault"
-	"github.com/getoutreach/devenv/pkg/app"
+	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
@@ -20,16 +21,12 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	deployLongDesc = `
-		Deploys an Outreach application into your developer environment.
-		The application name (appName) provided should match, exactly, an Outreach repository name.
+	listLongDesc = `
+		Lists all currently deployed applications in your devenv
 	`
-	deployExample = `
-		# Deploy an application to the developer environment
-		devenv apps deploy <appName>
-
-		# Deploy a local directory application to the developer environment
-		devenv apps deploy .
+	listExample = `
+		# List all applications in your devenv
+		devenv apps list
 	`
 )
 
@@ -38,12 +35,9 @@ type Options struct {
 	log  logrus.FieldLogger
 	k    kubernetes.Interface
 	conf *rest.Config
-
-	// App is the app to deploy
-	App string
 }
 
-// NewOptions create an initialized options struct for the `apps deploy` command
+// NewOptions create an initialized options struct for the `apps list` command
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	k, conf, err := kube.GetKubeClientWithConfig()
 	if err != nil {
@@ -57,28 +51,23 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	}, nil
 }
 
-// NewCmd creates a new cli.Command for the `apps deploy` command
+// NewCmd creates a new cli.Command for the `apps list` command
 func NewCmd(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
-		Name:        "deploy",
-		Usage:       "Deploy an application to the developer environment",
-		Description: cmdutil.NewDescription(deployLongDesc, deployExample),
+		Name:        "list",
+		Usage:       "List all deployed applications in your devenv",
+		Description: cmdutil.NewDescription(listLongDesc, listExample),
 		Action: func(c *cli.Context) error {
-			if c.Args().Len() == 0 {
-				return fmt.Errorf("missing application")
-			}
 			o, err := NewOptions(log)
 			if err != nil {
 				return err
 			}
-
-			o.App = c.Args().First()
 			return o.Run(c.Context)
 		},
 	}
 }
 
-// Run runs the `apps deploy` command
+// Run runs the `apps list` command
 func (o *Options) Run(ctx context.Context) error {
 	b, err := box.LoadBox()
 	if err != nil {
@@ -90,16 +79,20 @@ func (o *Options) Run(ctx context.Context) error {
 		return errors.Wrap(err, "failed to load config")
 	}
 
-	kr, err := devenvutil.EnsureDevenvRunning(ctx, conf, b)
+	if _, err := devenvutil.EnsureDevenvRunning(ctx, conf, b); err != nil {
+		return err
+	}
+
+	appsClient := apps.NewKubernetesConfigmapClient(o.k, "")
+	deployedApps, err := appsClient.List(ctx)
 	if err != nil {
 		return err
 	}
 
-	if b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
-		if err := vault.EnsureLoggedIn(ctx, o.log, b, o.k); err != nil {
-			return errors.Wrap(err, "failed to refresh vault authentication")
-		}
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "APP\tVERSION")
+	for _, a := range deployedApps {
+		fmt.Fprintln(w, a.Name+"\t"+a.Version)
 	}
-
-	return app.Deploy(ctx, o.log, o.k, o.conf, o.App, kr.GetConfig())
+	return w.Flush()
 }
