@@ -1,14 +1,26 @@
 name: devenv
 reportingTeam: fnd-dtss
+description: ""
 oss: true
+slack: ""
 library: true
-releaseType: semver
-versions:
-  terraform: 0.14.7
-releaseOptions:
-  allowMajorVersions: true
-  allowPrereleases: true
 commands:
   - devenv
-  # Doesn't use the bootstrap CLI setup
-  #- snapshot-uploader
+releaseType: semver
+releaseOptions:
+  allowPrereleases: true
+  allowMajorVersions: true
+deployTo:
+  environments: []
+versions:
+  terraform: 0.14.7
+arguments:
+  dependencies:
+    optional: []
+    required: []
+  description: ""
+  reportingTeam: fnd-dtss
+  type: []
+modules:
+  - url: https://github.com/getoutreach/stencil-base
+    version: ""
