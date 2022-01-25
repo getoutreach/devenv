@@ -2,10 +2,10 @@ package devspace
 
 import (
 	"context"
-	"os"
-	"os/exec"
+	"runtime"
 
 	"github.com/getoutreach/devenv/internal/vault"
+	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
@@ -15,6 +15,12 @@ import (
 	"github.com/urfave/cli/v2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+)
+
+const (
+	devspaceVersion     = "v5.18.2"
+	devspaceDownloadURL = "https://github.com/loft-sh/devspace/releases/download/" +
+		devspaceVersion + "/devspace-" + runtime.GOOS + "-" + runtime.GOARCH
 )
 
 type Options struct {
@@ -57,11 +63,6 @@ func NewCmdDevspace(log logrus.FieldLogger) *cli.Command {
 }
 
 func (o *Options) Run(ctx context.Context) error {
-	_, err := exec.LookPath("devspace")
-	if err != nil {
-		return errors.Wrap(err, "failed to find devspace CLI. run `orc setup` to install it")
-	}
-
 	b, err := box.LoadBox()
 	if err != nil {
 		return errors.Wrap(err, "failed to load box configuration")
@@ -83,6 +84,11 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
+	devspacePath, err := ensureDevspace(o.log)
+	if err != nil {
+		return errors.Wrap(err, "failed to download devspace CLI")
+	}
+
 	contextSet := false
 	noWarn := false
 	for _, a := range o.args {
@@ -101,12 +107,9 @@ func (o *Options) Run(ctx context.Context) error {
 		o.args = append(o.args, "--no-warn")
 	}
 
-	//nolint:gosec // Why: This is a pass through command to devspace, we want to pass through all arguments.
-	cmd := exec.CommandContext(ctx, "devspace", o.args...)
+	return errors.Wrap(cmdutil.RunKubernetesCommand(ctx, "", false, devspacePath, o.args...), "failed to run devspace command")
+}
 
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-
-	return cmd.Run()
+func ensureDevspace(log logrus.FieldLogger) (string, error) {
+	return cmdutil.EnsureBinary(log, "devspace-"+devspaceVersion, "Devspace CLI", devspaceDownloadURL, "")
 }
