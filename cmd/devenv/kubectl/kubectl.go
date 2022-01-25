@@ -29,7 +29,7 @@ func NewCmdKubectl(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
 		Name:            "kubectl",
 		Aliases:         []string{"k"},
-		Usage:           "Run kubectl commands in your local developer environment",
+		Usage:           "Run kubectl commands in your developer environment",
 		SkipFlagParsing: true,
 		Action: func(c *cli.Context) error {
 			o.Args = c.Args().Slice()

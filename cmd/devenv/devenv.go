@@ -26,6 +26,7 @@ import (
 	deleteapp "github.com/getoutreach/devenv/cmd/devenv/delete-app"
 	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
+	"github.com/getoutreach/devenv/cmd/devenv/devspace"
 	"github.com/getoutreach/devenv/cmd/devenv/expose"
 	"github.com/getoutreach/devenv/cmd/devenv/kubectl"
 	localapp "github.com/getoutreach/devenv/cmd/devenv/local-app"
@@ -117,6 +118,7 @@ func main() {
 		expose.NewCmdExpose(log),
 		cmdcontext.NewCmdContext(log),
 		registry.NewCmdRegistry(log),
+		devspace.NewCmdDevspace(log),
 		///EndBlock(commands)
 	}
 
