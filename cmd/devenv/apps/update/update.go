@@ -57,7 +57,6 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 		Name:        "update",
 		Usage:       "Update application(s) in your developer environment",
 		Description: cmdutil.NewDescription(updateLongDesc, updateExample),
-		Flags:       []cli.Flag{},
 		Action: func(c *cli.Context) error {
 			o := NewOptions(log)
 			o.AppName = c.Args().First()
@@ -115,6 +114,10 @@ func (o *Options) Run(ctx context.Context) error {
 	}
 
 	o.log.Infof("Updating %d service(s)", len(deployedApps))
+
+	// iterate over all the apps, and run deploy on them...
+	// this will force the manifests+images (set VERSION) to be
+	// updated.
 
 	return nil
 }

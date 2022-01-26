@@ -101,6 +101,15 @@ func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config,
 	return &app, nil
 }
 
+func (a *App) detectVersion(ctx context.Context) error {
+	// check Github repository, get topics
+	// if topic release-type-commits, use the latest commit as a.Version
+	// or if there are no releases.
+	// Otherwise, get the latest github release, use the tag as a.Version
+	return nil
+}
+
+// downloadRepository downloads the repository of our application
 func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func(), err error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -109,6 +118,8 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 
 	// on macOS we seem to lose contents of temp directories, so now we need to do this
 	tempDir := filepath.Join(homeDir, repoCachePath, repo, time.Now().Format(time.RFC3339Nano))
+	// Set the path of the app to the downloaded repository in the temporary directory.
+	a.Path = tempDir
 	cleanup = func() {
 		os.RemoveAll(tempDir)
 	}
@@ -117,33 +128,24 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 		return cleanup, err
 	}
 
+	if a.Version == "" {
+		if err := a.detectVersion(ctx); err != nil {
+			return cleanup, errors.Wrapf(err, "failed to find latest version of %s", a.RepositoryName)
+		}
+	}
+
 	args := []string{"clone", "--recurse-submodules", "git@github.com:getoutreach/" + a.RepositoryName, tempDir}
 	if a.Version != "" {
 		args = append(args, "--branch", a.Version, "--depth", "1")
 	}
 
 	a.log.Info("Fetching Application")
-
 	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec,lll // Why: We're using git here because of it's ability to better handle mixed input
 	b, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println(string(b))
 		return cleanup, err
 	}
-
-	cmd = exec.CommandContext(ctx, "git", "describe", "--tags")
-	cmd.Dir = tempDir
-	b, err = cmd.Output()
-	if err == nil {
-		ver := strings.TrimSpace(string(b))
-		if ver != a.Version {
-			a.log.WithField("app.version", ver).Info("Detected potential application version")
-			a.Version = ver
-		}
-	}
-
-	// Set the path of the app to the downloaded repository in the temporary directory.
-	a.Path = tempDir
 
 	return cleanup, nil
 }
@@ -167,15 +169,18 @@ func (a *App) determineType() error {
 // determineRepository name determines a repositories name from the path
 // or from a service.yaml
 func (a *App) determineRepositoryName() error {
+	// Determine the name via the basename for legacy applications
 	if a.Type != TypeBootstrap {
-		if a.Path != "" && a.Path != "." && a.Path != ".." && a.Path != "../" {
+		if filepath.IsAbs(a.Path) {
 			a.RepositoryName = filepath.Base(a.Path)
 			return nil
 		}
 
-		return errors.New("could not determine repository name")
+		// can't resolve names of relative paths at this point
+		return fmt.Errorf("failed to resolve application's name")
 	}
 
+	// ready the repository's service.yaml for bootstrap applications
 	b, err := ioutil.ReadFile(filepath.Join(a.Path, "service.yaml"))
 	if err != nil {
 		return errors.Wrap(err, "failed to read service.yaml")

@@ -33,6 +33,9 @@ type Interface interface {
 
 	// Set sets information about an application in the devenv
 	Set(ctx context.Context, a *App) error
+
+	// Delete deletes an application in the devenv
+	Delete(ctx context.Context, name string) error
 }
 
 // App is an application inside of a devenv

@@ -48,3 +48,9 @@ func (i *InMemoryClient) Set(_ context.Context, a *App) error {
 	i.apps[a.Name] = *a
 	return nil
 }
+
+// Delete deletes an application
+func (i *InMemoryClient) Delete(_ context.Context, name string) error {
+	delete(i.apps, name)
+	return nil
+}

@@ -3,8 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/getoutreach/devenv/internal/apps"
@@ -46,10 +44,6 @@ func (a *App) deployLegacy(ctx context.Context) error {
 
 // deployBootstrap deploys an application created by Bootstrap
 func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
-	if err := a.determineRepositoryName(); err != nil {
-		return errors.Wrap(err, "determine repository name")
-	}
-	a.log = a.log.WithField("app.name", a.RepositoryName)
 
 	// Only build a docker image if we're not using the latest version
 	// or if we're in local mode
@@ -67,24 +61,17 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 
 	a.log.Info("Deploying application into devenv...")
 
-	deployScript := "./scripts/deploy-to-dev.sh"
-	deployScriptArgs := []string{"update"}
-
-	// Cheap way of detecting bootstrap v6 w/o importing bootstrap.lock
-	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "shell-wrapper.sh")); err == nil {
-		deployScript = "./scripts/shell-wrapper.sh"
-		deployScriptArgs = append([]string{"deploy-to-dev.sh"}, deployScriptArgs...)
-	}
+	deployScript := "./scripts/shell-wrapper.sh"
+	deployScriptArgs := []string{"deploy-to-dev.sh", "update"}
 
 	if err := cmdutil.RunKubernetesCommand(ctx, a.Path, true, deployScript, deployScriptArgs...); err != nil {
 		return errors.Wrap(err, "failed to deploy changes")
 	}
 
 	if builtDockerImage {
-		// Delete pods to ensure they are using the latest docker image we pushed
+		// Delete pods to ensure they are using our image we just pushed into the env
 		return devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
 			Namespaces: []string{a.RepositoryName + "--bento1a"},
-			// TODO: We have to be able to get this information elsewhere.
 			Type: &corev1.Pod{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "Pod",
@@ -127,6 +114,9 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 
 // buildDockerImage builds a docker image from a bootstrap repo
 // and deploys it into the developer environment cache
+//
+// !!! Note: This is deprecated: devspace, or tilt, should be used
+// !!! for development instead. This will be removed in a future release.
 func (a *App) buildDockerImage(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "deployapp.buildDockerImage")
 	defer trace.EndCall(ctx)
@@ -141,7 +131,7 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 	}
 
 	a.log.Info("Building Docker image (this may take awhile)")
-	err = cmdutil.RunKubernetesCommand(ctx, a.Path, true, "make", "docker-build")
+	err = cmdutil.RunKubernetesCommand(ctx, a.Path, false, "make", "docker-build")
 	if err != nil {
 		return err
 	}
@@ -153,6 +143,17 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 		return errors.Wrap(err, "failed to find/download Kind")
 	}
 
+	baseImage := fmt.Sprintf("gcr.io/outreach-docker/%s", a.RepositoryName)
+	taggedImage := fmt.Sprintf("%s:%s", baseImage, a.Version)
+
+	// tag the image to be the same as the version, which is a required format
+	// to be followed
+	if err = cmdutil.RunKubernetesCommand(ctx, a.Path, true,
+		"docker", "tag", baseImage, taggedImage); err != nil {
+		return errors.Wrap(err, "failed to tag image")
+	}
+
+	// load the docker image into the kind cache
 	err = cmdutil.RunKubernetesCommand(
 		ctx,
 		a.Path,
@@ -160,7 +161,7 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 		kindPath,
 		"load",
 		"docker-image",
-		fmt.Sprintf("gcr.io/outreach-docker/%s", a.RepositoryName),
+		taggedImage,
 		"--name",
 		kubernetesruntime.KindClusterName,
 	)
@@ -168,6 +169,7 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 	return errors.Wrap(err, "failed to push docker image to Kubernetes")
 }
 
+// Deploy deploys the application into the devenv
 func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 	// Download the repository if it doesn't already exist on disk.
 	if a.Path == "" {
@@ -183,6 +185,10 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 		return errors.Wrap(err, "determine repository type")
 	}
 
+	if err := a.determineRepositoryName(); err != nil {
+		return errors.Wrap(err, "determine repository name")
+	}
+	a.log = a.log.WithField("app.name", a.RepositoryName)
 	// Delete all jobs with a db-migration annotation.
 	err := devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
 		Namespaces: []string{a.RepositoryName, fmt.Sprintf("%s--bento1a", a.RepositoryName)},

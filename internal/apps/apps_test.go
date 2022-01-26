@@ -34,4 +34,9 @@ func TestBasicFlow(t *testing.T) {
 	foundApp, err := c.Get(ctx, setApp.Name)
 	assert.NilError(t, err, "expected Get() to not error")
 	assert.DeepEqual(t, foundApp, *setApp)
+
+	assert.NilError(t, c.Delete(ctx, setApp.Name), "expected Delete() to not error")
+
+	_, err = c.Get(ctx, setApp.Name)
+	assert.Error(t, err, apps.ErrNotFound.Error(), "expected Get() to error after Delete()")
 }

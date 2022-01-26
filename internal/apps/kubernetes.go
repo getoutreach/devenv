@@ -130,3 +130,18 @@ func (k *KubernetesConfigmapClient) Set(ctx context.Context, a *App) error {
 	apps[a.Name] = *a
 	return k.serializeConfigmap(ctx, apps)
 }
+
+// Delete deletes an application, if it exists
+func (k *KubernetesConfigmapClient) Delete(ctx context.Context, name string) error {
+	apps, err := k.parseConfigmap(ctx)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := apps[name]; ok {
+		delete(apps, name)
+		return k.serializeConfigmap(ctx, apps)
+	}
+
+	return ErrNotFound
+}
