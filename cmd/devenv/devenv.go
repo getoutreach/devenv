@@ -23,8 +23,7 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/apps"
 	"github.com/getoutreach/devenv/cmd/devenv/completion"
 	cmdcontext "github.com/getoutreach/devenv/cmd/devenv/context"
-	deleteapp "github.com/getoutreach/devenv/cmd/devenv/delete-app"
-	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
+	"github.com/getoutreach/devenv/cmd/devenv/deprecated"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
 	"github.com/getoutreach/devenv/cmd/devenv/expose"
 	"github.com/getoutreach/devenv/cmd/devenv/kubectl"
@@ -35,9 +34,7 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/start"
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/cmd/devenv/stop"
-	"github.com/getoutreach/devenv/cmd/devenv/top"
 	"github.com/getoutreach/devenv/cmd/devenv/tunnel"
-	updateapp "github.com/getoutreach/devenv/cmd/devenv/update-app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	///EndBlock(imports)
 )
@@ -75,6 +72,7 @@ func main() {
 			// Using the args passed in to see if the completion command
 			// was provided. Other global flags are just ignored.
 			if c.Args().First() == "completion" {
+				c.Set("skip-update", "true") //nolint:errcheck // Why: Just trying to skip updates
 				return nil
 			}
 
@@ -100,8 +98,6 @@ func main() {
 	app.Commands = []*cli.Command{
 		///Block(commands)
 		provision.NewCmdProvision(log),
-		deployapp.NewCmdDeployApp(log),
-		deleteapp.NewCmdDeleteApp(log),
 		destroy.NewCmdDestroy(log),
 		status.NewCmdStatus(log),
 		localapp.NewCmdLocalApp(log),
@@ -110,8 +106,6 @@ func main() {
 		start.NewCmdStart(log),
 		stop.NewCmdStop(log),
 		completion.NewCmdCompletion(),
-		top.NewCmdTop(log),
-		updateapp.NewCmdUpdateApp(log),
 		snapshot.NewCmdSnapshot(log),
 		expose.NewCmdExpose(log),
 		cmdcontext.NewCmdContext(log),
@@ -121,6 +115,7 @@ func main() {
 	}
 
 	///Block(postApp)
+	app.Commands = append(app.Commands, deprecated.Commands(log)...)
 	///EndBlock(postApp)
 
 	// Insert global flags, tracing, updating and start the application.
