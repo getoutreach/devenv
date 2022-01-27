@@ -6,18 +6,20 @@ import (
 
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-func Delete(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
+func Delete(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, box *box.Config,
 	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
-	app, err := NewApp(log, k, conf, appNameOrPath, &kr)
+	app, err := NewApp(ctx, log, k, box, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
+	defer app.Close()
 
 	return app.Delete(ctx)
 }
@@ -45,25 +47,6 @@ func (a *App) deleteBootstrap(ctx context.Context) error {
 }
 
 func (a *App) Delete(ctx context.Context) error {
-	// Download the repository if it doesn't already exist on disk.
-	if a.Path == "" {
-		cleanup, err := a.downloadRepository(ctx, a.RepositoryName)
-		defer cleanup()
-
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := a.determineType(); err != nil {
-		return errors.Wrap(err, "determine repository type")
-	}
-
-	if err := a.determineRepositoryName(); err != nil {
-		return errors.Wrap(err, "determine repository name")
-	}
-	a.log = a.log.WithField("app.name", a.RepositoryName)
-
 	var err error
 	switch a.Type {
 	case TypeBootstrap:

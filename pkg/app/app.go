@@ -8,11 +8,18 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
+	"github.com/getoutreach/gobox/pkg/box"
+	"github.com/google/go-github/v42/github"
+	"golang.org/x/oauth2"
+
+	// TODO(jaredallard): Move this into gobox
+	githubauth "github.com/getoutreach/stencil/pkg/extensions/github"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -38,7 +45,11 @@ type App struct {
 	k          kubernetes.Interface
 	appsClient apps.Interface
 	conf       *rest.Config
+	box        *box.Config
 	kr         *kubernetesruntime.RuntimeConfig
+
+	// cleanupFn is called to cleanup the downloaded files, if applicable
+	cleanupFn func()
 
 	// Type is the type of application this is
 	Type Type
@@ -59,7 +70,8 @@ type App struct {
 	Version string
 }
 
-func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config,
+// NewApp creates a new App for interaction with in a devenv
+func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, box *box.Config, conf *rest.Config,
 	appNameOrPath string, kr *kubernetesruntime.RuntimeConfig) (*App, error) {
 	version := ""
 	versionSplit := strings.SplitN(appNameOrPath, "@", 2)
@@ -69,10 +81,9 @@ func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config,
 		version = versionSplit[1]
 	}
 
-	// if not a valid Github repository name or is a current directory or lower directory reference, then
-	// run as local
 	app := App{
 		k:              k,
+		box:            box,
 		appsClient:     apps.NewKubernetesConfigmapClient(k, ""),
 		conf:           conf,
 		kr:             kr,
@@ -80,6 +91,8 @@ func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config,
 		RepositoryName: appNameOrPath,
 	}
 
+	// if not a valid Github repository name or is a current directory or lower directory reference, then
+	// run as local
 	if !validRepoReg.MatchString(appNameOrPath) || appNameOrPath == "." || appNameOrPath == ".." {
 		app.Path = appNameOrPath
 		app.Local = true
@@ -90,11 +103,33 @@ func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config,
 		}
 	}
 
-	fields := logrus.Fields{
-		"app.name": app.RepositoryName,
+	// Download the repository if it doesn't already exist on disk.
+	if app.Path == "" {
+		cleanup, err := app.downloadRepository(ctx, app.RepositoryName)
+		app.cleanupFn = cleanup
+		if err != nil {
+			return nil, err
+		}
 	}
-	if app.Version != "" {
-		fields["app.version"] = app.Version
+
+	if app.Version == "" {
+		if err := app.detectVersion(ctx); err != nil {
+			return nil, errors.Wrap(err, "failed to determine application version")
+		}
+	}
+
+	if err := app.determineType(); err != nil {
+		return nil, errors.Wrap(err, "determine repository type")
+	}
+
+	if err := app.determineRepositoryName(); err != nil {
+		return nil, errors.Wrap(err, "determine repository name")
+	}
+
+	// scope the logger to the application
+	fields := logrus.Fields{
+		"app.name":    app.RepositoryName,
+		"app.version": app.Version,
 	}
 	app.log = log.WithFields(fields)
 
@@ -102,10 +137,41 @@ func NewApp(log logrus.FieldLogger, k kubernetes.Interface, conf *rest.Config,
 }
 
 func (a *App) detectVersion(ctx context.Context) error {
-	// check Github repository, get topics
-	// if topic release-type-commits, use the latest commit as a.Version
-	// or if there are no releases.
-	// Otherwise, get the latest github release, use the tag as a.Version
+	token, err := githubauth.GetGHToken()
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve github token")
+	}
+
+	gh := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: string(token)},
+	)))
+
+	repo, _, err := gh.Repositories.Get(ctx, a.box.Org, a.RepositoryName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to lookup repository %s/%s", a.box.Org, a.RepositoryName)
+	}
+	sort.Strings(repo.Topics)
+	if sort.SearchStrings(repo.Topics, "release-type-commits") != len(repo.Topics) {
+		// Using commits, return the latest commit
+		if repo.DefaultBranch == nil || *repo.DefaultBranch == "" {
+			repo.DefaultBranch = github.String("master")
+		}
+
+		br, _, err := gh.Repositories.GetBranch(ctx, a.box.Org, a.RepositoryName, *repo.DefaultBranch, true)
+		if err != nil {
+			return errors.Wrapf(err, "failed to resolve the latest commit on repository %s/%s@%s", a.box.Org, a.RepositoryName, *repo.DefaultBranch)
+		}
+
+		a.Version = br.GetCommit().GetSHA()
+		return nil
+	}
+
+	rel, _, err := gh.Repositories.GetLatestRelease(ctx, a.box.Org, a.RepositoryName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to lookup repository %s/%s", a.box.Org, a.RepositoryName)
+	}
+
+	a.Version = *rel.TagName
 	return nil
 }
 
@@ -197,5 +263,15 @@ func (a *App) determineRepositoryName() error {
 	}
 
 	a.RepositoryName = conf.Name
+	return nil
+}
+
+// Close cleans up all resources of this application
+// outside of the application itself.
+func (a *App) Close() error {
+	if a.cleanupFn != nil {
+		a.cleanupFn()
+	}
+
 	return nil
 }
