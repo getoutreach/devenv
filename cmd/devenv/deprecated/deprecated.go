@@ -1,3 +1,8 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: See package description
+
+// Package deprecated houses all deprecated commands
 package deprecated
 
 import (
@@ -9,6 +14,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// Commands returns all deprecated commands
 func Commands(log logrus.FieldLogger) []*cli.Command {
 	return []*cli.Command{
 		deployapp.NewCmdDeployApp(log),

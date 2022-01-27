@@ -1,3 +1,8 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: See package description
+
+// Package deleteapp is a deprecated command
 package deleteapp
 
 import (

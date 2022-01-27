@@ -1,3 +1,8 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: See package description
+
+// Package top is a deprecated command
 package top
 
 import (
@@ -9,10 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
-
-// !!!
-// !!! NOTE: This is deprecated. It doesn't work for all types of devenv.
-// !!!
 
 //nolint:gochecknoglobals
 var (
