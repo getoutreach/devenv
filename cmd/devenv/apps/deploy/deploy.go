@@ -101,5 +101,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Deploy(ctx, o.log, o.k, o.conf, o.App, kr.GetConfig())
+	return app.Deploy(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
 }

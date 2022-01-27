@@ -3,8 +3,11 @@ package update
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/getoutreach/devenv/internal/apps"
+	"github.com/getoutreach/devenv/internal/vault"
+	"github.com/getoutreach/devenv/pkg/app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
@@ -15,6 +18,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 //nolint:gochecknoglobals
@@ -32,9 +36,10 @@ var (
 )
 
 type Options struct {
-	log logrus.FieldLogger
-	k   kubernetes.Interface
-	b   *box.Config
+	log   logrus.FieldLogger
+	k     kubernetes.Interface
+	kconf *rest.Config
+	b     *box.Config
 
 	AppName string
 }
@@ -61,11 +66,12 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			o := NewOptions(log)
 			o.AppName = c.Args().First()
 
-			k, err := kube.GetKubeClient()
+			k, rconf, err := kube.GetKubeClientWithConfig()
 			if err != nil {
 				return errors.Wrap(err, "failed to create kubernetes client")
 			}
 			o.k = k
+			o.kconf = rconf
 
 			return o.Run(c.Context)
 		},
@@ -84,9 +90,16 @@ func (o *Options) Run(ctx context.Context) error {
 		return errors.Wrap(err, "failed to load config")
 	}
 
-	//nolint:govet // Why: err shadow
-	if _, err := devenvutil.EnsureDevenvRunning(ctx, conf, b); err != nil {
+	kr, err := devenvutil.EnsureDevenvRunning(ctx, conf, b)
+	if err != nil {
 		return err
+	}
+	krConfig := kr.GetConfig()
+
+	if b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
+		if err := vault.EnsureLoggedIn(ctx, o.log, b, o.k); err != nil {
+			return errors.Wrap(err, "failed to refresh vault authentication")
+		}
 	}
 
 	appsClient := apps.NewKubernetesConfigmapClient(o.k, "")
@@ -113,11 +126,29 @@ func (o *Options) Run(ctx context.Context) error {
 		deployedApps = []apps.App{*foundApp}
 	}
 
-	o.log.Infof("Updating %d service(s)", len(deployedApps))
+	o.log.Infof("Checking %d service(s) for updates", len(deployedApps))
+	for _, a := range deployedApps {
+		log := o.log.WithField("app.name", a.Name)
+		newVersion, err := app.NewApp(ctx, &logrus.Logger{Out: io.Discard}, o.k, o.b, o.kconf, a.Name, &krConfig)
+		if err != nil {
+			log.WithError(err).Warn("Failed to check/stage for updates")
+			continue
+		}
+		log = log.WithField("app.version", a.Version)
 
-	// iterate over all the apps, and run deploy on them...
-	// this will force the manifests+images (set VERSION) to be
-	// updated.
+		if newVersion.Version == a.Version {
+			log.Info("No new updates available")
+			continue
+		}
+
+		log.WithField("app.old_version", a.Version).Info("Updating application")
+
+		err = newVersion.Deploy(ctx)
+		newVersion.Close() //nolint:errcheck // Why: Best effort
+		if err != nil {
+			log.WithError(err).Warn("Failed to update")
+		}
+	}
 
 	return nil
 }

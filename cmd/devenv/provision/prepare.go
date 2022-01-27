@@ -83,7 +83,7 @@ func (o *Options) deployStage(ctx context.Context, stage string) error { //nolin
 	// so we should mutate all pods to have zero resources.
 	// Special exeception is when we're generating snapshots.
 	if runtimeConf.Type == kubernetesruntime.RuntimeTypeLocal && os.Getenv("DEVENV_SNAPSHOT_GENERATION") == "" {
-		err := app.Deploy(ctx, o.log, o.k, o.r, "resourcer", runtimeConf)
+		err := app.Deploy(ctx, o.log, o.k, o.b, o.r, "resourcer", runtimeConf)
 		if err != nil {
 			return errors.Wrap(err, "failed to deploy resourcer")
 		}

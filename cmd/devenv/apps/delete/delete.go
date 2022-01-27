@@ -62,6 +62,7 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 func NewCmd(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
 		Name:        "delete",
+		Aliases:     []string{"purge"},
 		Usage:       "Delete an application in the developer environment",
 		Description: cmdutil.NewDescription(deleteLongDesc, deleteExample),
 		Action: func(c *cli.Context) error {
@@ -113,5 +114,5 @@ func (o *Options) Run(ctx context.Context) error {
 		return fmt.Errorf("Failed to find application named '%s' that was deployed", o.App)
 	}
 
-	return app.Delete(ctx, o.log, o.k, o.conf, o.App, kr.GetConfig())
+	return app.Delete(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
 }

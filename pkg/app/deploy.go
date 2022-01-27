@@ -26,9 +26,9 @@ import (
 
 // Deploy is a wrapper around NewApp().Deploy() that automatically closes
 // the app and deploys it into the devenv
-func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, box *box.Config,
+func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
 	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
-	app, err := NewApp(ctx, log, k, box, conf, appNameOrPath, &kr)
+	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
@@ -64,10 +64,16 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 
 	a.log.Info("Deploying application into devenv...")
 
-	deployScript := "./scripts/shell-wrapper.sh"
-	deployScriptArgs := []string{"deploy-to-dev.sh", "update"}
+	// Note: This is done this way because a.Version is not sanitized and could
+	// be used to run arbitrary shell commands.
+	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/shell-wrapper.sh", "deploy-to-dev.sh", "update")
+	if err != nil {
+		return errors.Wrap(err, "failed to create command")
+	}
 
-	if err := cmdutil.RunKubernetesCommand(ctx, a.Path, true, deployScript, deployScriptArgs...); err != nil {
+	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
+	if b, err := cmd.CombinedOutput(); err != nil {
+		a.log.Error(string(b))
 		return errors.Wrap(err, "failed to deploy changes")
 	}
 

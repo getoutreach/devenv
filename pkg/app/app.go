@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/google/go-github/v42/github"
 	"golang.org/x/oauth2"
+	"golang.org/x/tools/go/vcs"
 
 	// TODO(jaredallard): Move this into gobox
 	githubauth "github.com/getoutreach/stencil/pkg/extensions/github"
@@ -71,7 +71,7 @@ type App struct {
 }
 
 // NewApp creates a new App for interaction with in a devenv
-func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, box *box.Config, conf *rest.Config,
+func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config, conf *rest.Config,
 	appNameOrPath string, kr *kubernetesruntime.RuntimeConfig) (*App, error) {
 	version := ""
 	versionSplit := strings.SplitN(appNameOrPath, "@", 2)
@@ -83,7 +83,7 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 
 	app := App{
 		k:              k,
-		box:            box,
+		box:            b,
 		appsClient:     apps.NewKubernetesConfigmapClient(k, ""),
 		conf:           conf,
 		kr:             kr,
@@ -101,7 +101,12 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 		if version != "" {
 			return nil, fmt.Errorf("when deploying a local-app a version must not be set")
 		}
+
+		if err := app.determineRepositoryName(); err != nil {
+			return nil, errors.Wrap(err, "determine repository name")
+		}
 	}
+	app.log = log.WithField("app.name", app.RepositoryName)
 
 	// Download the repository if it doesn't already exist on disk.
 	if app.Path == "" {
@@ -126,16 +131,15 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 		return nil, errors.Wrap(err, "determine repository name")
 	}
 
-	// scope the logger to the application
-	fields := logrus.Fields{
-		"app.name":    app.RepositoryName,
-		"app.version": app.Version,
-	}
-	app.log = log.WithFields(fields)
+	app.log = app.log.WithField("app.version", app.Version)
 
 	return &app, nil
 }
 
+// detectVersion determines the latest version of a repository by three criteria"
+// - topic "release-type-commits" is set. Uses the latest commit
+// - 0 tags on the repository. Uses the latest commit.
+// - Otherwise it uses the latest release (tag) on the repository
 func (a *App) detectVersion(ctx context.Context) error {
 	token, err := githubauth.GetGHToken()
 	if err != nil {
@@ -150,9 +154,24 @@ func (a *App) detectVersion(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to lookup repository %s/%s", a.box.Org, a.RepositoryName)
 	}
-	sort.Strings(repo.Topics)
-	if sort.SearchStrings(repo.Topics, "release-type-commits") != len(repo.Topics) {
-		// Using commits, return the latest commit
+
+	useCommit := false
+	for _, topic := range repo.Topics {
+		if topic == "release-type-commits" {
+			useCommit = true
+			break
+		}
+	}
+
+	tags, _, err := gh.Repositories.ListTags(ctx, a.box.Org, a.RepositoryName, &github.ListOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to list tags on repository %s/%s", a.box.Org, a.RepositoryName)
+	}
+	if len(tags) == 0 {
+		useCommit = true
+	}
+
+	if useCommit {
 		if repo.DefaultBranch == nil || *repo.DefaultBranch == "" {
 			repo.DefaultBranch = github.String("master")
 		}
@@ -200,20 +219,13 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 		}
 	}
 
-	args := []string{"clone", "--recurse-submodules", "git@github.com:getoutreach/" + a.RepositoryName, tempDir}
-	if a.Version != "" {
-		args = append(args, "--branch", a.Version, "--depth", "1")
+	root, err := vcs.RepoRootForImportPath("github.com/"+path.Join(a.box.Org, a.RepositoryName), false)
+	if err != nil {
+		return cleanup, errors.Wrap(err, "failed to setup vcs client")
 	}
 
 	a.log.Info("Fetching Application")
-	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec,lll // Why: We're using git here because of it's ability to better handle mixed input
-	b, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Println(string(b))
-		return cleanup, err
-	}
-
-	return cleanup, nil
+	return cleanup, root.VCS.CreateAtRev(tempDir, root.Repo, a.Version)
 }
 
 // determineType determines the type of repository a service is
