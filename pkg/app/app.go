@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -16,7 +16,6 @@ import (
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/google/go-github/v42/github"
 	"golang.org/x/oauth2"
-	"golang.org/x/tools/go/vcs"
 
 	// TODO(jaredallard): Move this into gobox
 	githubauth "github.com/getoutreach/stencil/pkg/extensions/github"
@@ -96,6 +95,7 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	if !validRepoReg.MatchString(appNameOrPath) || appNameOrPath == "." || appNameOrPath == ".." {
 		app.Path = appNameOrPath
 		app.Local = true
+		app.Version = "local"
 		app.RepositoryName = filepath.Base(appNameOrPath)
 
 		if version != "" {
@@ -108,6 +108,28 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	}
 	app.log = log.WithField("app.name", app.RepositoryName)
 
+	// Get the type first for validation checks later
+	if err := app.determineType(ctx); err != nil {
+		return nil, errors.Wrap(err, "determine repository name")
+	}
+	app.log = log.WithField("app.type", app.Type)
+
+	// Find the latest version if not set, or resolve the provided version
+	if !app.Local {
+		if app.Version == "" {
+			if err := app.detectVersion(ctx); err != nil {
+				return nil, errors.Wrap(err, "failed to determine application version")
+			}
+		} else {
+			// If we had a provided version, attempt to
+			// resolve the version in case it's a branch
+			if err := app.resolveVersion(ctx); err != nil {
+				return nil, errors.Wrap(err, "failed to resolve application version")
+			}
+		}
+		app.log = app.log.WithField("app.version", app.Version)
+	}
+
 	// Download the repository if it doesn't already exist on disk.
 	if app.Path == "" {
 		cleanup, err := app.downloadRepository(ctx, app.RepositoryName)
@@ -117,21 +139,9 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 		}
 	}
 
-	if app.Version == "" {
-		if err := app.detectVersion(ctx); err != nil {
-			return nil, errors.Wrap(err, "failed to determine application version")
-		}
-	}
-
-	if err := app.determineType(); err != nil {
-		return nil, errors.Wrap(err, "determine repository type")
-	}
-
 	if err := app.determineRepositoryName(); err != nil {
 		return nil, errors.Wrap(err, "determine repository name")
 	}
-
-	app.log = app.log.WithField("app.version", app.Version)
 
 	return &app, nil
 }
@@ -185,12 +195,54 @@ func (a *App) detectVersion(ctx context.Context) error {
 		return nil
 	}
 
+	// Note: This doesn't resolve the latest _tag_ but the latest Github release. This is a
+	// requirement for us for now. (no tags w/o releases)
 	rel, _, err := gh.Repositories.GetLatestRelease(ctx, a.box.Org, a.RepositoryName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to lookup repository %s/%s", a.box.Org, a.RepositoryName)
 	}
 
 	a.Version = *rel.TagName
+	return nil
+}
+
+// resolveVersion attempts to determine if a version is a tag or branch
+func (a *App) resolveVersion(ctx context.Context) error {
+	token, err := githubauth.GetGHToken()
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve github token")
+	}
+
+	gh := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: string(token)},
+	)))
+
+	// check if it's a valid tag
+	_, _, err = gh.Git.GetRef(ctx, a.box.Org, a.RepositoryName, "tags/"+a.Version)
+	if err == nil {
+		return nil
+	}
+
+	// if the version wasn't a tag and we're a bootstrapped service we're sad.
+	if a.Type == TypeBootstrap {
+		return fmt.Errorf("Pointing at a commit/branch for bootstrap services is unsupported, use a tag instead")
+	}
+
+	// check if it's a valid commit
+	_, _, err = gh.Git.GetCommit(ctx, a.box.Org, a.RepositoryName, a.Version)
+	if err == nil {
+		return nil
+	}
+
+	// lookup branch
+	br, _, err := gh.Repositories.GetBranch(ctx, a.box.Org, a.RepositoryName, a.Version, true)
+	if err != nil {
+		return errors.Wrapf(err, "failed to resolve the latest commit on branch %s/%s@%s", a.box.Org, a.RepositoryName, a.Version)
+	}
+	a.Version = br.GetCommit().GetSHA()
+
+	a.log.Warn("Pointing at a branch doesn't currently use the version of the application, use devspace instead")
+
 	return nil
 }
 
@@ -213,32 +265,54 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 		return cleanup, err
 	}
 
-	if a.Version == "" {
-		if err := a.detectVersion(ctx); err != nil {
-			return cleanup, errors.Wrapf(err, "failed to find latest version of %s", a.RepositoryName)
-		}
+	a.log.Info("Fetching application")
+
+	//nolint:gosec // Why: On purpose
+	cmd := exec.CommandContext(ctx, "git", "clone", "--depth=1", fmt.Sprintf("git@github.com:%s/%s", a.box.Org, a.RepositoryName), tempDir)
+	if b, err := cmd.CombinedOutput(); err != nil {
+		return cleanup, errors.Wrapf(err, "failed to shallow clone repository: %s", string(b))
 	}
 
-	root, err := vcs.RepoRootForImportPath("github.com/"+path.Join(a.box.Org, a.RepositoryName), false)
-	if err != nil {
-		return cleanup, errors.Wrap(err, "failed to setup vcs client")
+	//nolint:gosec // Why: On purpose
+	cmd = exec.CommandContext(ctx, "git", "fetch", "origin", a.Version)
+	cmd.Dir = tempDir
+	if b, err := cmd.CombinedOutput(); err != nil {
+		return cleanup, errors.Wrapf(err, "failed to fetch remote ref: %s", string(b))
 	}
 
-	a.log.Info("Fetching Application")
-	return cleanup, root.VCS.CreateAtRev(tempDir, root.Repo, a.Version)
+	//nolint:gosec // Why: On purpose
+	cmd = exec.CommandContext(ctx, "git", "reset", "--hard", a.Version)
+	cmd.Dir = tempDir
+	if b, err := cmd.CombinedOutput(); err != nil {
+		return cleanup, errors.Wrapf(err, "failed to hard reset to given ref: %s", string(b))
+	}
+
+	return cleanup, nil
 }
 
 // determineType determines the type of repository a service is
-func (a *App) determineType() error {
-	serviceYamlPath := filepath.Join(a.Path, "service.yaml")
-	deployScriptPath := filepath.Join(a.Path, "scripts", "deploy-to-dev.sh")
+func (a *App) determineType(ctx context.Context) error {
+	token, err := githubauth.GetGHToken()
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve github token")
+	}
 
-	if _, err := os.Stat(serviceYamlPath); err == nil {
+	gh := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: string(token)},
+	)))
+
+	if _, _, _, err = gh.Repositories.GetContents(ctx, a.box.Org, a.RepositoryName, "service.yaml",
+		&github.RepositoryContentGetOptions{
+			Ref: a.Version,
+		}); err == nil {
 		a.Type = TypeBootstrap
-	} else if _, err := os.Stat(deployScriptPath); err == nil {
+	} else if _, _, _, err = gh.Repositories.GetContents(ctx, a.box.Org, a.RepositoryName, "scripts/deploy-to-dev.sh",
+		&github.RepositoryContentGetOptions{
+			Ref: a.Version,
+		}); err == nil {
 		a.Type = TypeLegacy
 	} else {
-		return fmt.Errorf("failed to determine application type, no %s or %s", serviceYamlPath, deployScriptPath)
+		return fmt.Errorf("failed to determine application type on ref %s", a.Version)
 	}
 
 	return nil

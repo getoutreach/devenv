@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/getoutreach/devenv/internal/apps"
@@ -41,8 +42,15 @@ func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 // ./scripts/deploy-to-dev.sh, relative to the repository root.
 func (a *App) deployLegacy(ctx context.Context) error {
 	a.log.Info("Deploying application into devenv...")
-	return errors.Wrap(cmdutil.RunKubernetesCommand(ctx, a.Path, true,
-		"./scripts/deploy-to-dev.sh", "update"), "failed to deploy changes")
+	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/deploy-to-dev.sh", "update")
+	if err != nil {
+		return errors.Wrap(err, "failed to create command")
+	}
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
+	return cmd.Run()
 }
 
 // deployBootstrap deploys an application created by Bootstrap
