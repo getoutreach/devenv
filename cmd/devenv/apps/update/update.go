@@ -134,7 +134,7 @@ func (o *Options) Run(ctx context.Context) error {
 			log.WithError(err).Warn("Failed to check/stage for updates")
 			continue
 		}
-		log = log.WithField("app.version", a.Version)
+		log = log.WithField("app.version", newVersion.Version)
 
 		if newVersion.Version == a.Version {
 			log.Info("No new updates available")
