@@ -1,10 +1,10 @@
-package deployapp
+package delete
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/getoutreach/devenv/internal/vault"
+	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
@@ -20,19 +20,18 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	deployAppLongDesc = `
-		deploy-app deploys an Outreach application into your developer environment.
-		The application name (appName) provided should match, exactly, an Outreach repository name.
+	deleteLongDesc = `
+	  Deletes an Outreach application in your developer environment, should match a repository name
 	`
-	deployAppExample = `
-		# Deploy an application to the developer environment
-		devenv deploy-app <appName>
+	deleteExample = `
+		# Delete an application in of the developer environment
+		devenv apps delete <appName>
 
-		# Deploy a local directory application to the developer environment
-		devenv deploy-app .
+		# Delete a local directory application in the developer environment
+		devenv apps delete .
 
-		# Deploy a local application to the developer environment
-		devenv deploy-app ./outreach-accounts
+		# Delete a local application in the developer environment
+		devenv apps delete ./outreach-accounts
 	`
 )
 
@@ -41,9 +40,11 @@ type Options struct {
 	k    kubernetes.Interface
 	conf *rest.Config
 
+	// App to delete
 	App string
 }
 
+// NewOptions creates a new options struct for this command
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	k, conf, err := kube.GetKubeClientWithConfig()
 	if err != nil {
@@ -57,18 +58,13 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	}, nil
 }
 
-func NewCmdDeployApp(log logrus.FieldLogger) *cli.Command {
+// NewCmd creates a new cli.Command for this command
+func NewCmd(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
-		Name:        "deploy-app",
-		Usage:       "Deploy an application to the developer environment",
-		Description: cmdutil.NewDescription(deployAppLongDesc, deployAppExample),
-		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:   "local",
-				Hidden: true,
-				Usage:  "Deploy an application from local disk --local <path>",
-			},
-		},
+		Name:        "delete",
+		Aliases:     []string{"purge"},
+		Usage:       "Delete an application in the developer environment",
+		Description: cmdutil.NewDescription(deleteLongDesc, deleteExample),
 		Action: func(c *cli.Context) error {
 			if c.Args().Len() == 0 {
 				return fmt.Errorf("missing application")
@@ -84,6 +80,7 @@ func NewCmdDeployApp(log logrus.FieldLogger) *cli.Command {
 	}
 }
 
+// Run runs this command
 func (o *Options) Run(ctx context.Context) error {
 	b, err := box.LoadBox()
 	if err != nil {
@@ -100,11 +97,22 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	if b.DeveloperEnvironmentConfig.VaultConfig.Enabled {
-		if err := vault.EnsureLoggedIn(ctx, o.log, b, o.k); err != nil {
-			return errors.Wrap(err, "failed to refresh vault authentication")
-		}
+	appsClient := apps.NewKubernetesConfigmapClient(o.k, "")
+	deployedApps, err := appsClient.List(ctx)
+	if err != nil {
+		return err
 	}
 
-	return app.Deploy(ctx, o.log, o.k, o.conf, o.App, kr.GetConfig())
+	found := false
+	for _, a := range deployedApps {
+		if a.Name == o.App {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("Failed to find application named '%s' that was deployed", o.App)
+	}
+
+	return app.Delete(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
 }
