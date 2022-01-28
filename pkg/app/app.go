@@ -322,7 +322,11 @@ func (a *App) determineType(ctx context.Context) error {
 // or from a service.yaml
 func (a *App) determineRepositoryName() error {
 	// Determine the name via the basename for legacy applications
-	if a.Type != TypeBootstrap && a.Local {
+	if a.Type != TypeBootstrap {
+		if !a.Local { // If not local, use the provided name
+			return nil
+		}
+
 		if filepath.IsAbs(a.Path) {
 			a.RepositoryName = filepath.Base(a.Path)
 			return nil
