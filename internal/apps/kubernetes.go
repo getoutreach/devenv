@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -79,7 +78,6 @@ func (k *KubernetesConfigmapClient) serializeConfigmap(ctx context.Context, apps
 		},
 		Data: serializedData,
 	}
-	spew.Dump(cm)
 
 	exists := false
 	if _, err := k.k.CoreV1().ConfigMaps(k.namespace).Get(ctx, cm.Name, metav1.GetOptions{}); err == nil {

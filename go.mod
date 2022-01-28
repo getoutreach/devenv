@@ -233,7 +233,6 @@ require (
 	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
 	github.com/getoutreach/stencil v1.1.1
 	github.com/google/go-github/v42 v42.0.0
-	golang.org/x/tools v0.1.7
 	gotest.tools/v3 v3.0.3
 )
 
