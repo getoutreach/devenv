@@ -21,6 +21,7 @@ import (
 	// Place any extra imports for your startup code here
 	///Block(imports)
 	"github.com/getoutreach/devenv/cmd/devenv/apps"
+	"github.com/getoutreach/devenv/cmd/devenv/auth"
 	"github.com/getoutreach/devenv/cmd/devenv/completion"
 	cmdcontext "github.com/getoutreach/devenv/cmd/devenv/context"
 	"github.com/getoutreach/devenv/cmd/devenv/deprecated"
@@ -97,6 +98,7 @@ func main() {
 	}
 	app.Commands = []*cli.Command{
 		///Block(commands)
+		auth.NewCmdAuth(log),
 		provision.NewCmdProvision(log),
 		destroy.NewCmdDestroy(log),
 		status.NewCmdStatus(log),

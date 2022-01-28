@@ -49,6 +49,8 @@ func EnsureLoggedIn(ctx context.Context, log logrus.FieldLogger, b *box.Config, 
 		if err2 != nil {
 			return err2
 		}
+	} else {
+		log.Warn("No Kubernetes client available, not refreshing Kubernetes environment")
 	}
 
 	return nil
