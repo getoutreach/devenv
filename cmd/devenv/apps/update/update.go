@@ -24,7 +24,7 @@ import (
 //nolint:gochecknoglobals
 var (
 	updateLongDesc = `
-		updates your applications running in your developer environment
+		Updates applications in your developer environment. This usually involves updating Docker images/Kubernetes manifests, but is up to the application.
 	`
 	updateExample = `
 		# Update all your applications
