@@ -112,7 +112,7 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	if err := app.determineType(ctx); err != nil {
 		return nil, errors.Wrap(err, "determine repository name")
 	}
-	app.log = log.WithField("app.type", app.Type)
+	app.log = app.log.WithField("app.type", app.Type)
 
 	// Find the latest version if not set, or resolve the provided version
 	if !app.Local {
@@ -322,7 +322,7 @@ func (a *App) determineType(ctx context.Context) error {
 // or from a service.yaml
 func (a *App) determineRepositoryName() error {
 	// Determine the name via the basename for legacy applications
-	if a.Type != TypeBootstrap {
+	if a.Type != TypeBootstrap && a.Local {
 		if filepath.IsAbs(a.Path) {
 			a.RepositoryName = filepath.Base(a.Path)
 			return nil

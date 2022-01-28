@@ -60,7 +60,7 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 	builtDockerImage := false
 	if a.Local {
 		if a.kr.Type == kubernetesruntime.RuntimeTypeLocal {
-			a.log.Warn("Building a local docker image via apps deploy/deploy-app is deprecated")
+			a.log.Warn("Building a local docker image via apps deploy is deprecated")
 			if err := a.buildDockerImage(ctx); err != nil {
 				return errors.Wrap(err, "failed to build image")
 			}

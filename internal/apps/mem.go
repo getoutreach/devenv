@@ -5,7 +5,10 @@
 
 package apps
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // InMemoryClient is an in memory client that implements
 // the apps.Interface interface for usage in unit testing.
@@ -45,6 +48,7 @@ func (i *InMemoryClient) Get(_ context.Context, name string) (App, error) {
 
 // Set sets the state of a deployed application
 func (i *InMemoryClient) Set(_ context.Context, a *App) error {
+	a.DeployedAt = time.Now().UTC()
 	i.apps[a.Name] = *a
 	return nil
 }

@@ -14,6 +14,7 @@ package apps
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 // This block contains typed errors
@@ -47,4 +48,7 @@ type App struct {
 	// Version is the currently deployed version of an application.
 	// This should generally be semver and may be forced to be
 	Version string `json:"version" yaml:"version"`
+
+	// DeployedAt was when this app was deployed
+	DeployedAt time.Time `json:"deployed_at" yaml:"deployedAt"`
 }
