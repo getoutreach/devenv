@@ -18,7 +18,7 @@ import (
 	"golang.org/x/oauth2"
 
 	// TODO(jaredallard): Move this into gobox
-	githubauth "github.com/getoutreach/stencil/pkg/extensions/github"
+	githubauth "github.com/getoutreach/gobox/pkg/github"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -151,7 +151,7 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 // - 0 tags on the repository. Uses the latest commit.
 // - Otherwise it uses the latest release (tag) on the repository
 func (a *App) detectVersion(ctx context.Context) error {
-	token, err := githubauth.GetGHToken()
+	token, err := githubauth.GetToken()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve github token")
 	}
@@ -208,7 +208,7 @@ func (a *App) detectVersion(ctx context.Context) error {
 
 // resolveVersion attempts to determine if a version is a tag or branch
 func (a *App) resolveVersion(ctx context.Context) error {
-	token, err := githubauth.GetGHToken()
+	token, err := githubauth.GetToken()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve github token")
 	}
@@ -292,7 +292,7 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 
 // determineType determines the type of repository a service is
 func (a *App) determineType(ctx context.Context) error {
-	token, err := githubauth.GetGHToken()
+	token, err := githubauth.GetToken()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve github token")
 	}
