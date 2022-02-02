@@ -301,7 +301,7 @@ func (a *App) determineType(ctx context.Context) error {
 		&oauth2.Token{AccessToken: string(token)},
 	)))
 
-	if _, _, _, err = gh.Repositories.GetContents(ctx, a.box.Org, a.RepositoryName, "service.yaml",
+	if _, _, _, err = gh.Repositories.GetContents(ctx, a.box.Org, a.RepositoryName, "bootstrap.lock",
 		&github.RepositoryContentGetOptions{
 			Ref: a.Version,
 		}); err == nil {
