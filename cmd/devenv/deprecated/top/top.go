@@ -1,3 +1,8 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: See package description
+
+// Package top is a deprecated command
 package top
 
 import (
@@ -34,7 +39,8 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 func NewCmdTop(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
 		Name:        "top",
-		Usage:       "Htop for devenv",
+		Usage:       "DEPRECATED: htop for devenv",
+		Hidden:      true,
 		Description: cmdutil.NewDescription(topLongDesc, topExample),
 		Flags:       []cli.Flag{},
 		Action: func(c *cli.Context) error {

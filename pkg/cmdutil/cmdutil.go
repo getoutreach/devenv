@@ -83,17 +83,11 @@ func RunKubernetesCommand(ctx context.Context, wd string, onlyOutputOnError bool
 	ctx = trace.StartCall(ctx, "devenvutil.RunKubernetesCommand", olog.F{"command": name})
 	defer trace.EndCall(ctx)
 
-	kubeConfPath, err := kube.GetKubeConfig()
+	cmd, err := CreateKubernetesCommand(ctx, wd, name, args...)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kubeconfig")
+		return err
 	}
 
-	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Dir = wd
-	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("KUBECONFIG=%s", kubeConfPath),
-		fmt.Sprintf("DEVENV_VERSION=%s", app.Version),
-	)
 	if !onlyOutputOnError {
 		cmd.Stdout = os.Stdout
 		cmd.Stdin = os.Stdin
@@ -106,4 +100,23 @@ func RunKubernetesCommand(ctx context.Context, wd string, onlyOutputOnError bool
 		fmt.Println(string(b))
 	}
 	return err
+}
+
+// CreateKubernetesCommand is like RunKubernetesCommand but returns the command
+func CreateKubernetesCommand(ctx context.Context, wd, command string, args ...string) (*exec.Cmd, error) {
+	ctx = trace.StartCall(ctx, "devenvutil.CreateKubernetesCommand", olog.F{"command": command})
+	defer trace.EndCall(ctx)
+
+	kubeConfPath, err := kube.GetKubeConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kubeconfig")
+	}
+
+	cmd := exec.CommandContext(ctx, command, args...)
+	cmd.Dir = wd
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("KUBECONFIG=%s", kubeConfPath),
+		fmt.Sprintf("DEVENV_VERSION=%s", app.Version),
+	)
+	return cmd, nil
 }

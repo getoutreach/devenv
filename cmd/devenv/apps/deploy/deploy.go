@@ -1,4 +1,4 @@
-package deleteapp
+package deploy
 
 import (
 	"context"
@@ -20,30 +20,30 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	deployAppLongDesc = `
-		delete-app deletes an Outreach application into your developer environment. 
+	deployLongDesc = `
+		Deploys an Outreach application into your developer environment.
 		The application name (appName) provided should match, exactly, an Outreach repository name.
 	`
-	deployAppExample = `
-		# Delete an application in of the developer environment
-		devenv deploy-app <appName>
+	deployExample = `
+		# Deploy an application to the developer environment
+		devenv apps deploy <appName>
 
-		# Delete a local directory application in the developer environment
-		devenv deploy-app .
-
-		# Delete a local application in the developer environment
-		devenv deploy-app ./outreach-accounts
+		# Deploy a local directory application to the developer environment
+		devenv apps deploy .
 	`
 )
 
+// Options are various options for the `apps deploy` command
 type Options struct {
 	log  logrus.FieldLogger
 	k    kubernetes.Interface
 	conf *rest.Config
 
+	// App is the app to deploy
 	App string
 }
 
+// NewOptions create an initialized options struct for the `apps deploy` command
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	k, conf, err := kube.GetKubeClientWithConfig()
 	if err != nil {
@@ -57,12 +57,12 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	}, nil
 }
 
-func NewCmdDeleteApp(log logrus.FieldLogger) *cli.Command {
+// NewCmd creates a new cli.Command for the `apps deploy` command
+func NewCmd(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
-		Name:        "delete-app",
-		Usage:       "Delete an application in the developer environment",
-		Description: cmdutil.NewDescription(deployAppLongDesc, deployAppExample),
-		Flags:       []cli.Flag{},
+		Name:        "deploy",
+		Usage:       "Deploy an application to the developer environment",
+		Description: cmdutil.NewDescription(deployLongDesc, deployExample),
 		Action: func(c *cli.Context) error {
 			if c.Args().Len() == 0 {
 				return fmt.Errorf("missing application")
@@ -78,6 +78,7 @@ func NewCmdDeleteApp(log logrus.FieldLogger) *cli.Command {
 	}
 }
 
+// Run runs the `apps deploy` command
 func (o *Options) Run(ctx context.Context) error {
 	b, err := box.LoadBox()
 	if err != nil {
@@ -100,5 +101,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Delete(ctx, o.log, o.k, o.conf, o.App, kr.GetConfig())
+	return app.Deploy(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
 }

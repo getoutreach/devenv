@@ -3,23 +3,23 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-func Delete(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
+func Delete(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
 	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
-	app, err := NewApp(log, k, conf, appNameOrPath, &kr)
+	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
+	defer app.Close()
 
 	return app.Delete(ctx)
 }
@@ -31,22 +31,13 @@ func (a *App) deleteLegacy(ctx context.Context) error {
 	return errors.Wrap(cmdutil.RunKubernetesCommand(ctx, a.Path, true, "./scripts/deploy-to-dev.sh", "delete"), "failed to delete application")
 }
 
+// deleteBootstrap deletes a bootstrapped repository from
+// the devenv
 func (a *App) deleteBootstrap(ctx context.Context) error {
-	if err := a.determineRepositoryName(); err != nil {
-		return errors.Wrap(err, "determine repository name")
-	}
-	a.log = a.log.WithField("app.name", a.RepositoryName)
-
 	a.log.Info("Deleting application from devenv...")
 
-	deployScript := "./scripts/deploy-to-dev.sh"
-	deployScriptArgs := []string{"delete"}
-
-	// Cheap way of detecting bootstrap v6 w/o importing bootstrap.lock
-	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "shell-wrapper.sh")); err == nil {
-		deployScript = "./scripts/shell-wrapper.sh"
-		deployScriptArgs = append([]string{"deploy-to-dev.sh"}, deployScriptArgs...)
-	}
+	deployScript := "./scripts/shell-wrapper.sh"
+	deployScriptArgs := []string{"deploy-to-dev.sh", "delete"}
 
 	if err := cmdutil.RunKubernetesCommand(ctx, a.Path, true, deployScript, deployScriptArgs...); err != nil {
 		return errors.Wrap(err, "failed to delete application")
@@ -56,27 +47,19 @@ func (a *App) deleteBootstrap(ctx context.Context) error {
 }
 
 func (a *App) Delete(ctx context.Context) error {
-	// Download the repository if it doesn't already exist on disk.
-	if a.Path == "" {
-		cleanup, err := a.downloadRepository(ctx, a.RepositoryName)
-		defer cleanup()
-
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := a.determineType(); err != nil {
-		return errors.Wrap(err, "determine repository type")
-	}
-
+	var err error
 	switch a.Type {
 	case TypeBootstrap:
-		return a.deleteBootstrap(ctx)
+		err = a.deleteBootstrap(ctx)
 	case TypeLegacy:
-		return a.deleteLegacy(ctx)
+		err = a.deleteLegacy(ctx)
+	default:
+		// If this ever fires, there is an issue with *App.determineType.
+		return fmt.Errorf("unknown application type %s", a.Type)
+	}
+	if err != nil {
+		return err
 	}
 
-	// If this ever fires, there is an issue with *App.determineType.
-	return fmt.Errorf("unknown application type %s", a.Type)
+	return a.appsClient.Delete(ctx, a.RepositoryName)
 }

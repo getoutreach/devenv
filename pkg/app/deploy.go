@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
+	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/gobox/pkg/sshhelper"
 	"github.com/getoutreach/gobox/pkg/trace"
 	dockerparser "github.com/novln/docker-parser"
@@ -24,13 +25,15 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// Deploy deploys an application by name, to the devenv.
-func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
+// Deploy is a wrapper around NewApp().Deploy() that automatically closes
+// the app and deploys it into the devenv
+func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
 	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
-	app, err := NewApp(log, k, conf, appNameOrPath, &kr)
+	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
+	defer app.Close()
 
 	return app.Deploy(ctx)
 }
@@ -39,21 +42,25 @@ func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 // ./scripts/deploy-to-dev.sh, relative to the repository root.
 func (a *App) deployLegacy(ctx context.Context) error {
 	a.log.Info("Deploying application into devenv...")
-	return errors.Wrap(cmdutil.RunKubernetesCommand(ctx, a.Path, true,
-		"./scripts/deploy-to-dev.sh", "update"), "failed to deploy changes")
+	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/deploy-to-dev.sh", "update")
+	if err != nil {
+		return errors.Wrap(err, "failed to create command")
+	}
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
+	return cmd.Run()
 }
 
+// deployBootstrap deploys an application created by Bootstrap
 func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
-	if err := a.determineRepositoryName(); err != nil {
-		return errors.Wrap(err, "determine repository name")
-	}
-	a.log = a.log.WithField("app.name", a.RepositoryName)
-
-	// Only build a docker image if we're not using the latest version
-	// or if we're in local mode
+	// Only build a docker image if we're running locally.
+	// Note: This is deprecated, devspace/tilt instead.
 	builtDockerImage := false
-	if a.Version != "" || a.Local {
+	if a.Local {
 		if a.kr.Type == kubernetesruntime.RuntimeTypeLocal {
+			a.log.Warn("Building a local docker image via apps deploy is deprecated")
 			if err := a.buildDockerImage(ctx); err != nil {
 				return errors.Wrap(err, "failed to build image")
 			}
@@ -65,24 +72,24 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 
 	a.log.Info("Deploying application into devenv...")
 
-	deployScript := "./scripts/deploy-to-dev.sh"
-	deployScriptArgs := []string{"update"}
-
-	// Cheap way of detecting bootstrap v6 w/o importing bootstrap.lock
-	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "shell-wrapper.sh")); err == nil {
-		deployScript = "./scripts/shell-wrapper.sh"
-		deployScriptArgs = append([]string{"deploy-to-dev.sh"}, deployScriptArgs...)
+	// Note: This is done this way because a.Version is not sanitized and could
+	// be used to run arbitrary shell commands.
+	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/shell-wrapper.sh", "deploy-to-dev.sh", "update")
+	if err != nil {
+		return errors.Wrap(err, "failed to create command")
 	}
 
-	if err := cmdutil.RunKubernetesCommand(ctx, a.Path, true, deployScript, deployScriptArgs...); err != nil {
+	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
+	if b, err := cmd.CombinedOutput(); err != nil {
+		a.log.Error(string(b))
 		return errors.Wrap(err, "failed to deploy changes")
 	}
 
+	// Deprecated: Use devspace/tilt instead. Will be removed soon.
 	if builtDockerImage {
-		// Delete pods to ensure they are using the latest docker image we pushed
+		// Delete pods to ensure they are using our image we just pushed into the env
 		return devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
 			Namespaces: []string{a.RepositoryName + "--bento1a"},
-			// TODO: We have to be able to get this information elsewhere.
 			Type: &corev1.Pod{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "Pod",
@@ -106,7 +113,7 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 
 					// check if it matched our applications image name.
 					// eventually we should do a better job at checking this (not building it ourself)
-					if !strings.Contains(ref.Name(), fmt.Sprintf("outreach-docker/%s", a.RepositoryName)) {
+					if !strings.Contains(ref.Name(), a.RepositoryName) {
 						continue
 					}
 
@@ -125,6 +132,9 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 
 // buildDockerImage builds a docker image from a bootstrap repo
 // and deploys it into the developer environment cache
+//
+// !!! Note: This is deprecated: devspace, or tilt, should be used
+// !!! for development instead. This will be removed in a future release.
 func (a *App) buildDockerImage(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "deployapp.buildDockerImage")
 	defer trace.EndCall(ctx)
@@ -139,7 +149,7 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 	}
 
 	a.log.Info("Building Docker image (this may take awhile)")
-	err = cmdutil.RunKubernetesCommand(ctx, a.Path, true, "make", "docker-build")
+	err = cmdutil.RunKubernetesCommand(ctx, a.Path, false, "make", "docker-build")
 	if err != nil {
 		return err
 	}
@@ -151,6 +161,17 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 		return errors.Wrap(err, "failed to find/download Kind")
 	}
 
+	baseImage := fmt.Sprintf("gcr.io/outreach-docker/%s", a.RepositoryName)
+	taggedImage := fmt.Sprintf("%s:%s", baseImage, a.Version)
+
+	// tag the image to be the same as the version, which is a required format
+	// to be followed
+	if err = cmdutil.RunKubernetesCommand(ctx, a.Path, true,
+		"docker", "tag", baseImage, taggedImage); err != nil {
+		return errors.Wrap(err, "failed to tag image")
+	}
+
+	// load the docker image into the kind cache
 	err = cmdutil.RunKubernetesCommand(
 		ctx,
 		a.Path,
@@ -158,7 +179,7 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 		kindPath,
 		"load",
 		"docker-image",
-		fmt.Sprintf("gcr.io/outreach-docker/%s", a.RepositoryName),
+		taggedImage,
 		"--name",
 		kubernetesruntime.KindClusterName,
 	)
@@ -166,26 +187,11 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 	return errors.Wrap(err, "failed to push docker image to Kubernetes")
 }
 
+// Deploy deploys the application into the devenv
 func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
-	// Download the repository if it doesn't already exist on disk.
-	if a.Path == "" {
-		cleanup, err := a.downloadRepository(ctx, a.RepositoryName)
-		defer cleanup()
-
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := a.determineType(); err != nil {
-		return errors.Wrap(err, "determine repository type")
-	}
-
 	// Delete all jobs with a db-migration annotation.
-
 	err := devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
 		Namespaces: []string{a.RepositoryName, fmt.Sprintf("%s--bento1a", a.RepositoryName)},
-		// TODO: We have to be able to get this information elsewhere.
 		Type: &batchv1.Job{
 			TypeMeta: v1.TypeMeta{
 				Kind:       "Job",
@@ -203,7 +209,6 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 			return job.Annotations[DeleteJobAnnotation] != "true"
 		},
 	})
-
 	if err != nil {
 		a.log.WithError(err).Error("failed to delete jobs")
 	}
@@ -220,5 +225,9 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	return devenvutil.WaitForAllPodsToBeReady(ctx, a.k, a.log)
+	if err := devenvutil.WaitForAllPodsToBeReady(ctx, a.k, a.log); err != nil {
+		return err
+	}
+
+	return a.appsClient.Set(ctx, &apps.App{Name: a.RepositoryName, Version: a.Version})
 }

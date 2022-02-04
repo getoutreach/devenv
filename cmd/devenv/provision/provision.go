@@ -19,7 +19,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	dockerclient "github.com/docker/docker/client"
-	deployapp "github.com/getoutreach/devenv/cmd/devenv/deploy-app"
+	"github.com/getoutreach/devenv/cmd/devenv/apps/deploy"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
 	"github.com/getoutreach/devenv/cmd/devenv/snapshot"
 	"github.com/getoutreach/devenv/pkg/aws"
@@ -603,7 +603,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 		}
 	}
 
-	dopts, err := deployapp.NewOptions(o.log)
+	dopts, err := deploy.NewOptions(o.log)
 	if err != nil {
 		return err
 	}
