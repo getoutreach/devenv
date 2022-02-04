@@ -23,7 +23,7 @@ RUN --mount=type=cache,target=/go/pkg --mount=type=cache,target=/go-build-cache 
 FROM gcr.io/outreach-docker/golang:1.17.1
 ENTRYPOINT ["/usr/local/bin/devenv", "--skip-update"]
 
-LABEL "io.outreach.reporting_team"="cia-dev-tooling"
+LABEL "io.outreach.reporting_team"="fnd-dtss"
 LABEL "io.outreach.repo"="devenv"
 
 ###Block(afterBuild)
