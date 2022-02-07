@@ -108,6 +108,9 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	}
 	app.log = log.WithField("app.name", app.RepositoryName)
 
+	// IDEA: We probably need to detect the version first
+	// so we now which ref to check.
+	//
 	// Get the type first for validation checks later
 	if err := app.determineType(ctx); err != nil {
 		return nil, errors.Wrap(err, "determine repository name")
@@ -300,6 +303,10 @@ func (a *App) determineType(ctx context.Context) error {
 	gh := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: string(token)},
 	)))
+
+	if _, _, err := gh.Repositories.Get(ctx, a.box.Org, a.RepositoryName); err != nil {
+		return errors.Wrap(err, "failed to check if repository exists")
+	}
 
 	if _, _, _, err = gh.Repositories.GetContents(ctx, a.box.Org, a.RepositoryName, "bootstrap.lock",
 		&github.RepositoryContentGetOptions{
