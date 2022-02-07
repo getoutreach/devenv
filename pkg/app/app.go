@@ -271,23 +271,16 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 	a.log.Info("Fetching application")
 
 	//nolint:gosec // Why: On purpose
-	cmd := exec.CommandContext(ctx, "git", "clone", "--depth=1", fmt.Sprintf("git@github.com:%s/%s", a.box.Org, a.RepositoryName), tempDir)
+	cmd := exec.CommandContext(ctx, "git", "clone", fmt.Sprintf("git@github.com:%s/%s", a.box.Org, a.RepositoryName), tempDir)
 	if b, err := cmd.CombinedOutput(); err != nil {
 		return cleanup, errors.Wrapf(err, "failed to shallow clone repository: %s", string(b))
 	}
 
 	//nolint:gosec // Why: On purpose
-	cmd = exec.CommandContext(ctx, "git", "fetch", "origin", a.Version)
+	cmd = exec.CommandContext(ctx, "git", "checkout", a.Version)
 	cmd.Dir = tempDir
 	if b, err := cmd.CombinedOutput(); err != nil {
-		return cleanup, errors.Wrapf(err, "failed to fetch remote ref: %s", string(b))
-	}
-
-	//nolint:gosec // Why: On purpose
-	cmd = exec.CommandContext(ctx, "git", "reset", "--hard", a.Version)
-	cmd.Dir = tempDir
-	if b, err := cmd.CombinedOutput(); err != nil {
-		return cleanup, errors.Wrapf(err, "failed to hard reset to given ref: %s", string(b))
+		return cleanup, errors.Wrapf(err, "failed to checkout given ref: %s", string(b))
 	}
 
 	return cleanup, nil
