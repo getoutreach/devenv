@@ -25,7 +25,7 @@ require (
 	github.com/loft-sh/loftctl/v2 v2.0.3-beta.5.0.20211217083256-42224ddca958
 	github.com/manifoldco/promptui v0.9.0
 	github.com/matryer/is v1.4.0 // indirect
-	github.com/minio/minio-go/v7 v7.0.14
+	github.com/minio/minio-go/v7 v7.0.21
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/novln/docker-parser v1.0.0
 	github.com/pkg/errors v0.9.1
