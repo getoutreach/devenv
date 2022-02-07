@@ -16,14 +16,13 @@ This pages goes into detail about how to interact with services.
 
 ## Deploying a Service
 
-To deploy a service into your developer environment, run `devenv deploy-app <appName>`. 
+To deploy a service into your developer environment, run `devenv apps deploy <appName>`. 
+
+**Note**: By default tags are used for deployments, if present. Otherwise the latest commit is used. If you wish to ignore tags and use the latest commit instead set the topic `release-type-commits` on your repository. Though note this is unsupported and only provided for projects that haven't yet moved to tags.
 
 ### Deploying a Specific Revision
 
-To deploy a specific revision of a service, run `devenv deploy-app <appName@revision>`. 
-
-**Note**: When deploying a specific revision, the Docker image used will correspond to whatever
-is in your image cache, _not_ the Docker image for that revision. If this matters, please use follow [Deploying Local Changes](#deploying-local-changes).
+To deploy a specific revision of a service, run `devenv apps deploy <appName@CommitOrTag>`.
 
 ### Deploying Local Changes
 
@@ -36,18 +35,7 @@ There are two commands that can update an application in your developer environm
 
 ### Updating to the Latest Version
 
-`devenv update-app [namespace]` for a single application, `devenv update-apps` to update all applications.
-
-### Deploying a Specific Version
-
-Clone the repository of the application you'd like to update, checkout a branch or tag, and run:
-
-```
-devenv deploy-app --local .
-```
-
-When prompted to build a docker image or not, enter `y` if you want to update the application running, or `n` if you want to
-just update the Kubernetes manifests. If you aren't sure, generally you want to enter `y`.
+`devenv apps update <appName>` for a single application, `devenv apps update` to update all applications.
 
 ## Running a Local Service
 

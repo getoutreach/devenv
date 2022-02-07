@@ -18,6 +18,7 @@ import (
 	vault "github.com/getoutreach/vault-client"
 )
 
+// EnsureLoggedIn ensures that we are authenticated with Vault and have a valid token
 func EnsureLoggedIn(ctx context.Context, log logrus.FieldLogger, b *box.Config, k kubernetes.Interface) error {
 	// Check if we need to issue a new token
 	// IDEA: Move to use vault-client for this, minus SSO authentication
@@ -26,7 +27,7 @@ func EnsureLoggedIn(ctx context.Context, log logrus.FieldLogger, b *box.Config, 
 	if err != nil {
 		// We did, so issue a new token using our authentication method
 		//nolint:gosec // Why: passing in the auth method and vault address
-		cmd := exec.CommandContext(ctx, "vault", "login",
+		cmd := exec.CommandContext(ctx, "vault", "login", "-no-print",
 			"-method",
 			b.DeveloperEnvironmentConfig.VaultConfig.AuthMethod,
 			"-address", b.DeveloperEnvironmentConfig.VaultConfig.Address,
@@ -55,6 +56,7 @@ func EnsureLoggedIn(ctx context.Context, log logrus.FieldLogger, b *box.Config, 
 	return nil
 }
 
+// refreshKubernetesAuth refreshed the Vault token stored inside of Kubernetes
 func refreshKubernetesAuth(ctx context.Context, b *box.Config, k kubernetes.Interface) error { //nolint:funlen
 	secretName := "vault-secrets-operator"
 	exists := true

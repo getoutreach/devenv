@@ -41,7 +41,7 @@ jobs:
   release-dryrun:
     executor:
       name: shared/testbed-machine
-    resource_class: large
+    resource_class: xlarge
     steps:
       - shared/setup_environment:
           machine: true
@@ -60,7 +60,7 @@ jobs:
   release:
     executor:
       name: shared/testbed-machine
-    resource_class: large
+    resource_class: xlarge
     steps:
       - shared/setup_environment:
           machine: true
