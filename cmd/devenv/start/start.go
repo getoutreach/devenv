@@ -96,7 +96,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 	}
 	o.log.Info("Started Developer Environment")
 
-	o.log.Info("Waiting for Kubernetes to accessible ...")
+	o.log.Info("Waiting for Kubernetes to be accessible ...")
 	sopt, err := status.NewOptions(o.log)
 	if err != nil {
 		return err
