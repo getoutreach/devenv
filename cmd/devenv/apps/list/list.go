@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"text/tabwriter"
 
 	"github.com/getoutreach/devenv/internal/apps"
@@ -106,6 +107,11 @@ func (o *Options) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// alphabetical sort
+	sort.Slice(deployedApps, func(i, j int) bool {
+		return deployedApps[i].Name < deployedApps[j].Name
+	})
 
 	if o.Format == "table" {
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
