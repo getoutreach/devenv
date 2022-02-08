@@ -101,37 +101,46 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 		if version != "" {
 			return nil, fmt.Errorf("when deploying a local-app a version must not be set")
 		}
+	}
 
+	// Handle local applications
+	if app.Local {
+		if err := app.determineTypeLocal(ctx); err != nil {
+			return nil, errors.Wrap(err, "determine repository type")
+		}
+
+		// we can check the name early when local
 		if err := app.determineRepositoryName(); err != nil {
 			return nil, errors.Wrap(err, "determine repository name")
 		}
-	}
-	app.log = log.WithField("app.name", app.RepositoryName)
 
-	// IDEA: We probably need to detect the version first
-	// so we now which ref to check.
-	//
-	// Get the type first for validation checks later
-	if err := app.determineType(ctx); err != nil {
-		return nil, errors.Wrap(err, "determine repository name")
-	}
-	app.log = app.log.WithField("app.type", app.Type)
+		app.log = log.WithField("app.name", app.RepositoryName).
+			WithField("app.type", app.Type)
 
-	// Find the latest version if not set, or resolve the provided version
-	if !app.Local {
-		if app.Version == "" {
-			if err := app.detectVersion(ctx); err != nil {
-				return nil, errors.Wrap(err, "failed to determine application version")
-			}
-		} else {
-			// If we had a provided version, attempt to
-			// resolve the version in case it's a branch
-			if err := app.resolveVersion(ctx); err != nil {
-				return nil, errors.Wrap(err, "failed to resolve application version")
-			}
+		return &app, nil
+	}
+
+	// Remote applications logic here
+	if err := app.determineTypeRemote(ctx); err != nil {
+		return nil, errors.Wrap(err, "determine repository type")
+	}
+
+	app.log = log.WithField("app.name", app.RepositoryName).
+		WithField("app.type", app.Type)
+
+		// Find the latest version if not set, or resolve the provided version
+	if app.Version == "" {
+		if err := app.detectVersion(ctx); err != nil {
+			return nil, errors.Wrap(err, "failed to determine application version")
 		}
-		app.log = app.log.WithField("app.version", app.Version)
+	} else {
+		// If we had a provided version, attempt to
+		// resolve the version in case it's a branch
+		if err := app.resolveVersion(ctx); err != nil {
+			return nil, errors.Wrap(err, "failed to resolve application version")
+		}
 	}
+	app.log = app.log.WithField("app.version", app.Version)
 
 	// Download the repository if it doesn't already exist on disk.
 	if app.Path == "" {
@@ -286,8 +295,29 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 	return cleanup, nil
 }
 
+// determineTypeLocal determines the type of a local application
+func (a *App) determineTypeLocal(_ context.Context) error {
+	// bootstrap has bootstrap.lock
+	if _, err := os.Stat(filepath.Join(a.Path, "bootstrap.lock")); err == nil {
+		a.Type = TypeBootstrap
+		return nil
+	}
+
+	// legacy applications use scripts/deploy-to-dev.sh
+	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "deploy-to-dev.sh")); err == nil {
+		a.Type = TypeLegacy
+		return nil
+	}
+
+	// else not supported
+	return fmt.Errorf(
+		"%s doesn't appear to support being deployed via the devenv, please contact application owner",
+		a.RepositoryName,
+	)
+}
+
 // determineType determines the type of repository a service is
-func (a *App) determineType(ctx context.Context) error {
+func (a *App) determineTypeRemote(ctx context.Context) error {
 	token, err := githubauth.GetToken()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve github token")
@@ -312,7 +342,10 @@ func (a *App) determineType(ctx context.Context) error {
 		}); err == nil {
 		a.Type = TypeLegacy
 	} else {
-		return fmt.Errorf("failed to determine application type on ref %s", a.Version)
+		return fmt.Errorf(
+			"%s doesn't appear to support being deployed via the devenv, please contact application owners",
+			a.RepositoryName,
+		)
 	}
 
 	return nil
