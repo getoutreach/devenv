@@ -244,7 +244,7 @@ func (lr *LoftRuntime) Destroy(ctx context.Context) error {
 }
 
 // getSpaceForVcluster returns the space backing a given vcluster
-func (lr *LoftRuntime) getSpaceForVcluster(ctx context.Context) (string, error) {
+func (lr *LoftRuntime) getSpaceForVcluster(_ context.Context) (string, error) {
 	clusters, err := loftctlhelper.GetVirtualClusters(lr.loftctl, newLoftLogger())
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get clusters user has access to")
