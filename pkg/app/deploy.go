@@ -67,6 +67,7 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 			builtDockerImage = true
 		} else {
 			a.log.Warn("Skipping docker image build, not supported with remote clusters")
+			a.log.Warn("This will likely be stuck at \"Waiting for Pods\".")
 		}
 	}
 
