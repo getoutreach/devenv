@@ -243,13 +243,35 @@ func (lr *LoftRuntime) Destroy(ctx context.Context) error {
 	return errors.Wrapf(err, "failed to delete loft vcluster: %s", out)
 }
 
+// getSpaceForVcluster returns the space backing a given vcluster
+func (lr *LoftRuntime) getSpaceForVcluster(_ context.Context) (string, error) {
+	clusters, err := loftctlhelper.GetVirtualClusters(lr.loftctl, newLoftLogger())
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get clusters user has access to")
+	}
+
+	for i := range clusters {
+		c := &clusters[i]
+		if c.Name == lr.clusterName {
+			return c.Namespace, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to find vcluster named %s", lr.clusterName)
+}
+
 func (lr *LoftRuntime) Stop(ctx context.Context) error {
 	loft, err := lr.ensureLoft(lr.log)
 	if err != nil {
 		return err
 	}
 
-	out, err := exec.CommandContext(ctx, loft, "sleep", "vcluster-"+lr.clusterName).CombinedOutput()
+	space, err := lr.getSpaceForVcluster(ctx)
+	if err != nil {
+		return err
+	}
+
+	out, err := exec.CommandContext(ctx, loft, "sleep", space).CombinedOutput()
 	return errors.Wrapf(err, "failed to put loft vcluster to sleep: %s", out)
 }
 
@@ -259,7 +281,12 @@ func (lr *LoftRuntime) Start(ctx context.Context) error {
 		return err
 	}
 
-	out, err := exec.CommandContext(ctx, loft, "wakeup", "vcluster-"+lr.clusterName).CombinedOutput()
+	space, err := lr.getSpaceForVcluster(ctx)
+	if err != nil {
+		return err
+	}
+
+	out, err := exec.CommandContext(ctx, loft, "wakeup", space).CombinedOutput()
 	return errors.Wrapf(err, "failed to wakeup loft vcluster: %s", out)
 }
 
