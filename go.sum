@@ -1542,8 +1542,8 @@ github.com/lithammer/dedent v1.1.0 h1:VNzHMVCBNG1j0fh3OrsFRkVUwStdDArbgBWoPAffkt
 github.com/lithammer/dedent v1.1.0/go.mod h1:jrXYCQtgg0nJiN+StA2KgR7w6CiQNv9Fd/Z9BP0jIOc=
 github.com/loft-sh/agentapi/v2 v2.0.4-beta.0/go.mod h1:M2Y/Y/uOVJrYCiNk1cQ/iZ5B8yAqdvBghM1kbgQNnq0=
 github.com/loft-sh/agentapi/v2 v2.0.4/go.mod h1:M2Y/Y/uOVJrYCiNk1cQ/iZ5B8yAqdvBghM1kbgQNnq0=
-github.com/loft-sh/agentapi/v2 v2.1.0 h1:E20izuHFhRGm5xT8llsCIJP9e4vxKakysyQ0h7BMvBQ=
-github.com/loft-sh/agentapi/v2 v2.1.0/go.mod h1:M2Y/Y/uOVJrYCiNk1cQ/iZ5B8yAqdvBghM1kbgQNnq0=
+github.com/loft-sh/agentapi/v2 v2.1.1 h1:z4Os2H+PEgcvqIuqtT82INp4ti7hrNc1l69ZPImvE3c=
+github.com/loft-sh/agentapi/v2 v2.1.1/go.mod h1:M2Y/Y/uOVJrYCiNk1cQ/iZ5B8yAqdvBghM1kbgQNnq0=
 github.com/loft-sh/api/v2 v2.0.4 h1:FW1We1Gsy5oFffDUpAWVV6cjvMjjEIiYohtaG+M7bCs=
 github.com/loft-sh/api/v2 v2.0.4/go.mod h1:vz2XddU84gGZmfJuIqMrELfinN8pzzFZdxzeQSQ0OWg=
 github.com/loft-sh/apiserver v0.0.0-20211216225656-cafe09adc0b8 h1:AwRDdL4KSuT28PXCVyOoPNkMJNrYJgI4pdsjS+D9aRo=
