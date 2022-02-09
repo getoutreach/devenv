@@ -108,6 +108,11 @@ workflows:
   build_and_test:
     jobs:
       ###Block(circleWorkflowJobs)
+      - e2e:
+          context:
+            - docker-registry
+            - ghaccesstoken
+            - npm-credentials
       ###EndBlock(circleWorkflowJobs)
       - release:
           context:
