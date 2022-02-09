@@ -1,10 +1,23 @@
 version: 2.1
 
 orbs:
-  shared: getoutreach/shared@1.49.6
+  shared: getoutreach/shared@dev:first
 
 jobs:
   ###Block(circleJobs)
+  e2e:
+    executor:
+      name: shared/testbed-machine
+    resource_class: xlarge
+    steps:
+      - shared/setup_environment:
+          machine: true
+      - shared/setup_devenv
+      - run:
+          name: Run E2E tests
+          command: make e2e-override
+      - shared/with_go_cache
+      - shared/save_go_cache
   ###EndBlock(circleJobs)
 
   test:
