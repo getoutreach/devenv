@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 //nolint:gochecknoglobals
@@ -121,7 +122,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 		gCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 
 		client, closer, err := localizer.Connect(gCtx,
-			grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
+			grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials())) //nolint:govet // Why: It's okay to shadow the error here.
 		if err != nil {
 			cancel()
 			//nolint:lll // Why: Not much we can do here

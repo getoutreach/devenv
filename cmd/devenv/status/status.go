@@ -23,6 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -233,7 +234,7 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 		gCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 
 		client, closer, err := localizer.Connect(gCtx,
-			grpc.WithBlock(), grpc.WithInsecure()) //nolint:govet // Why: It's okay to shadow the error here.
+			grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials())) //nolint:govet // Why: It's okay to shadow the error here.
 		if err == nil {
 			defer closer()
 

@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  shared: getoutreach/shared@1.38.1
+  shared: getoutreach/shared@1.49.6
 
 jobs:
   ###Block(circleJobs)
