@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	loftVersion     = "v2.0.2"
+	loftVersion     = "v2.1.1"
 	loftDownloadURL = "https://github.com/loft-sh/loft/releases/download/" + loftVersion + "/loft-" + runtime.GOOS + "-" + runtime.GOARCH
 )
 

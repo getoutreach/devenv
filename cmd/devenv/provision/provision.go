@@ -38,6 +38,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
+	"github.com/jetstack/cert-manager/cmd/ctl/pkg/factory"
 	"github.com/jetstack/cert-manager/cmd/ctl/pkg/renew"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -328,7 +329,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	for ctx.Err() == nil {
 		// When ropts fails, we need to create a new rest config
 		// so just use a fresh one every time here.
-		_, k8sConf, err2 := kube.GetKubeClientWithConfig()
+		k8sClient, k8sConf, err2 := kube.GetKubeClientWithConfig()
 		if err2 != nil {
 			return err2
 		}
@@ -336,10 +337,16 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		ropts := renew.NewOptions(genericclioptions.IOStreams{In: os.Stdout, Out: os.Stdout, ErrOut: os.Stderr})
 		ropts.AllNamespaces = true
 		ropts.All = true
-		ropts.RESTConfig = k8sConf
-		ropts.CMClient, err = cmclient.NewForConfig(k8sConf)
+
+		CMClient, err := cmclient.NewForConfig(k8sConf)
 		if err != nil {
 			return errors.Wrap(err, "failed to create cert-manager client")
+		}
+
+		ropts.Factory = &factory.Factory{
+			RESTConfig: k8sConf,
+			CMClient:   CMClient,
+			KubeClient: k8sClient,
 		}
 
 		err2 = ropts.Run(ctx, []string{})
