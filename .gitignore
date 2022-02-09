@@ -56,8 +56,11 @@ Pulumi.*.yaml
 /cache-version.txt
 
 # DevSpace files
-/.devspace 
+/.devspace
 /deployments/devenv.yaml
+
+# Documentation output
+/apidocs
 
 ###Block(extras)
 # Created by dev-env when ran in this directory

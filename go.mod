@@ -10,9 +10,11 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/fatih/color v1.13.0
+	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
 	github.com/getoutreach/gobox v1.32.0
 	github.com/getoutreach/localizer v1.12.0
 	github.com/getoutreach/vault-client v1.4.0
+	github.com/google/go-github/v42 v42.0.0
 	github.com/jetstack/cert-manager v1.7.1
 	github.com/loft-sh/agentapi/v2 v2.1.1
 	github.com/loft-sh/loftctl/v2 v2.0.4
@@ -26,8 +28,10 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/versent/saml2aws/v2 v2.33.0
 	github.com/vmware-tanzu/velero v1.7.1
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	google.golang.org/grpc v1.43.0
 	gopkg.in/yaml.v2 v2.4.0
+	gotest.tools/v3 v3.1.0
 
 	// Kubernetes dependencies
 	// Ensure that the versions here are always the same
@@ -42,18 +46,6 @@ require (
 )
 
 require (
-	github.com/DataDog/datadog-go v4.4.0+incompatible // indirect
-	github.com/ulikunitz/xz v0.5.10 // indirect
-	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
-)
-
-require (
-	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
-	github.com/google/go-github/v42 v42.0.0
-	gotest.tools/v3 v3.1.0
-)
-
-require (
 	cloud.google.com/go/compute v0.1.0 // indirect
 	cloud.google.com/go/kms v1.2.0 // indirect
 	cloud.google.com/go/monitoring v1.2.0 // indirect
@@ -65,6 +57,7 @@ require (
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
+	github.com/DataDog/datadog-go v4.4.0+incompatible // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
@@ -206,6 +199,7 @@ require (
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/tcnksm/go-gitconfig v0.1.2 // indirect
 	github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c // indirect
+	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.0 // indirect

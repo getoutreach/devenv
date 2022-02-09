@@ -1,14 +1,42 @@
 name: devenv
 reportingTeam: fnd-dtss
+description: Kubernetes Developer Environment Platform
 oss: true
+slack: dev-tooling-notifications
 library: true
-releaseType: semver
-versions:
-  terraform: 0.14.7
-releaseOptions:
-  allowMajorVersions: true
-  allowPrereleases: true
 commands:
   - devenv
-  # Doesn't use the bootstrap CLI setup
-  #- snapshot-uploader
+circleAPIKey: ""
+releaseType: semver
+releaseOptions:
+  allowPrereleases: true
+  allowMajorVersions: true
+deployTo:
+  environments: []
+versions:
+  terraform: 0.14.7
+arguments:
+  circleAPIKey: ""
+  dependencies:
+    optional: []
+    required: []
+  description: Kubernetes Developer Environment Platform
+  opslevel:
+    confluenceSpaceKey: ""
+    designDocumentLink: ""
+  oss: true
+  reportingTeam: fnd-dtss
+  type:
+    - library
+modules:
+  - url: https://github.com/getoutreach/stencil-base
+    version: ""
+opsLevel:
+  serviceTier: 0
+  lifecycle: ""
+  confluenceSpaceKey: ""
+  pagerDutyLink: ""
+  datadogDashboards:
+    mainLink: ""
+    custom: []
+  designDocumentLink: ""
