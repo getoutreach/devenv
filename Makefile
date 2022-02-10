@@ -2,13 +2,6 @@ APP := devenv
 OSS := true
 _ := $(shell ./scripts/bootstrap-lib.sh) 
 
-###Deviation(make): Overwrite the e2e target
-.PHONY: e2e
-e2e::
-	@echo Use make e2e-override
-	@exit 1
-
-
 include .bootstrap/root/Makefile
 
 ###Block(targets)
