@@ -17,7 +17,7 @@ require (
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/jetstack/cert-manager v1.5.4
 	github.com/jonboulle/clockwork v0.2.2 // indirect
-	github.com/loft-sh/agentapi/v2 v2.0.3-beta.5
+	github.com/loft-sh/agentapi/v2 v2.1.1
 
 	// Note: Currently can't use v1.15 because of a private dependency
 	// being `replace`-d.
@@ -42,10 +42,10 @@ require (
 	// Ensure that the versions here are always the same
 	// and that the replace directives are updated to match.
 	// Current version: v0.21.3
-	k8s.io/api v0.22.4
-	k8s.io/apimachinery v0.22.4
+	k8s.io/api v0.23.1
+	k8s.io/apimachinery v0.23.1
 	k8s.io/cli-runtime v0.22.2
-	k8s.io/client-go v0.22.4
+	k8s.io/client-go v0.23.1
 	k8s.io/component-base v0.22.4
 	k8s.io/kubectl v0.22.4
 )
@@ -140,7 +140,7 @@ require (
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lithammer/dedent v1.1.0 // indirect
-	github.com/loft-sh/apiserver v0.0.0-20210607160412-10c99558fdeb // indirect
+	github.com/loft-sh/apiserver v0.0.0-20211216225656-cafe09adc0b8 // indirect
 	github.com/loft-sh/jspolicy v0.1.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.11 // indirect
@@ -210,16 +210,16 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	k8s.io/apiextensions-apiserver v0.22.4 // indirect
-	k8s.io/apiserver v0.21.3 // indirect
+	k8s.io/apiserver v0.23.1 // indirect
 	k8s.io/component-helpers v0.21.3 // indirect
 	k8s.io/klog v1.0.0 // indirect
-	k8s.io/klog/v2 v2.9.0 // indirect
-	k8s.io/kube-aggregator v0.21.3 // indirect
-	k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909 // indirect
+	k8s.io/klog/v2 v2.30.0 // indirect
+	k8s.io/kube-aggregator v0.23.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/metrics v0.21.3 // indirect
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.19 // indirect
-	sigs.k8s.io/controller-runtime v0.10.3 // indirect
+	sigs.k8s.io/controller-runtime v0.11.0 // indirect
 	sigs.k8s.io/kustomize/api v0.8.8 // indirect
 	sigs.k8s.io/kustomize/kustomize/v4 v4.1.2 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.10.17 // indirect
