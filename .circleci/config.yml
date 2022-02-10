@@ -113,6 +113,7 @@ workflows:
             - docker-registry
             - ghaccesstoken
             - npm-credentials
+            - vault-dev
       ###EndBlock(circleWorkflowJobs)
       - release:
           context:
