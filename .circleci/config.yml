@@ -12,12 +12,13 @@ jobs:
     steps:
       - shared/setup_environment:
           machine: true
-      - shared/setup_devenv
+      - shared/with_go_cache
+      - shared/save_go_cache
+      - shared/setup_devenv:
+          provision_args: "--base"
       - run:
           name: Run E2E tests
           command: make e2e-override
-      - shared/with_go_cache
-      - shared/save_go_cache
   ###EndBlock(circleJobs)
 
   test:
