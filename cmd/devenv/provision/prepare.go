@@ -76,7 +76,7 @@ func (o *Options) deployStage(ctx context.Context, stage string) error { //nolin
 
 	err = devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log)
 	if err != nil {
-		return errors.Wrap(err, "failed to wait for pods to be ready w")
+		return errors.Wrap(err, "failed to wait for pods to be ready")
 	}
 
 	// Deploy resourcer if we're a local runtime, we can only run things on a single node

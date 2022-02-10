@@ -5,9 +5,15 @@ _ := $(shell ./scripts/bootstrap-lib.sh)
 include .bootstrap/root/Makefile
 
 ###Block(targets)
+.PHONY: e2e-override
+e2e-override:
+	@echo "Hello, world!"
+
+# Note: We rm here because M1 macs get angry about copying new files onto
+# existing ones. Probably because of some signature thing. Who knows.
 .PHONY: install
 install: build
-	@devenvPath="$$(command -v devenv)"; if [[ -w "$$devenvPath" ]]; then cp -v ./bin/devenv "$$devenvPath"; else sudo cp -v ./bin/devenv "$$devenvPath"; fi
+	@devenvPath="$$(command -v devenv)"; rm "$$devenvPath"; if [[ -w "$$devenvPath" ]]; then cp -v ./bin/devenv "$$devenvPath"; else sudo cp -v ./bin/devenv "$$devenvPath"; fi
 
 .PHONY: docker-build-override
 docker-build-override:

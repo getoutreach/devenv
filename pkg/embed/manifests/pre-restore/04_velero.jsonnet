@@ -9,12 +9,12 @@ else
 
 local manifests = ok.HelmChart(name) {
   namespace:: name,
-  version:: '2.23.8',
+  version:: '2.27.3',
   repo:: 'https://vmware-tanzu.github.io/helm-charts',
   values:: {
     image: {
       repository: 'velero/velero',
-      tag: 'v1.6.3',
+      tag: 'v1.7.1',
       pullPolicy: 'IfNotPresent',
     },
     resources: {
@@ -27,10 +27,20 @@ local manifests = ok.HelmChart(name) {
         memory: '0',
       },
     },
+    kubectl: {
+      // Use a docker image that supports multi-arch kubectl.
+      // Remove when https://github.com/vmware-tanzu/helm-charts/issues/339
+      // is closed.
+      image: {
+        // See Dockerfile.velero-kubectl
+        repository: 'jaredallard/velero-kubectl',
+        tag: 'v1.23.3',
+      },
+    },
     initContainers: [
       {
         name: 'velero-plugin-for-aws',
-        image: 'velero/velero-plugin-for-aws:v1.1.0',
+        image: 'velero/velero-plugin-for-aws:v1.3.0',
         imagePullPolicy: 'IfNotPresent',
         volumeMounts: [
           {
