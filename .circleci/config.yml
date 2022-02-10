@@ -114,6 +114,7 @@ workflows:
             - ghaccesstoken
             - npm-credentials
             - vault-dev
+            - aws-credentials
       ###EndBlock(circleWorkflowJobs)
       - release:
           context:
