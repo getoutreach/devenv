@@ -65,6 +65,11 @@ func (o *Options) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	kr.Configure(o.log, b)
+
+	if err := kr.PreCreate(ctx); err != nil {
+		return err
+	}
 
 	o.log.Info("Stopping Developer Environment ...")
 	if err := kr.Stop(ctx); err != nil {

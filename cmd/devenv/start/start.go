@@ -90,6 +90,10 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen
 	}
 	kr.Configure(o.log, b)
 
+	if err := kr.PreCreate(ctx); err != nil {
+		return err
+	}
+
 	o.log.Info("Starting Developer Environment")
 	if err := kr.Start(ctx); err != nil {
 		return errors.Wrap(err, "failed to start developer environment")
