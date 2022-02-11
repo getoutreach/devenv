@@ -21,7 +21,6 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/deploy"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
-	"github.com/getoutreach/devenv/cmd/devenv/snapshot"
 	"github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
@@ -29,6 +28,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
+	"github.com/getoutreach/devenv/pkg/snapshot"
 	"github.com/getoutreach/devenv/pkg/snapshoter"
 	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/getoutreach/gobox/pkg/box"
@@ -95,7 +95,8 @@ type Options struct {
 	r       *rest.Config
 }
 
-func NewOptions(log logrus.FieldLogger) (*Options, error) {
+// NewOptions creates a new provision command
+func NewOptions(log logrus.FieldLogger, b *box.Config) (*Options, error) {
 	d, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create docker client")
@@ -104,11 +105,6 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
-	}
-
-	b, err := box.LoadBox()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to load box configuration")
 	}
 
 	return &Options{
@@ -157,7 +153,12 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 			},
 		},
 		Action: func(c *cli.Context) error {
-			o, err := NewOptions(log)
+			b, err := box.LoadBox()
+			if err != nil {
+				return errors.Wrap(err, "failed to load box configuration")
+			}
+
+			o, err := NewOptions(log, b)
 			if err != nil {
 				return err
 			}
@@ -254,7 +255,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		return err
 	}
 
-	snapshotOpt, err := snapshot.NewOptions(o.log)
+	snapshotOpt, err := snapshot.NewOptions(o.log, o.b)
 	if err != nil {
 		return errors.Wrap(err, "failed to create snapshot client")
 	}

@@ -7,7 +7,7 @@ include .bootstrap/root/Makefile
 ###Block(targets)
 .PHONY: e2e-override
 e2e-override:
-	@echo "Hello, world!"
+	TEST_OUTPUT_FORMAT=standard-verbose TEST_FLAGS=-v TEST_TAGS=or_e2e ./scripts/shell-wrapper.sh test.sh
 
 # Note: We rm here because M1 macs get angry about copying new files onto
 # existing ones. Probably because of some signature thing. Who knows.

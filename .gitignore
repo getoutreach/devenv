@@ -74,4 +74,6 @@ node_modules/
 
 # vendored stuff
 replacements/
+
+__debug_bin
 ###EndBlock(extras)

@@ -21,6 +21,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// awsEndpointResolver is a stub aws.EndpointResolver that returns a static
+// endpoint.
+type awsEndpointResolver struct {
+	endpoint string
+	region   string
+}
+
+func (a *awsEndpointResolver) ResolveEndpoint(_, _ string) (aws.Endpoint, error) {
+	return aws.Endpoint{
+		PartitionID:       "aws",
+		URL:               a.endpoint,
+		HostnameImmutable: true,
+		SigningRegion:     a.region, // default minio region
+	}, nil
+}
+
 // fetchSnapshot fetches the latest snapshot information from the box configured
 // snapshot bucket based on the provided snapshot channel and target. Then a kubernetes
 // job is kicked off that runs snapshot-uploader to actually stage the snapshot
@@ -29,6 +45,14 @@ func (o *Options) fetchSnapshot(ctx context.Context) (*box.SnapshotLockListItem,
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(o.b.DeveloperEnvironmentConfig.SnapshotConfig.Region))
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to load SDK config")
+	}
+
+	// use a custom endpoint if provided
+	if endpoint := o.b.DeveloperEnvironmentConfig.SnapshotConfig.Endpoint; endpoint != "" {
+		cfg.EndpointResolver = &awsEndpointResolver{ //nolint:staticcheck // Why: using new one doesn't work?
+			endpoint: endpoint,
+			region:   cfg.Region,
+		}
 	}
 
 	s3client := s3.NewFromConfig(cfg)
