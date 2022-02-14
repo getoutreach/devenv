@@ -128,7 +128,7 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	app.log = log.WithField("app.name", app.RepositoryName).
 		WithField("app.type", app.Type)
 
-		// Find the latest version if not set, or resolve the provided version
+	// Find the latest version if not set, or resolve the provided version
 	if app.Version == "" {
 		if err := app.detectVersion(ctx); err != nil {
 			return nil, errors.Wrap(err, "failed to determine application version")
@@ -158,7 +158,7 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	return &app, nil
 }
 
-// detectVersion determines the latest version of a repository by three criteria"
+// detectVersion determines the latest version of a repository by three criteria
 // - topic "release-type-commits" is set. Uses the latest commit
 // - 0 tags on the repository. Uses the latest commit.
 // - Otherwise it uses the latest release (tag) on the repository
@@ -369,7 +369,7 @@ func (a *App) determineRepositoryName() error {
 		return fmt.Errorf("failed to resolve application's name")
 	}
 
-	// ready the repository's service.yaml for bootstrap applications
+	// read the repository's service.yaml for bootstrap applications
 	b, err := ioutil.ReadFile(filepath.Join(a.Path, "service.yaml"))
 	if err != nil {
 		return errors.Wrap(err, "failed to read service.yaml")

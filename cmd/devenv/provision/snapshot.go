@@ -105,8 +105,7 @@ func (o *Options) stageSnapshot(ctx context.Context, s *box.SnapshotLockListItem
 			AWSSecretKey: "miniosecret",
 		},
 		Source: snapshot.S3Config{
-			// IDEA: probably should put this in our box configuration?
-			S3Host:          "s3.amazonaws.com",
+			S3Host:          o.b.DeveloperEnvironmentConfig.SnapshotConfig.Endpoint,
 			Bucket:          o.b.DeveloperEnvironmentConfig.SnapshotConfig.Bucket,
 			Key:             s.URI,
 			AWSAccessKey:    creds.AccessKeyID,
