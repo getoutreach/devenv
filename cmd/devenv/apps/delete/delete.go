@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
@@ -95,23 +94,6 @@ func (o *Options) Run(ctx context.Context) error {
 	kr, err := devenvutil.EnsureDevenvRunning(ctx, conf, b)
 	if err != nil {
 		return err
-	}
-
-	appsClient := apps.NewKubernetesConfigmapClient(o.k, "")
-	deployedApps, err := appsClient.List(ctx)
-	if err != nil {
-		return err
-	}
-
-	found := false
-	for _, a := range deployedApps {
-		if a.Name == o.App {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("Failed to find application named '%s' that was deployed", o.App)
 	}
 
 	return app.Delete(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
