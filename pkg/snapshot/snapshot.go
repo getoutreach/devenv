@@ -2,6 +2,8 @@
 // the snapshot-uploader
 package snapshot
 
+import "github.com/getoutreach/gobox/pkg/box"
+
 // S3Config is configuration for accessing an object, or path
 // in S3.
 type S3Config struct {
@@ -26,6 +28,14 @@ type S3Config struct {
 	// Key is the key to use when accessing S3, either an object
 	// or a path depending on the expected input.
 	Key string `json:"s3_key"`
+
+	// SnapshotTarget is the target snapshot to use if in source, if in dest
+	// ignored.
+	SnapshotTarget string `json:"snapshot_target,omitempty"`
+
+	// SnapshotChannel is the target channel to use if in source, if in dest
+	// ignored.
+	SnapshotChannel box.SnapshotLockChannel `json:"snapshot_channel,omitempty"`
 
 	// Digest is an optional digest to use when validating an object
 	Digest string `json:"s3_md5_hash,omitempty"`

@@ -58,3 +58,9 @@ func (i *InMemoryClient) Delete(_ context.Context, name string) error {
 	delete(i.apps, name)
 	return nil
 }
+
+// Reset resets the entire apps store
+func (i *InMemoryClient) Reset(_ context.Context) error {
+	i.apps = make(map[string]App)
+	return nil
+}

@@ -8,13 +8,19 @@ package snapshot
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strings"
 	"time"
 
+	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/gobox/pkg/box"
+	clilog "github.com/getoutreach/gobox/pkg/cli/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -122,6 +128,18 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 		return err
 	}
 
+	appsClient := apps.NewKubernetesConfigmapClient(o.k, "")
+	beforeApps, err := appsClient.List(ctx)
+	if err != nil {
+		o.log.WithError(err).
+			Warn("failed to preserve apps configmap state before restore, apps information may be invalid")
+		beforeApps = []apps.App{}
+	}
+
+	if err := appsClient.Reset(ctx); err != nil {
+		o.log.WithError(err).Warn("failed to reset apps configmap, apps information may be invalid")
+	}
+
 	if _, err := o.vc.VeleroV1().Restores(SnapshotNamespace).Create(ctx, &velerov1api.Restore{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: SnapshotNamespace,
@@ -182,10 +200,39 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 	)
 	go restoreInformer.Run(ctx.Done())
 
-	o.log.Info("Waiting for snapshot restore operation to complete ...")
+	logger := clilog.New(clilog.WithOutput(os.Stderr))
+	defer logger.Close()
+
+	logger.StartOperation(ctx, "task", "Snapshot restore")
+
+	// Best effort attempt to stream logs from velero
+	pods, err := o.k.CoreV1().Pods("velero").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		// TODO(for real): use owner references instead.
+		// find a velero pod
+		var pod *corev1.Pod
+		for i := range pods.Items {
+			if strings.HasPrefix(pods.Items[i].Name, "velero-") {
+				pod = &pods.Items[i]
+				break
+			}
+		}
+
+		// if we have a pod, stream it's logs
+		if pod != nil {
+			o.log.WithField("pod", pod.Namespace+"/"+pod.Name).Info("Streaming velero logs")
+			r, err := kube.StreamPodLogs(ctx, o.k, o.log, pod.Name, pod.Namespace)
+			if err == nil {
+				go io.Copy(logger.ExecWriter(), r)
+				defer r.Close() // close when we're done
+			}
+		}
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
+			logger.FinishOperation(ctx, clilog.StatusFailed, ctx.Err().Error())
 			return ctx.Err()
 		case restore, ok := <-updates:
 			if !ok {
@@ -193,6 +240,26 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 			}
 			if restore.Status.Phase != velerov1api.RestorePhaseNew && restore.Status.Phase != velerov1api.RestorePhaseInProgress {
 				o.log.Infof("Snapshot restore finished with status: %v", restore.Status.Phase)
+
+				if newApps, err := appsClient.List(ctx); err != nil {
+					o.log.Infof("Snapshot created %d applications", len(newApps))
+				}
+
+				// iterate over old apps that we had before the restore, adding them
+				// to the current state of the world. Note: we don't override versions
+				// because velero doesn't replace existing resources
+				for i := range beforeApps {
+					a := &beforeApps[i]
+
+					if _, err := appsClient.Get(ctx, a.Name); err == nil {
+						continue
+					}
+
+					appsClient.Set(ctx, a) //nolint:errcheck // Why: best effort
+				}
+
+				logger.FinishOperation(ctx, clilog.StatusSuccess, "")
+
 				return nil
 			}
 		}
