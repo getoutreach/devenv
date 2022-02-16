@@ -41,8 +41,5 @@ info_sub "Loading docker image into cache"
 "$KIND_BIN" load docker-image --name dev-environment \
   "gcr.io/outreach-docker/devenv:$(make version)"
 
-info "Creating new devenv with snapshot-uploader"
+info_sub "Cleaning up environment"
 "$DIR/../bin/devenv" destroy
-
-set -x
-"$DIR/../bin/devenv" provision --kubernetes-runtime kind "$@"

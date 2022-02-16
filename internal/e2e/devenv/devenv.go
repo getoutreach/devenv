@@ -15,6 +15,7 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
 	"github.com/getoutreach/devenv/cmd/devenv/provision"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
+	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -59,6 +60,21 @@ func DestroyDevenv(ctx context.Context) error {
 // and returns a function to destroy it.
 //nolint:gocritic,revive // Why: We're OK not naming these
 func ProvisionDevenv(t *testing.T, ctx context.Context, opts *ProvisionOpts) func() {
+	t.Log("Building snapshot image")
+	if err := execOSOut(exec.CommandContext(ctx, "./scripts/use-custom-snapshot-uploader.sh")).Run(); err != nil {
+		t.Error(errors.Wrap(err, "failed to inject devenv snapshot image").Error())
+		return nil
+	}
+
+	appVersionByt, err := exec.CommandContext(ctx, "make", "version").CombinedOutput()
+	if err != nil {
+		t.Errorf(errors.Wrap(err, "failed to detect application version").Error())
+		return nil
+	}
+	app.Info().Version = strings.TrimSpace(string(appVersionByt))
+
+	t.Logf("Detected app version: %v", app.Info().Version)
+
 	t.Log("Provisioning devenv")
 	popts, err := provision.NewOptions(Logger, opts.Box)
 	if err != nil {

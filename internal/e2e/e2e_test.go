@@ -6,6 +6,8 @@ package e2e
 import (
 	"context"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/getoutreach/devenv/cmd/devenv/snapshot"
@@ -13,6 +15,16 @@ import (
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"
 )
+
+// sets cd to root of repo
+func init() {
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Join(filepath.Dir(filename), "../..")
+	err := os.Chdir(dir)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func getVaultURL() string {
 	if os.Getenv("CI") != "" {
