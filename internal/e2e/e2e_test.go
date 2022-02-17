@@ -17,9 +17,10 @@ import (
 )
 
 // sets cd to root of repo
+//nolint:gochecknoinits // Why: Easier then calling all the time.
 func init() {
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Join(filepath.Dir(filename), "../..")
+	_, filename, _, _ := runtime.Caller(0) //nolint:dogsled // Why: This is OK?
+	dir := filepath.Join(filepath.Dir(filename), "..", "..")
 	err := os.Chdir(dir)
 	if err != nil {
 		panic(err)
@@ -55,7 +56,7 @@ var defaultProvisionArgs = devenv.ProvisionOpts{
 }
 
 func TestCanProvisionDevenv(t *testing.T) {
-	defer devenv.ProvisionDevenv(t, context.Background(), &defaultProvisionArgs)()
+	devenv.ProvisionDevenv(t, context.Background(), &defaultProvisionArgs)()
 }
 
 func TestCanProvisionSnapshotDevenv(t *testing.T) {
@@ -103,5 +104,5 @@ func TestCanProvisionSnapshotDevenv(t *testing.T) {
 	provisionArgs.SnapshotTarget = "default"
 
 	t.Log("Generating devenv using generated snapshot")
-	defer devenv.ProvisionDevenv(t, context.Background(), &provisionArgs)()
+	devenv.ProvisionDevenv(t, context.Background(), &provisionArgs)()
 }

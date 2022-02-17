@@ -4,7 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // Why: just using for digest checking
 	"encoding/base64"
 	"fmt"
 	"io"
