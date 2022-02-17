@@ -82,24 +82,44 @@ func (s *SnapshotUploader) StartFromEnv(ctx context.Context, log logrus.FieldLog
 	return nil
 }
 
+// removeProtocol removes http+s from a given URL
+func removeProtocol(s string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(s, "https://"), "http://")
+}
+
 // CreateClients creates the S3 clients for our dest and source
 func (s *SnapshotUploader) CreateClients(ctx context.Context) error {
 	s.log.Info("Creating snapshot clients")
 	var err error
-	s.source, err = minio.New(s.conf.Source.S3Host, &minio.Options{
+
+	// create source options
+	sourceOpts := &minio.Options{
 		Creds:  credentials.NewStaticV4(s.conf.Source.AWSAccessKey, s.conf.Source.AWSSecretKey, s.conf.Source.AWSSessionToken),
-		Secure: true,
 		Region: s.conf.Source.Region,
-	})
+	}
+	if strings.HasPrefix(s.conf.Source.S3Host, "https") {
+		sourceOpts.Secure = true
+	}
+	s.conf.Source.S3Host = removeProtocol(s.conf.Source.S3Host)
+
+	// create dest options
+	destOpts := &minio.Options{
+		Creds:  credentials.NewStaticV4(s.conf.Dest.AWSAccessKey, s.conf.Dest.AWSSecretKey, s.conf.Dest.AWSSessionToken),
+		Secure: false,
+		Region: s.conf.Dest.Region,
+	}
+	if strings.HasPrefix(s.conf.Dest.S3Host, "https") {
+		destOpts.Secure = true
+	}
+	s.conf.Dest.S3Host = removeProtocol(s.conf.Dest.S3Host)
+
+	// create the clients
+	s.source, err = minio.New(s.conf.Source.S3Host, sourceOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to create source s3 client")
 	}
 
-	s.dest, err = minio.New(s.conf.Dest.S3Host, &minio.Options{
-		Creds:  credentials.NewStaticV4(s.conf.Dest.AWSAccessKey, s.conf.Dest.AWSSecretKey, s.conf.Dest.AWSSessionToken),
-		Secure: false,
-		Region: s.conf.Dest.Region,
-	})
+	s.dest, err = minio.New(s.conf.Dest.S3Host, destOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to create dest s3 client")
 	}
@@ -287,31 +307,42 @@ func (s *SnapshotUploader) UploadArchiveContents(ctx context.Context) error {
 	return errors.Wrap(err, "failed to set current snapshot")
 }
 
-// ExtractPostRestore extracts the post-restore manifests out of S3 and inserts
-// them into Kubernetes.
-func (s *SnapshotUploader) ExtractPostRestore(ctx context.Context) error {
-	postRestorePath := strings.TrimPrefix(s.snapshot.Config.PostRestore, "./")
-
+func (s *SnapshotUploader) getPostRestoreManifests(ctx context.Context, postRestorePath string) ([]byte, error) {
+	// compress because of 1MB limit, like Helm does.
+	s.log.Info("Compressing post-restore manifests")
 	obj, err := s.dest.GetObject(ctx, s.conf.Dest.Bucket, postRestorePath, minio.GetObjectOptions{})
 	if err != nil {
-		// Do we support this?
-		return nil
+		return nil, nil
 	}
 	defer obj.Close()
 
-	// compress because of 1MB limit, like Helm does.
 	var postRestoreBuf bytes.Buffer
 	gzw, err := gzip.NewWriterLevel(&postRestoreBuf, gzip.BestCompression)
 	if err != nil {
-		return errors.Wrap(err, "failed to create gzip writer")
+		return nil, errors.Wrap(err, "failed to create gzip writer")
 	}
 
 	if _, err := io.Copy(gzw, obj); err != nil {
-		return errors.Wrap(err, "failed to compress post-restore manifests")
+		return nil, errors.Wrap(err, "failed to compress post-restore manifests")
 	}
 
 	if err := gzw.Close(); err != nil {
-		return errors.Wrap(err, "failed to flush gzip writer")
+		return nil, errors.Wrap(err, "failed to flush gzip writer")
+	}
+
+	s.log.Info("Finished compressing post-restore manifests")
+	return postRestoreBuf.Bytes(), nil
+}
+
+// ExtractPostRestore extracts the post-restore manifests out of S3 and inserts
+// them into Kubernetes.
+func (s *SnapshotUploader) ExtractPostRestore(ctx context.Context) error {
+	s.log.Info("Generating snapshot state in Kubernetes")
+
+	postRestorePath := strings.TrimPrefix(s.snapshot.Config.PostRestore, "./")
+	postRestoreManifests, err := s.getPostRestoreManifests(ctx, postRestorePath)
+	if err != nil {
+		return errors.Wrap(err, "failed to get post-restore manifests")
 	}
 
 	serializedSnapshot, err := json.Marshal(s.snapshot)
@@ -319,21 +350,30 @@ func (s *SnapshotUploader) ExtractPostRestore(ctx context.Context) error {
 		return errors.Wrap(err, "failed to serialize snapshot")
 	}
 
+	data := map[string]string{
+		"snapshot.json": string(serializedSnapshot),
+	}
+
+	if postRestoreManifests != nil {
+		data["post-restore.yaml"] = base64.StdEncoding.EncodeToString(postRestoreManifests)
+
+		s.log.Info("Cleaning up post-restore artifacts")
+		//nolint:errcheck // Why: best effort
+		s.dest.RemoveObject(ctx, s.conf.Dest.Bucket, postRestorePath, minio.RemoveObjectOptions{})
+	}
+
+	s.log.Info("Creating 'snapshot' configmap")
 	_, err = s.k.CoreV1().ConfigMaps("devenv").Create(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "snapshot",
 		},
-		Data: map[string]string{
-			"snapshot.json":     string(serializedSnapshot),
-			"post-restore.yaml": base64.StdEncoding.EncodeToString(postRestoreBuf.Bytes()),
-		},
+		Data: data,
 	}, metav1.CreateOptions{})
 	if err != nil {
+		s.log.WithError(err).Error("Failed to create snapshot configmap")
 		return errors.Wrap(err, "failed to create snapshot configmap")
 	}
 
-	//nolint:errcheck // Why: best effort
-	s.dest.RemoveObject(ctx, s.conf.Dest.Bucket, postRestorePath, minio.RemoveObjectOptions{})
-
+	s.log.Info("Finished setting up Kubernetes snapshot state")
 	return nil
 }

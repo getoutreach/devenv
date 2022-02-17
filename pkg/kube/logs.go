@@ -70,10 +70,8 @@ func StreamJobLogs(ctx context.Context, k kubernetes.Interface,
 		}
 
 		// check if we hit backoff or some other unrecoverable condition
-		if ready, err := JobSucceeded(ctx, k, name, namespace); err != nil {
+		if _, err := JobSucceeded(ctx, k, name, namespace); err != nil {
 			return errors.Wrap(err, "snapshot stage job failed")
-		} else if ready {
-			break
 		}
 
 		pods, err := k.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + name})
@@ -97,7 +95,7 @@ func StreamJobLogs(ctx context.Context, k kubernetes.Interface,
 			reason = err.Error()
 			continue
 		}
-		io.Copy(w, r)
+		io.Copy(w, r) //nolint:errcheck // Why: OK not returning error here
 
 		// check success to prevent needing to wait later
 		if ready, err := JobSucceeded(ctx, k, name, namespace); err != nil {
@@ -123,11 +121,7 @@ func StreamPodLogs(ctx context.Context, k kubernetes.Interface,
 		return nil, errors.Wrap(err, "failed to get pods for job")
 	}
 
-	if pod.Status.Phase == corev1.PodSucceeded {
-		return nil, nil
-	}
-
-	if pod.Status.Phase != corev1.PodRunning {
+	if pod.Status.Phase != corev1.PodRunning && pod.Status.Phase != corev1.PodSucceeded {
 		return nil, fmt.Errorf("pod status not running, got: %s", pod.Status.Phase)
 	}
 

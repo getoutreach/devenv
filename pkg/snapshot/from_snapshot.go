@@ -8,19 +8,14 @@ package snapshot
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/gobox/pkg/box"
-	clilog "github.com/getoutreach/gobox/pkg/cli/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -200,39 +195,9 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 	)
 	go restoreInformer.Run(ctx.Done())
 
-	logger := clilog.New(clilog.WithOutput(os.Stderr))
-	defer logger.Close()
-
-	logger.StartOperation(ctx, "task", "Snapshot restore")
-
-	// Best effort attempt to stream logs from velero
-	pods, err := o.k.CoreV1().Pods("velero").List(ctx, metav1.ListOptions{})
-	if err == nil {
-		// TODO(for real): use owner references instead.
-		// find a velero pod
-		var pod *corev1.Pod
-		for i := range pods.Items {
-			if strings.HasPrefix(pods.Items[i].Name, "velero-") {
-				pod = &pods.Items[i]
-				break
-			}
-		}
-
-		// if we have a pod, stream it's logs
-		if pod != nil {
-			o.log.WithField("pod", pod.Namespace+"/"+pod.Name).Info("Streaming velero logs")
-			r, err := kube.StreamPodLogs(ctx, o.k, o.log, pod.Name, pod.Namespace)
-			if err == nil {
-				go io.Copy(logger.ExecWriter(), r)
-				defer r.Close() // close when we're done
-			}
-		}
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
-			logger.FinishOperation(ctx, clilog.StatusFailed, ctx.Err().Error())
 			return ctx.Err()
 		case restore, ok := <-updates:
 			if !ok {
@@ -257,8 +222,6 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 
 					appsClient.Set(ctx, a) //nolint:errcheck // Why: best effort
 				}
-
-				logger.FinishOperation(ctx, clilog.StatusSuccess, "")
 
 				return nil
 			}

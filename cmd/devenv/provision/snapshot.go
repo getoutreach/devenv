@@ -32,14 +32,14 @@ func (o *Options) stageSnapshot(ctx context.Context, target string, channel box.
 	}
 
 	conf := &snapshot.Config{
-		Dest: snapshot.S3Config{
+		Dest: &snapshot.S3Config{
 			S3Host:       "minio.minio:9000",
 			Bucket:       "velero-restore",
 			Key:          "/",
 			AWSAccessKey: "minioaccess",
 			AWSSecretKey: "miniosecret",
 		},
-		Source: snapshot.S3Config{
+		Source: &snapshot.S3Config{
 			S3Host:          o.b.DeveloperEnvironmentConfig.SnapshotConfig.Endpoint,
 			Bucket:          o.b.DeveloperEnvironmentConfig.SnapshotConfig.Bucket,
 			SnapshotTarget:  target,

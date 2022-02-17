@@ -43,8 +43,8 @@ type S3Config struct {
 
 type Config struct {
 	// Source is the configuration for downloading the snapshot
-	Source S3Config `json:"source"`
+	Source *S3Config `json:"source"`
 
 	// Dest is the configuration for extracting the snapshot
-	Dest S3Config `json:"dest"`
+	Dest *S3Config `json:"dest"`
 }

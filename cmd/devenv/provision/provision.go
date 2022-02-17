@@ -281,9 +281,11 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		return errors.Wrap(err, "failed to restore snapshot")
 	}
 
-	err = o.applyPostRestore(ctx, []byte(rawSnapshotInfo.Data["post-restore.yaml"]))
-	if err != nil {
-		return errors.Wrap(err, "failed to apply post-restore manifests from local snapshot storage")
+	if _, ok := rawSnapshotInfo.Data["post-restore.yaml"]; ok {
+		err = o.applyPostRestore(ctx, []byte(rawSnapshotInfo.Data["post-restore.yaml"]))
+		if err != nil {
+			return errors.Wrap(err, "failed to apply post-restore manifests from local snapshot storage")
+		}
 	}
 
 	// Sometimes, if we don't preemptively delete all restic-wait containing pods

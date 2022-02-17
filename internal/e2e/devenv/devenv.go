@@ -60,12 +60,6 @@ func DestroyDevenv(ctx context.Context) error {
 // and returns a function to destroy it.
 //nolint:gocritic,revive // Why: We're OK not naming these
 func ProvisionDevenv(t *testing.T, ctx context.Context, opts *ProvisionOpts) func() {
-	t.Log("Building snapshot image")
-	if err := execOSOut(exec.CommandContext(ctx, "./scripts/use-custom-snapshot-uploader.sh")).Run(); err != nil {
-		t.Error(errors.Wrap(err, "failed to inject devenv snapshot image").Error())
-		return nil
-	}
-
 	appVersionByt, err := exec.CommandContext(ctx, "make", "version").CombinedOutput()
 	if err != nil {
 		t.Errorf(errors.Wrap(err, "failed to detect application version").Error())
@@ -92,6 +86,13 @@ func ProvisionDevenv(t *testing.T, ctx context.Context, opts *ProvisionOpts) fun
 		popts.Base = true
 	} else {
 		popts.SnapshotTarget = opts.SnapshotTarget
+		popts.SnapshotChannel = box.SnapshotLockChannelStable
+
+		t.Log("Building snapshot image")
+		if err := execOSOut(exec.CommandContext(ctx, "./scripts/use-custom-snapshot-uploader.sh")).Run(); err != nil {
+			t.Error(errors.Wrap(err, "failed to inject devenv snapshot image").Error())
+			return nil
+		}
 	}
 
 	if opts.Apps != nil {
@@ -205,7 +206,7 @@ func UseSnapshotStorage(t *testing.T, ctx context.Context, b *box.Config) (func(
 	b.DeveloperEnvironmentConfig.SnapshotConfig = box.SnapshotConfig{
 		// Note: This assumes that you're accessing from inside the cluster.
 		// endpoint will need to be modified if attempting to publish from outside.
-		Endpoint: "http://" + ipAddr + ":9000",
+		Endpoint: ipAddr + ":9000",
 		Region:   "us-east-1", // default minio region
 		Bucket:   "snapshots",
 	}
