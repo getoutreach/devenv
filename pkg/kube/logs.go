@@ -20,8 +20,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// JobSucceeded returns an error if the given job hasn't succeeded yet.
-// When an error is returned, this is considered unrecoverable.
+// JobSucceeded returns a bool if the given job has/hasn't succeeded.
+// If an error is returned, this is considered unrecoverable.
 func JobSucceeded(ctx context.Context, k kubernetes.Interface, name, namespace string) (bool, error) {
 	j, err := k.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
