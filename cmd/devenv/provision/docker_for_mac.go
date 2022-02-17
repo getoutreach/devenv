@@ -3,7 +3,6 @@ package provision
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -41,7 +40,7 @@ func startDockerForMac(ctx context.Context, d dockerclient.APIClient, log logrus
 }
 
 func reconcileDockerForMacConfig(_ context.Context, settingsFile string) (bool, error) { //nolint:funlen
-	b, err := ioutil.ReadFile(settingsFile)
+	b, err := os.ReadFile(settingsFile)
 	if err != nil {
 		return false, err
 	}
@@ -114,7 +113,7 @@ func reconcileDockerForMacConfig(_ context.Context, settingsFile string) (bool, 
 	}
 
 	//nolint:gosec // This is what is default for the config
-	return modified, ioutil.WriteFile(settingsFile, b, 0644)
+	return modified, os.WriteFile(settingsFile, b, 0o644)
 }
 
 func (o *Options) configureDockerForMac(ctx context.Context) error {

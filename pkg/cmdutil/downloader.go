@@ -129,7 +129,7 @@ func EnsureBinary(log logrus.FieldLogger, name, downloadDesc, downloadURL, archi
 		return execPath, nil
 	}
 
-	err = os.MkdirAll(sourceDir, 0755)
+	err = os.MkdirAll(sourceDir, 0o755)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to make dependency directory")
 	}
@@ -163,7 +163,7 @@ func EnsureBinary(log logrus.FieldLogger, name, downloadDesc, downloadURL, archi
 		return "", err
 	}
 
-	err = os.Chmod(execPath, 0755)
+	err = os.Chmod(execPath, 0o755)
 	if err != nil {
 		cleanup()
 		return "", err

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -485,7 +484,7 @@ func (o *Options) removeServiceImages(ctx context.Context) error {
 // generateDockerConfig generates a docker configuration file that is used
 // to authenticate image pulls by KinD
 func (o *Options) generateDockerConfig() error {
-	imgPullSec, err := ioutil.ReadFile(filepath.Join(o.homeDir, imagePullSecretPath))
+	imgPullSec, err := os.ReadFile(filepath.Join(o.homeDir, imagePullSecretPath))
 	if err != nil {
 		return err
 	}

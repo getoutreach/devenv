@@ -3,7 +3,6 @@ package provision
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -146,10 +145,10 @@ func (o *Options) ensureImagePull(ctx context.Context) error {
 	}
 	imageSecret := sec.Data["secret"].(string)
 
-	err = os.MkdirAll(filepath.Dir(storagePath), 0755)
+	err = os.MkdirAll(filepath.Dir(storagePath), 0o755)
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(storagePath, []byte(imageSecret), 0600)
+	return os.WriteFile(storagePath, []byte(imageSecret), 0o600)
 }

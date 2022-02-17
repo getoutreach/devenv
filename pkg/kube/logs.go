@@ -88,14 +88,12 @@ func StreamJobLogs(ctx context.Context, k kubernetes.Interface,
 		pod := pods.Items[0]
 
 		r, err := StreamPodLogs(ctx, k, log, pod.Name, pod.Namespace)
-		if r != nil {
-			defer r.Close()
-		}
 		if err != nil {
 			reason = err.Error()
 			continue
 		}
 		io.Copy(w, r) //nolint:errcheck // Why: OK not returning error here
+		r.Close()     //nolint:errcheck // Why: best effort
 
 		// check success to prevent needing to wait later
 		if ready, err := JobSucceeded(ctx, k, name, namespace); err != nil {

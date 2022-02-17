@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -137,7 +136,7 @@ func NewCmdSnapshot(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 						return err
 					}
 
-					byt, err := ioutil.ReadFile("snapshots.yaml")
+					byt, err := os.ReadFile("snapshots.yaml")
 					if err != nil {
 						return err
 					}
@@ -310,7 +309,7 @@ func (o *Options) uploadSnapshot(ctx context.Context, s3c *s3.Client,
 			Typeflag:   tar.TypeReg,
 			Name:       info.Key,
 			Size:       info.Size,
-			Mode:       0755,
+			Mode:       0o755,
 			ModTime:    info.LastModified,
 			AccessTime: info.LastModified,
 			ChangeTime: info.LastModified,

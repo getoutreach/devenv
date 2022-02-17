@@ -233,7 +233,7 @@ func (s *SnapshotUploader) DownloadFile(ctx context.Context) error { //nolint:fu
 	tmpFile.Close()           //nolint:errcheck // Why: Best effort
 	os.Remove(tmpFile.Name()) //nolint:errcheck // Why: Best effort
 
-	err = os.MkdirAll(filepath.Dir(tmpFile.Name()), 0755)
+	err = os.MkdirAll(filepath.Dir(tmpFile.Name()), 0o755)
 	if err != nil {
 		return errors.Wrap(err, "failed to create temporary directory")
 	}

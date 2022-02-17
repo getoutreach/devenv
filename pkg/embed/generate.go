@@ -49,7 +49,7 @@ func ExtractToDir(efs *goembed.FS, dir string) error {
 		defer f.Close()
 
 		tempFileDir := filepath.Join(dir, filepath.Dir(p))
-		err = os.MkdirAll(tempFileDir, 0755)
+		err = os.MkdirAll(tempFileDir, 0o755)
 		if err != nil {
 			return errors.Wrap(err, "failed to create directory for embedded file")
 		}
@@ -90,7 +90,7 @@ func ExtractAllToTempDir(ctx context.Context) (string, error) {
 		return tempDir, err
 	}
 
-	err = os.MkdirAll(tempDir, 0755)
+	err = os.MkdirAll(tempDir, 0o755)
 	if err != nil {
 		return tempDir, err
 	}

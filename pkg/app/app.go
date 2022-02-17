@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -273,7 +272,7 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 		os.RemoveAll(tempDir)
 	}
 
-	if err := os.MkdirAll(tempDir, 0755); err != nil { //nolint:govet // Why: We're okay with shadowing the error.
+	if err := os.MkdirAll(tempDir, 0o755); err != nil { //nolint:govet // Why: We're okay with shadowing the error.
 		return cleanup, err
 	}
 
@@ -370,7 +369,7 @@ func (a *App) determineRepositoryName() error {
 	}
 
 	// read the repository's service.yaml for bootstrap applications
-	b, err := ioutil.ReadFile(filepath.Join(a.Path, "service.yaml"))
+	b, err := os.ReadFile(filepath.Join(a.Path, "service.yaml"))
 	if err != nil {
 		return errors.Wrap(err, "failed to read service.yaml")
 	}

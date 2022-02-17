@@ -3,7 +3,6 @@ package kubernetesruntime
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -229,7 +228,7 @@ func (lr *LoftRuntime) Create(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create loft vcluster")
 	}
 
-	lr.kubeConfig, err = ioutil.ReadFile(kubeConfig.Name())
+	lr.kubeConfig, err = os.ReadFile(kubeConfig.Name())
 	return errors.Wrap(err, "failed to read kubeconfig")
 }
 
@@ -329,7 +328,7 @@ func (lr *LoftRuntime) getKubeConfigForVCluster(ctx context.Context, vc *loftctl
 		return nil
 	}
 
-	out, err := ioutil.ReadFile(kubeConfig.Name())
+	out, err := os.ReadFile(kubeConfig.Name())
 	if err != nil {
 		return nil
 	}
