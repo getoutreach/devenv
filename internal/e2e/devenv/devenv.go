@@ -43,11 +43,11 @@ var Logger = &logrus.Logger{Out: os.Stderr, Level: logrus.DebugLevel, ReportCall
 	Formatter: &logrus.TextFormatter{ForceColors: true}}
 
 // DestroyDevenv destroys a devenv
-func DestroyDevenv(ctx context.Context) error {
+func DestroyDevenv(ctx context.Context, b *box.Config) error {
 	var dopts *destroy.Options
 	var err error
 
-	if dopts, err = destroy.NewOptions(Logger); err == nil {
+	if dopts, err = destroy.NewOptions(Logger, b); err == nil {
 		if err = dopts.Run(ctx); err == nil {
 			return nil
 		}
@@ -100,7 +100,7 @@ func ProvisionDevenv(t *testing.T, ctx context.Context, opts *ProvisionOpts) fun
 	}
 
 	cleanupFn := func() {
-		if err := DestroyDevenv(ctx); err != nil {
+		if err := DestroyDevenv(ctx, opts.Box); err != nil {
 			t.Logf("WARNING: Failed to cleanup devenv: %v\n", err)
 		}
 	}

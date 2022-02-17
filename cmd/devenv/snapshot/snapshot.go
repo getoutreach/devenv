@@ -391,7 +391,7 @@ func (o *Options) generateSnapshot(ctx context.Context, s3c *s3.Client,
 	name string, t *box.SnapshotTarget, skipUpload bool) (*box.SnapshotLockListItem, error) {
 	o.log.WithField("snapshot", name).Info("Generating Snapshot")
 
-	destroyOpts, err := destroy.NewOptions(o.log)
+	destroyOpts, err := destroy.NewOptions(o.log, o.b)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create destroy command")
 	}

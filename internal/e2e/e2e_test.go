@@ -95,7 +95,7 @@ func TestCanProvisionSnapshotDevenv(t *testing.T) {
 	}
 
 	t.Log("Destroying snapshot generation intermediate devenv")
-	if err := devenv.DestroyDevenv(ctx); err != nil {
+	if err := devenv.DestroyDevenv(ctx, provisionArgs.Box); err != nil {
 		t.Error(errors.Wrap(err, "failed to destroy devenv after snapshot generation"))
 		return
 	}

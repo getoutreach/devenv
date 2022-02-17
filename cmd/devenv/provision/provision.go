@@ -587,7 +587,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 		err = o.snapshotRestore(ctx)
 		if err != nil { // remove the environment because it's a half baked environment used just for this
 			o.log.WithError(err).Error("failed to provision from snapshot, destroying intermediate environment")
-			dopts, err2 := destroy.NewOptions(o.log)
+			dopts, err2 := destroy.NewOptions(o.log, o.b)
 			if err2 != nil {
 				o.log.WithError(err).Error("failed to remove intermediate environment")
 				return err2
