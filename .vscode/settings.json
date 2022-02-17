@@ -8,9 +8,7 @@
     "cluster_type": "local",
     "vault_addr": "https://vault.outreach.cloud"
   },
-  "go.testFlags": [
-    "-v"
-  ],
+  "go.testFlags": ["-v"],
   ///EndBlock(settings)
   "go.lintTool": "golangci-lint",
   "go.lintFlags": [],
@@ -25,11 +23,7 @@
   "go.testTags": "or_test,or_int,or_e2e",
   // This prevents 99% of issues with linters :)
   "editor.formatOnSave": true,
-  "shellcheck.customArgs": [
-    "-P",
-    "SCRIPTDIR",
-    "-x"
-  ],
+  "shellcheck.customArgs": ["-P", "SCRIPTDIR", "-x"],
   "shellformat.path": "./.bootstrap/shell/shfmt.sh",
   "[dockerfile]": {
     "editor.defaultFormatter": "ms-azuretools.vscode-docker"
@@ -41,8 +35,6 @@
     "editor.defaultFormatter": "redhat.vscode-yaml"
   },
   "gopls": {
-    "build.buildFlags": [
-      "-tags=or_test,or_dev,or_e2e,or_int"
-    ]
+    "build.buildFlags": ["-tags=or_test,or_dev,or_e2e,or_int"]
   }
 }
