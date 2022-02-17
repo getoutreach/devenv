@@ -39,7 +39,7 @@ make docker-build-dev
 
 info_sub "Loading docker image into cache"
 "$KIND_BIN" load docker-image --name dev-environment \
-  "gcr.io/outreach-docker/devenv:$(make version)"
+  "gcr.io/outreach-docker/devenv:$(make --no-print-directory version)"
 
 info_sub "Cleaning up environment"
 "$DIR/../bin/devenv" destroy

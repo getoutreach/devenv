@@ -60,7 +60,7 @@ func DestroyDevenv(ctx context.Context, b *box.Config) error {
 // and returns a function to destroy it.
 //nolint:gocritic,revive // Why: We're OK not naming these
 func ProvisionDevenv(t *testing.T, ctx context.Context, opts *ProvisionOpts) func() {
-	appVersionByt, err := exec.CommandContext(ctx, "make", "version").CombinedOutput()
+	appVersionByt, err := exec.CommandContext(ctx, "make", "--no-print-directory", "version").CombinedOutput()
 	if err != nil {
 		t.Errorf(errors.Wrap(err, "failed to detect application version").Error())
 		return nil
