@@ -197,7 +197,7 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig,
 		}
 	}
 
-	o.log.WithField("region", cfg.Region).Info("s3 config")
+	o.log.WithField("region", cfg.Region).WithField("endpoint", endpoint).Info("s3 config")
 
 	s3c := s3.NewFromConfig(cfg)
 
