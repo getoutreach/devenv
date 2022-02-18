@@ -59,11 +59,11 @@ func (s *SnapshotUploader) StartFromEnv(ctx context.Context, log logrus.FieldLog
 
 	// Default to S3 if no endpoint
 	if conf.Source.S3Host == "" {
-		conf.Source.S3Host = "s3.amazonaws.com"
+		conf.Source.S3Host = "https://s3.amazonaws.com"
 	}
 
 	if conf.Dest.S3Host == "" {
-		conf.Dest.S3Host = "s3.amazonaws.com"
+		conf.Dest.S3Host = "https://s3.amazonaws.com"
 	}
 
 	s.conf = conf
