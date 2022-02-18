@@ -16,8 +16,8 @@ require (
 	github.com/getoutreach/vault-client v1.4.0
 	github.com/google/go-github/v42 v42.0.0
 	github.com/jetstack/cert-manager v1.7.1
-	github.com/loft-sh/agentapi/v2 v2.1.1
-	github.com/loft-sh/loftctl/v2 v2.0.4
+	github.com/loft-sh/agentapi/v2 v2.1.2
+	github.com/loft-sh/loftctl/v2 v2.1.2
 	github.com/manifoldco/promptui v0.9.0
 	github.com/minio/minio-go/v7 v7.0.21
 	github.com/mitchellh/go-wordwrap v1.0.1
@@ -44,6 +44,8 @@ require (
 	k8s.io/component-base v0.23.1
 	k8s.io/kubectl v0.23.1
 )
+
+require github.com/docker/go-connections v0.4.0
 
 require (
 	cloud.google.com/go/compute v0.1.0 // indirect
@@ -92,7 +94,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/daviddengcn/go-colortext v0.0.0-20160507010035-511bcaf42ccd // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/emicklei/go-restful v2.9.5+incompatible // indirect
@@ -153,7 +154,7 @@ require (
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lithammer/dedent v1.1.0 // indirect
-	github.com/loft-sh/api/v2 v2.0.4 // indirect
+	github.com/loft-sh/api/v2 v2.1.2 // indirect
 	github.com/loft-sh/apiserver v0.0.0-20211216225656-cafe09adc0b8 // indirect
 	github.com/loft-sh/jspolicy v0.1.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect

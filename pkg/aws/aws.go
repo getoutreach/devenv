@@ -67,6 +67,11 @@ func EnsureValidCredentials(ctx context.Context, copts *CredentialOptions) error
 	needsNewCreds := false
 	reason := ""
 
+	if os.Getenv("AWS_ACCESS_KEY_ID") != "" {
+		copts.Log.Debug("Skipping AWS credentials refresh check, AWS_ACCESS_KEY_ID is set")
+		return nil
+	}
+
 	if creds, err := awsconfig.NewSharedCredentials(copts.Profile, "").Load(); err == nil {
 		// Check, via the principal_arn, if the creds match the role we want
 		if creds.PrincipalARN != "" && assumedToRole(creds.PrincipalARN) != copts.Role {

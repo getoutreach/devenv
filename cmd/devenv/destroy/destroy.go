@@ -38,15 +38,10 @@ type Options struct {
 	KubernetesRuntime     kubernetesruntime.Runtime
 }
 
-func NewOptions(log logrus.FieldLogger) (*Options, error) {
+func NewOptions(log logrus.FieldLogger, b *box.Config) (*Options, error) {
 	d, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create docker client")
-	}
-
-	b, err := box.LoadBox()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read box config")
 	}
 
 	conf, err := config.LoadConfig(context.TODO())
@@ -93,7 +88,12 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			o, err := NewOptions(log)
+			b, err := box.LoadBox()
+			if err != nil {
+				return err
+			}
+
+			o, err := NewOptions(log, b)
 			if err != nil {
 				return err
 			}

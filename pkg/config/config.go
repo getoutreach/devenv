@@ -66,7 +66,7 @@ func SaveConfig(_ context.Context, c *Config) error {
 		return errors.Wrap(err, "failed to get config file path")
 	}
 
-	err = os.MkdirAll(filepath.Dir(confPath), 0755)
+	err = os.MkdirAll(filepath.Dir(confPath), 0o755)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure config dirs existed")
 	}

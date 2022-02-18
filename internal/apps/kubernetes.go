@@ -147,3 +147,12 @@ func (k *KubernetesConfigmapClient) Delete(ctx context.Context, name string) err
 
 	return ErrNotFound
 }
+
+// Reset resets the entire apps store
+func (k *KubernetesConfigmapClient) Reset(ctx context.Context) error {
+	err := k.k.CoreV1().ConfigMaps(k.namespace).Delete(ctx, k.configmapName, *metav1.NewDeleteOptions(0))
+	if kerrors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}

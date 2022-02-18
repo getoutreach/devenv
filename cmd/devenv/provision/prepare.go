@@ -3,12 +3,12 @@ package provision
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -83,6 +83,11 @@ func (o *Options) deployStage(ctx context.Context, stage string) error { //nolin
 	// so we should mutate all pods to have zero resources.
 	// Special exeception is when we're generating snapshots.
 	if runtimeConf.Type == kubernetesruntime.RuntimeTypeLocal && os.Getenv("DEVENV_SNAPSHOT_GENERATION") == "" {
+		deployedApps := apps.NewKubernetesConfigmapClient(o.k, "")
+		if _, err := deployedApps.Get(ctx, "resourcer"); err == nil {
+			return nil
+		}
+
 		err := app.Deploy(ctx, o.log, o.k, o.b, o.r, "resourcer", runtimeConf)
 		if err != nil {
 			return errors.Wrap(err, "failed to deploy resourcer")
@@ -140,10 +145,10 @@ func (o *Options) ensureImagePull(ctx context.Context) error {
 	}
 	imageSecret := sec.Data["secret"].(string)
 
-	err = os.MkdirAll(filepath.Dir(storagePath), 0755)
+	err = os.MkdirAll(filepath.Dir(storagePath), 0o755)
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(storagePath, []byte(imageSecret), 0600)
+	return os.WriteFile(storagePath, []byte(imageSecret), 0o600)
 }

@@ -37,6 +37,10 @@ type Interface interface {
 
 	// Delete deletes an application in the devenv
 	Delete(ctx context.Context, name string) error
+
+	// Reset deletes all application infomation and the underlying
+	// datastore.
+	Reset(ctx context.Context) error
 }
 
 // App is an application inside of a devenv

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,14 +28,9 @@ func Backoff(ctx context.Context, d time.Duration, max uint64, fn func() error, 
 			log.Infof("Retrying operation in %s", waitTime)
 		}
 
-		t := time.NewTicker(waitTime)
-		defer t.Stop()
-
-		select {
-		case <-ctx.Done():
+		async.Sleep(ctx, waitTime)
+		if ctx.Err() != nil {
 			return ctx.Err()
-		case <-t.C:
-			continue
 		}
 	}
 }

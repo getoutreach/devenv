@@ -82,7 +82,7 @@ func main() {
 				return errors.Wrap(err, "failed to get user home dir")
 			}
 
-			err = os.MkdirAll(filepath.Join(homeDir, ".local", "dev-environment"), 0755)
+			err = os.MkdirAll(filepath.Join(homeDir, ".local", "dev-environment"), 0o755)
 			if err != nil {
 				return err
 			}

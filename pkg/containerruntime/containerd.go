@@ -3,7 +3,6 @@ package containerruntime
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -76,7 +75,7 @@ func PullImage(ctx context.Context, image string) error {
 		return trace.SetCallStatus(ctx, err)
 	}
 
-	b, err := ioutil.ReadFile(filepath.Join(homedir, ".outreach", "imgpullsecret.json"))
+	b, err := os.ReadFile(filepath.Join(homedir, ".outreach", "imgpullsecret.json"))
 	if err != nil {
 		return trace.SetCallStatus(ctx, err)
 	}

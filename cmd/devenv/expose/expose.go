@@ -3,7 +3,6 @@ package expose
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -167,7 +166,7 @@ func (o *Options) EnsureAuthenticated(ctx context.Context) (*NgrokConfig, error)
 		return nil, errors.Wrap(err, "failed to marshal ngrok configuration")
 	}
 
-	return conf, ioutil.WriteFile(configPath, b, 0600)
+	return conf, os.WriteFile(configPath, b, 0o600)
 }
 
 func (o *Options) CreateNgrokInstance(ctx context.Context, conf *NgrokConfig) error { //nolint:funlen

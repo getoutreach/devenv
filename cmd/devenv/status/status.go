@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -354,7 +353,7 @@ func (o *Options) kubernetesInfo(ctx context.Context, w io.Writer) error { //nol
 func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 	target := io.Writer(os.Stdout)
 	if o.Quiet {
-		target = ioutil.Discard
+		target = io.Discard
 	}
 
 	w := tabwriter.NewWriter(target, 10, 0, 5, ' ', 0)

@@ -3,11 +3,12 @@ package provision
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"os/user"
@@ -21,7 +22,7 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/deploy"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
-	"github.com/getoutreach/devenv/cmd/devenv/snapshot"
+	"github.com/getoutreach/devenv/internal/snapshot"
 	"github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
@@ -29,10 +30,8 @@ import (
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
-	"github.com/getoutreach/devenv/pkg/snapshoter"
 	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/getoutreach/gobox/pkg/box"
-	"github.com/minio/minio-go/v7"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -95,7 +94,8 @@ type Options struct {
 	r       *rest.Config
 }
 
-func NewOptions(log logrus.FieldLogger) (*Options, error) {
+// NewOptions creates a new provision command
+func NewOptions(log logrus.FieldLogger, b *box.Config) (*Options, error) {
 	d, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create docker client")
@@ -104,11 +104,6 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
-	}
-
-	b, err := box.LoadBox()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to load box configuration")
 	}
 
 	return &Options{
@@ -157,7 +152,12 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 			},
 		},
 		Action: func(c *cli.Context) error {
-			o, err := NewOptions(log)
+			b, err := box.LoadBox()
+			if err != nil {
+				return errors.Wrap(err, "failed to load box configuration")
+			}
+
+			o, err := NewOptions(log, b)
 			if err != nil {
 				return err
 			}
@@ -180,24 +180,16 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 	}
 }
 
-func (o *Options) applyPostRestore(ctx context.Context) error { //nolint:funlen
-	m, err := snapshoter.NewSnapshotBackend(ctx, o.r, o.k)
+func (o *Options) applyPostRestore(ctx context.Context, manifestsCompressed []byte) error { //nolint:funlen
+	gzr, err := gzip.NewReader(base64.NewDecoder(base64.StdEncoding,
+		bytes.NewReader(manifestsCompressed)))
 	if err != nil {
-		return errors.Wrap(err, "failed to create local snapshot storage client")
-	}
-	defer m.Close()
-
-	obj, err := m.GetObject(ctx, snapshotLocalBucket, "post-restore/manifests.yaml", minio.GetObjectOptions{})
-	if err != nil {
-		if minio.ToErrorResponse(err).StatusCode == 404 { // If we don't have one, skip this step
-			return nil
-		}
-		return errors.Wrap(err, "failed to fetch post-restore manifests from local snapshot storage")
+		return errors.Wrap(err, "failed to create post-restore gzip reader")
 	}
 
-	manifests, err := ioutil.ReadAll(obj)
+	manifests, err := io.ReadAll(gzr)
 	if err != nil {
-		return errors.Wrap(err, "failed to read from S3")
+		return errors.Wrap(err, "failed to decompress post-restore manifests")
 	}
 
 	t, err := template.New("post-restore").Delims("[[", "]]").
@@ -249,38 +241,49 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		defer os.RemoveAll(dir)
 	}
 
-	snapshotTarget, err := o.fetchSnapshot(ctx)
-	if err != nil {
-		return err
-	}
-
-	snapshotOpt, err := snapshot.NewOptions(o.log)
+	m, err := snapshot.NewManager(o.log, o.b)
 	if err != nil {
 		return errors.Wrap(err, "failed to create snapshot client")
 	}
 
+	if err := o.stageSnapshot(ctx, o.SnapshotTarget, o.SnapshotChannel); err != nil {
+		return errors.Wrap(err, "failed to setup snapshot infrastructure")
+	}
+
+	rawSnapshotInfo, err := o.k.CoreV1().ConfigMaps("devenv").Get(ctx, "snapshot", metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve loaded snapshot information")
+	}
+
+	var snapshotTarget box.SnapshotLockListItem
+	if err := json.Unmarshal([]byte(rawSnapshotInfo.Data["snapshot.json"]), &snapshotTarget); err != nil {
+		return errors.Wrap(err, "failed to parse snapshot from kubernetes configmap")
+	}
+
 	// Wait for Velero to load the backup
-	err = devenvutil.Backoff(ctx, 30*time.Second, 10, func() error {
-		err2 := snapshotOpt.CreateBackupStorage(ctx, "devenv", snapshotLocalBucket)
+	o.log.Info("Creating snapshot storage CRD")
+	err = devenvutil.Backoff(ctx, 10*time.Second, 10, func() error {
+		err2 := m.CreateBackupStorage(ctx, "devenv", snapshotLocalBucket)
 		if err2 != nil && !kerrors.IsAlreadyExists(err2) {
 			o.log.WithError(err2).Debug("Waiting to create backup storage location")
 		}
 
-		_, err2 = snapshotOpt.GetSnapshot(ctx, snapshotTarget.VeleroBackupName)
+		_, err2 = m.RetrieveVeleroBackup(ctx, snapshotTarget.VeleroBackupName)
 		return err2
 	}, o.log)
 	if err != nil {
 		return errors.Wrap(err, "failed to verify velero loaded snapshot")
 	}
 
-	err = snapshotOpt.RestoreSnapshot(ctx, snapshotTarget.VeleroBackupName, false)
-	if err != nil {
+	if err := m.Restore(ctx, snapshotTarget.VeleroBackupName); err != nil {
 		return errors.Wrap(err, "failed to restore snapshot")
 	}
 
-	err = o.applyPostRestore(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to apply post-restore manifests from local snapshot storage")
+	if _, ok := rawSnapshotInfo.Data["post-restore.yaml"]; ok {
+		err = o.applyPostRestore(ctx, []byte(rawSnapshotInfo.Data["post-restore.yaml"]))
+		if err != nil {
+			return errors.Wrap(err, "failed to apply post-restore manifests from local snapshot storage")
+		}
 	}
 
 	// Sometimes, if we don't preemptively delete all restic-wait containing pods
@@ -480,7 +483,7 @@ func (o *Options) removeServiceImages(ctx context.Context) error {
 // generateDockerConfig generates a docker configuration file that is used
 // to authenticate image pulls by KinD
 func (o *Options) generateDockerConfig() error {
-	imgPullSec, err := ioutil.ReadFile(filepath.Join(o.homeDir, imagePullSecretPath))
+	imgPullSec, err := os.ReadFile(filepath.Join(o.homeDir, imagePullSecretPath))
 	if err != nil {
 		return err
 	}
@@ -582,7 +585,7 @@ func (o *Options) Run(ctx context.Context) error { //nolint:funlen,gocyclo
 		err = o.snapshotRestore(ctx)
 		if err != nil { // remove the environment because it's a half baked environment used just for this
 			o.log.WithError(err).Error("failed to provision from snapshot, destroying intermediate environment")
-			dopts, err2 := destroy.NewOptions(o.log)
+			dopts, err2 := destroy.NewOptions(o.log, o.b)
 			if err2 != nil {
 				o.log.WithError(err).Error("failed to remove intermediate environment")
 				return err2

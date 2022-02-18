@@ -8,6 +8,7 @@
     "cluster_type": "local",
     "vault_addr": "https://vault.outreach.cloud"
   },
+  "go.testFlags": ["-v"],
   ///EndBlock(settings)
   "go.lintTool": "golangci-lint",
   "go.lintFlags": [],

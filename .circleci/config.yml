@@ -15,7 +15,7 @@ jobs:
       - shared/with_go_cache
       - shared/save_go_cache
       - shared/setup_devenv:
-          provision_args: "--base"
+          provision: false
       - run:
           name: Run E2E tests
           command: make e2e-override
@@ -115,7 +115,6 @@ workflows:
             - ghaccesstoken
             - npm-credentials
             - vault-dev
-            - aws-credentials
       ###EndBlock(circleWorkflowJobs)
       - release:
           context:
