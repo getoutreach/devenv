@@ -21,12 +21,12 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
 	"github.com/getoutreach/devenv/cmd/devenv/provision"
+	noncmdsnapshot "github.com/getoutreach/devenv/internal/snapshot"
 	devenvaws "github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
-	noncmdsnapshot "github.com/getoutreach/devenv/pkg/snapshot"
 	"github.com/getoutreach/devenv/pkg/snapshoter"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/minio/minio-go/v7"
@@ -190,13 +190,13 @@ func (o *Options) Generate(ctx context.Context, s *box.SnapshotGenerateConfig,
 	}
 
 	// use a custom endpoint if provided
-	if endpoint := o.b.DeveloperEnvironmentConfig.SnapshotConfig.Endpoint; endpoint != "" {
+	endpoint := o.b.DeveloperEnvironmentConfig.SnapshotConfig.Endpoint
+	if endpoint != "" {
 		cfg.EndpointResolver = &awsEndpointResolver{ //nolint:staticcheck // Why: using new one doesn't work?
 			endpoint: endpoint,
 			region:   cfg.Region,
 		}
 	}
-
 	o.log.WithField("region", cfg.Region).WithField("endpoint", endpoint).Info("s3 config")
 
 	s3c := s3.NewFromConfig(cfg)

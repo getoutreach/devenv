@@ -32,7 +32,8 @@ const (
 	SnapshotNamespace = "velero"
 )
 
-type Options struct {
+// Manager contains logic for handling snapshots in a developer environment.
+type Manager struct {
 	log logrus.FieldLogger
 	k   kubernetes.Interface
 	r   *rest.Config
@@ -40,13 +41,14 @@ type Options struct {
 	vc  veleroclient.Interface
 }
 
-func NewOptions(log logrus.FieldLogger, b *box.Config) (*Options, error) {
+// NewManager creates a fully initialized Manager instance
+func NewManager(log logrus.FieldLogger, b *box.Config) (*Manager, error) {
 	k, conf, err := kube.GetKubeClientWithConfig()
 	if err != nil {
 		log.WithError(err).Warn("failed to create kubernetes client")
 	}
 
-	opts := &Options{
+	opts := &Manager{
 		log: log,
 		b:   b,
 	}
@@ -66,27 +68,29 @@ func NewOptions(log logrus.FieldLogger, b *box.Config) (*Options, error) {
 	return opts, nil
 }
 
-func (o *Options) GetSnapshot(ctx context.Context, snapshotName string) (*velerov1api.Backup, error) {
-	if o.vc == nil {
+// RetrieveVeleroBackup returns a backup from a velero store.
+func (m *Manager) RetrieveVeleroBackup(ctx context.Context, snapshotName string) (*velerov1api.Backup, error) {
+	if m.vc == nil {
 		return nil, fmt.Errorf("velero client not set")
 	}
 
-	return o.vc.VeleroV1().Backups(SnapshotNamespace).Get(ctx, snapshotName, metav1.GetOptions{})
+	return m.vc.VeleroV1().Backups(SnapshotNamespace).Get(ctx, snapshotName, metav1.GetOptions{})
 }
 
-func (o *Options) deleteExistingRestore(ctx context.Context, snapshotName string) error {
-	restore, err := o.vc.VeleroV1().Restores(SnapshotNamespace).Get(ctx, snapshotName, metav1.GetOptions{})
+// deleteExistingRestore deletes an existing restore object
+func (m *Manager) deleteExistingRestore(ctx context.Context, snapshotName string) error {
+	restore, err := m.vc.VeleroV1().Restores(SnapshotNamespace).Get(ctx, snapshotName, metav1.GetOptions{})
 	if err == nil {
 		if restore.Status.Phase == velerov1api.RestorePhaseInProgress {
 			return fmt.Errorf("existing restore is in progress, refusing to create new restore")
 		}
-		o.log.Info("Deleting previous completed restore")
-		err = o.vc.VeleroV1().Restores(SnapshotNamespace).Delete(ctx, snapshotName, metav1.DeleteOptions{})
+		m.log.Info("Deleting previous completed restore")
+		err = m.vc.VeleroV1().Restores(SnapshotNamespace).Delete(ctx, snapshotName, metav1.DeleteOptions{})
 		if err != nil {
 			return errors.Wrap(err, "failed to delete existing restore")
 		}
 
-		o.log.Info("Waiting for delete to finish ...")
+		m.log.Info("Waiting for delete to finish ...")
 		ticker := time.NewTicker(5 * time.Second)
 	loop:
 		for {
@@ -94,7 +98,7 @@ func (o *Options) deleteExistingRestore(ctx context.Context, snapshotName string
 			case <-ctx.Done():
 				return ctx.Err()
 			case <-ticker.C:
-				_, err = o.vc.VeleroV1().Restores(SnapshotNamespace).Get(ctx, snapshotName, metav1.GetOptions{})
+				_, err = m.vc.VeleroV1().Restores(SnapshotNamespace).Get(ctx, snapshotName, metav1.GetOptions{})
 				if kerrors.IsNotFound(err) {
 					break loop
 				} else if err != nil {
@@ -107,7 +111,8 @@ func (o *Options) deleteExistingRestore(ctx context.Context, snapshotName string
 	return nil
 }
 
-func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, liveRestore bool) error { //nolint:funlen
+// Restore restores a given snapshot into an environment.
+func (m *Manager) Restore(ctx context.Context, snapshotName string) error { //nolint:funlen
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -115,27 +120,27 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 		return fmt.Errorf("missing snapshot name")
 	}
 
-	if _, err := o.GetSnapshot(ctx, snapshotName); err != nil {
+	if _, err := m.RetrieveVeleroBackup(ctx, snapshotName); err != nil {
 		return err
 	}
 
-	if err := o.deleteExistingRestore(ctx, snapshotName); err != nil {
+	if err := m.deleteExistingRestore(ctx, snapshotName); err != nil {
 		return err
 	}
 
-	appsClient := apps.NewKubernetesConfigmapClient(o.k, "")
+	appsClient := apps.NewKubernetesConfigmapClient(m.k, "")
 	beforeApps, err := appsClient.List(ctx)
 	if err != nil {
-		o.log.WithError(err).
+		m.log.WithError(err).
 			Warn("failed to preserve apps configmap state before restore, apps information may be invalid")
 		beforeApps = []apps.App{}
 	}
 
 	if err := appsClient.Reset(ctx); err != nil {
-		o.log.WithError(err).Warn("failed to reset apps configmap, apps information may be invalid")
+		m.log.WithError(err).Warn("failed to reset apps configmap, apps information may be invalid")
 	}
 
-	if _, err := o.vc.VeleroV1().Restores(SnapshotNamespace).Create(ctx, &velerov1api.Restore{
+	if _, err := m.vc.VeleroV1().Restores(SnapshotNamespace).Create(ctx, &velerov1api.Restore{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: SnapshotNamespace,
 			Name:      snapshotName,
@@ -165,7 +170,7 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 	}
 
 	updates := make(chan *velerov1api.Restore)
-	restoreInformer := velerov1.NewRestoreInformer(o.vc, SnapshotNamespace, 0, nil)
+	restoreInformer := velerov1.NewRestoreInformer(m.vc, SnapshotNamespace, 0, nil)
 	restoreInformer.AddEventHandler( //nolint:dupl
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
@@ -204,10 +209,10 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 				return fmt.Errorf("failed to watch restore operation")
 			}
 			if restore.Status.Phase != velerov1api.RestorePhaseNew && restore.Status.Phase != velerov1api.RestorePhaseInProgress {
-				o.log.Infof("Snapshot restore finished with status: %v", restore.Status.Phase)
+				m.log.Infof("Snapshot restore finished with status: %v", restore.Status.Phase)
 
 				if newApps, err := appsClient.List(ctx); err != nil {
-					o.log.Infof("Snapshot created %d applications", len(newApps))
+					m.log.Infof("Snapshot created %d applications", len(newApps))
 				}
 
 				// iterate over old apps that we had before the restore, adding them
@@ -230,8 +235,8 @@ func (o *Options) RestoreSnapshot(ctx context.Context, snapshotName string, live
 }
 
 // CreateBackupStorage creates a backup storage location
-func (o *Options) CreateBackupStorage(ctx context.Context, name, bucket string) error {
-	_, err := o.vc.VeleroV1().BackupStorageLocations(SnapshotNamespace).Create(ctx, &velerov1api.BackupStorageLocation{
+func (m *Manager) CreateBackupStorage(ctx context.Context, name, bucket string) error {
+	_, err := m.vc.VeleroV1().BackupStorageLocations(SnapshotNamespace).Create(ctx, &velerov1api.BackupStorageLocation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},

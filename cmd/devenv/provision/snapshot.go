@@ -7,8 +7,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/getoutreach/devenv/internal/snapshot"
 	"github.com/getoutreach/devenv/pkg/kube"
-	"github.com/getoutreach/devenv/pkg/snapshot"
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/pkg/errors"

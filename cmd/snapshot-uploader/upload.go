@@ -16,8 +16,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/getoutreach/devenv/internal/snapshot"
 	"github.com/getoutreach/devenv/pkg/kube"
-	"github.com/getoutreach/devenv/pkg/snapshot"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"

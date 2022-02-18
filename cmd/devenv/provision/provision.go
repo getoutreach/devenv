@@ -22,6 +22,7 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/deploy"
 	"github.com/getoutreach/devenv/cmd/devenv/destroy"
+	"github.com/getoutreach/devenv/internal/snapshot"
 	"github.com/getoutreach/devenv/pkg/aws"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
@@ -29,7 +30,6 @@ import (
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kube"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
-	"github.com/getoutreach/devenv/pkg/snapshot"
 	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/getoutreach/gobox/pkg/box"
 
@@ -241,7 +241,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		defer os.RemoveAll(dir)
 	}
 
-	snapshotOpt, err := snapshot.NewOptions(o.log, o.b)
+	m, err := snapshot.NewManager(o.log, o.b)
 	if err != nil {
 		return errors.Wrap(err, "failed to create snapshot client")
 	}
@@ -263,20 +263,19 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	// Wait for Velero to load the backup
 	o.log.Info("Creating snapshot storage CRD")
 	err = devenvutil.Backoff(ctx, 10*time.Second, 10, func() error {
-		err2 := snapshotOpt.CreateBackupStorage(ctx, "devenv", snapshotLocalBucket)
+		err2 := m.CreateBackupStorage(ctx, "devenv", snapshotLocalBucket)
 		if err2 != nil && !kerrors.IsAlreadyExists(err2) {
 			o.log.WithError(err2).Debug("Waiting to create backup storage location")
 		}
 
-		_, err2 = snapshotOpt.GetSnapshot(ctx, snapshotTarget.VeleroBackupName)
+		_, err2 = m.RetrieveVeleroBackup(ctx, snapshotTarget.VeleroBackupName)
 		return err2
 	}, o.log)
 	if err != nil {
 		return errors.Wrap(err, "failed to verify velero loaded snapshot")
 	}
 
-	err = snapshotOpt.RestoreSnapshot(ctx, snapshotTarget.VeleroBackupName, false)
-	if err != nil {
+	if err := m.Restore(ctx, snapshotTarget.VeleroBackupName); err != nil {
 		return errors.Wrap(err, "failed to restore snapshot")
 	}
 
