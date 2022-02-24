@@ -97,6 +97,18 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 		app.Version = "local"
 		app.RepositoryName = filepath.Base(appNameOrPath)
 
+		if !filepath.IsAbs(app.Path) {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get current working dir")
+			}
+
+			app.Path, err = filepath.Abs(filepath.Join(cwd, appNameOrPath))
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to convert relative app path to absolute")
+			}
+		}
+
 		if version != "" {
 			return nil, fmt.Errorf("when deploying a local-app a version must not be set")
 		}
@@ -359,13 +371,8 @@ func (a *App) determineRepositoryName() error {
 			return nil
 		}
 
-		if filepath.IsAbs(a.Path) {
-			a.RepositoryName = filepath.Base(a.Path)
-			return nil
-		}
-
-		// can't resolve names of relative paths at this point
-		return fmt.Errorf("failed to resolve application's name")
+		a.RepositoryName = filepath.Base(a.Path)
+		return nil
 	}
 
 	// read the repository's service.yaml for bootstrap applications
