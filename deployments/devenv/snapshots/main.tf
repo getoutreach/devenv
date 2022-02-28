@@ -1,14 +1,14 @@
 module "s3-testbucket" {
   source                = "git@github.com:getoutreach/terraform-modules.git//s3-datastorage?ref=246500c"
-  team                  = "cia-dev-tooling"
-  data_classification   = "High"
+  team                  = "fnd:dtss"
+  data_classification   = "high"
   data_retention_months = "0"
-  personal_information  = "No"
-  environment           = "Development"
+  personal_information  = "no"
+  environment           = "development"
   application           = "dev-environment"
-  bento                 = "None"
-  tier                  = "Non-essential"
-  k8s_cluster           = "None"
+  bento                 = "none"
+  tier                  = "non-essential"
+  k8s_cluster           = "none"
   bucket_name           = "outreach-devenv-snapshots"
 }
 
