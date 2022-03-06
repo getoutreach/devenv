@@ -3,20 +3,21 @@
 This pages goes into detail about how to interact with services.
 
 - [Interacting with Services](#interacting-with-services)
-  * [Deploying a Service](#deploying-a-service)
-    + [Deploying a Specific Revision](#deploying-a-specific-revision)
-    + [Deploying Local Changes](#deploying-local-changes)
-  * [Updating Services](#updating-services)
-    + [Updating to the Latest Version](#updating-to-the-latest-version)
-    + [Deploying a Specific Version](#deploying-a-specific-version)
-  * [Running a Local Service](#running-a-local-service)
-    + [Exposing Your Local Service to the Developer Environment](#exposing-your-local-service-to-the-developer-environment)
+  - [Deploying a Service](#deploying-a-service)
+    - [Deploying a Specific Revision](#deploying-a-specific-revision)
+    - [Deploying Local Changes](#deploying-local-changes)
+  - [Updating Services](#updating-services)
+    - [Updating to the Latest Version](#updating-to-the-latest-version)
+    - [Deploying a Specific Version](#deploying-a-specific-version)
+  - [Running a Local Service](#running-a-local-service)
+    - [Exposing Your Local Service to the Developer Environment](#exposing-your-local-service-to-the-developer-environment)
       - [Mapping a port](#mapping-a-port)
+
 ---
 
 ## Deploying a Service
 
-To deploy a service into your developer environment, run `devenv apps deploy <appName>`. 
+To deploy a service into your developer environment, run `devenv apps deploy <appName>`.
 
 **Note**: By default tags are used for deployments, if present. Otherwise the latest commit is used. If you wish to ignore tags and use the latest commit instead set the topic `release-type-commits` on your repository. Though note this is unsupported and only provided for projects that haven't yet moved to tags.
 
