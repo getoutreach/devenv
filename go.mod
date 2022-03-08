@@ -11,7 +11,7 @@ require (
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
-	github.com/getoutreach/gobox v1.32.0
+	github.com/getoutreach/gobox v1.35.0
 	github.com/getoutreach/localizer v1.12.0
 	github.com/getoutreach/vault-client v1.4.0
 	github.com/google/go-github/v42 v42.0.0
