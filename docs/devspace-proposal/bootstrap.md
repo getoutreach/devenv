@@ -61,7 +61,7 @@ The deployment mechanism is a bit different between KiND and loft clusters becau
    - set up credentials from env variables to be used for pulling packages (npm, golang, gems)
    - command tails a log file (this is where application will `tee` logs so they land in Datadog)
 1. `devspace` syncs local source code into the dev container (and keeps syncing them as long as the session is open)
-1. `devspace` forwards ports (8000 for metrics, 8080 for HTTP, 5000 for gRPC, **TBD** for debugger)
+1. `devspace` forwards ports (8000 for internal HTTP (metrics, readiness, liveness, etc.), 8080 for public HTTP, 5000 for gRPC, **TBD** for debugger)
 1. `devspace` opens an interactive terminal into that pod
 
 > Note: make commands understand application is running in dev container and `tee` application logs into the file that is tailed for Datadog logs.
