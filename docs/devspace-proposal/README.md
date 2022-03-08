@@ -12,7 +12,7 @@ Bootstrap microservices (overwhelming number of repos) run in Kubernetes in prod
 
 `devenv` provides two deployment modes
 
-1. pre-built service is useful for testing latest service from git main (or master in some cases) branch
+1. released version of the service via the latest pushed docker image into our image repository
 2. from source lets developers make changes, deploy them to `devenv` cluster, run and debug.
 
 #### Pre-built Service
