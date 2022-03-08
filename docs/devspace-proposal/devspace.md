@@ -18,6 +18,7 @@ We don't want developers at Outreach to have to manage lots of different tools o
     * Add `DEPLOY_TO_DEV_VERSION` env variable
     * Add `DEVENV_APP_VERSION` env variable
     * Add `DEVENV_KIND` env variable
+    * Add `DEVENV_APPNAME` env variable
     * `KUBECONFIG` set to dev-environment
 * Otherwise check whether `devspace.yaml` or `./bootstrap/devspace.yaml` exists. If it does, check whether it has the `deployments` config.
     * Run `devspace deploy --namespace <app namespace>` with
@@ -25,6 +26,7 @@ We don't want developers at Outreach to have to manage lots of different tools o
         * `DEPLOY_TO_DEV_VERSION` env variable
         * `DEVENV_APP_VERSION` env variable
         * `DEVENV_KIND` env variable
+        * `DEVENV_APPNAME` env variable
         * `KUBECONFIG` set to dev-environment
 * Otherwise deploy not supported.
 
@@ -39,6 +41,7 @@ We don't want developers at Outreach to have to manage lots of different tools o
     * Add `DEPLOY_TO_DEV_VERSION` env variable
     * Add `DEVENV_APP_VERSION` env variable
     * Add `DEVENV_KIND` env variable
+    * Add `DEVENV_APPNAME` env variable
     * `KUBECONFIG` set to dev-environment
 * Otherwise check whether `devspace.yaml` or `./bootstrap/devspace.yaml` exists. If it does, check whether it has the `deployments` config.
     * Run `devspace purge --namespace <app namespace>` with
@@ -46,6 +49,7 @@ We don't want developers at Outreach to have to manage lots of different tools o
         * `DEPLOY_TO_DEV_VERSION` env variable
         * `DEVENV_APP_VERSION` env variable
         * `DEVENV_KIND` env variable
+        * `DEVENV_APPNAME` env variable
         * `KUBECONFIG` set to dev-environment
 * Otherwise delete not supported.
 
@@ -58,6 +62,7 @@ Supports multi-entry point applications using --service flag.
     * Add `DEPLOY_TO_DEV_VERSION` env variable
     * Add `DEVENV_APP_VERSION` env variable
     * Add `DEVENV_KIND` env variable
+    * Add `DEVENV_APPNAME` env variable
     * Add `DEVENV_SERVICE` env variable
     * Add `KUBECONFIG` set to dev-environment
 * Otherwise check whether `devspace.yaml` or `./bootstrap/devspace.yaml` exists. If it does, check whether it has the `dev` config.
@@ -67,6 +72,7 @@ Supports multi-entry point applications using --service flag.
         * `DEVENV_APP_VERSION` env variable
         * `DEVENV_KIND` env variable
         * `DEVENV_SERVICE` env variable
+        * `DEVENV_APPNAME` env variable
         * `KUBECONFIG` set to dev-environment
 * Otherwise dev not supported.
 
@@ -81,6 +87,7 @@ Supports multi-entry point applications using --service flag.
     * Add `DEPLOY_TO_DEV_VERSION` env variable
     * Add `DEVENV_APP_VERSION` env variable
     * Add `DEVENV_KIND` env variable
+    * Add `DEVENV_APPNAME` env variable
     * Add `DEVENV_SERVICE` env variable
     * Add `KUBECONFIG` set to dev-environment
 * Otherwise check whether `devspace.yaml` or `./bootstrap/devspace.yaml` exists. If it does, check whether it has the `dev` config.
@@ -89,6 +96,7 @@ Supports multi-entry point applications using --service flag.
         * `DEPLOY_TO_DEV_VERSION` env variable
         * `DEVENV_APP_VERSION` env variable
         * `DEVENV_KIND` env variable
+        * `DEVENV_APPNAME` env variable
         * `DEVENV_SERVICE` env variable
         * `KUBECONFIG` set to dev-environment
 * Otherwise dev stop not supported.
@@ -96,11 +104,13 @@ Supports multi-entry point applications using --service flag.
 ### apps dev terminal
 
 check whether `devspace.yaml` or `./bootstrap/devspace.yaml` exists. If it does, check whether it has the `dev` config.
-    * Run `devspace enter --namespace <app namespace> [--profile $DEVENV_SERVICE]` with
-        * `DEVENV_IMAGE_REGISTRY` env variable
-        * `DEPLOY_TO_DEV_VERSION` env variable
-        * `DEVENV_APP_VERSION` env variable
-        * `DEVENV_KIND` env variable
-        * `DEVENV_SERVICE` env variable
-        * `KUBECONFIG` set to dev-environment
+
+* Run `devspace enter --namespace <app namespace> [--profile $DEVENV_SERVICE]` with
+    * `DEVENV_IMAGE_REGISTRY` env variable
+    * `DEPLOY_TO_DEV_VERSION` env variable
+    * `DEVENV_APP_VERSION` env variable
+    * `DEVENV_KIND` env variable
+    * `DEVENV_SERVICE` env variable
+    * `DEVENV_APPNAME` env variable
+    * `KUBECONFIG` set to dev-environment
 * Otherwise dev terminal not supported.

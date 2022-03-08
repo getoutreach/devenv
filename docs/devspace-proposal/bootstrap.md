@@ -27,15 +27,15 @@ The deployment mechanism is a bit different between KiND and loft clusters becau
 
 #### Deploy into KiND Cluster
 
-1. `devenv` calls `devspace deploy` with the right Kubernetes context, namespace, and `IMAGE_REGISTRY=outreach.local`.Devspace executes the rest of the process.
-1. `devspace` runs Buildkit locally. Tag it as outreach.local/<appName>:<random_version>. Load image into KiND in a post-build devspace hook.
+1. `devenv` calls `devspace deploy` with the right Kubernetes context, namespace, and `IMAGE_REGISTRY=outreach.local`. Devspace executes the rest of the process.
+1. `devspace` runs Buildkit locally. Tag it as $IMAGE_REGISTRY/<appName>:<random_version>. Load image into KiND in a post-build devspace hook.
 1. Build jsonnet (devspace calls a script from devbase, `build-jsonnet.sh`) in a pre-deploy hook. Then it uses `kubectl` to apply the pre-built manifests. (Note: We need to ensure the right `kubectl` version is used, the one provided with `devenv`.)
 
 > We should probably expose loading image/pushing it to dev registry through devenv. Right now, custom deployment scripts use hacks to get a devenv version of kind binary to load the image.
 
 #### Deploy into loft Cluster
 
-1. `devenv` calls `devspace deploy` with the right Kubernetes context, namespace, and `IMAGE_REGISTRY=$(devenv registry get)`.
+1. `devenv` calls `devspace deploy` with the right Kubernetes context, namespace, and `$DEVENV_IMAGE_REGISTRY`.
 1. (optimization) `devenv` ensures there's a Buildkit pod with mounted local volume for caching dependencies.
 1. `devspace` sets up credentials for dev registry, so the image can be both pushed and pulled
 1. `devspace` runs Buildkit remotely in-cluster. This requires docker context to be sent to cluster, `.dockerignore` is important to minimize amount of data being sent. The image is pushed to dev's image registry.

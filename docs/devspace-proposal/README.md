@@ -24,6 +24,7 @@ In case of pre-built services manifests from git main branch are used in combina
 #### Running From Source Code
 
 `devenv apps deploy` 
+
 * builds `jsonnet` manifests
 * builds an image from source in the `devenv` cluster
 * uses the new built image in kubernetes manifests
@@ -49,7 +50,7 @@ Developers can build and start the service, run tests, including e2e.
 
 #### Performance
 
-The development pods are not going to stay around forever and need to be recreated when manifests and Dockerfile change. With cloud devenv they also need to be recreated after the cluster goes to sleep.
+The development pods are not going to stay around forever and need to be recreated when manifests and Dockerfile change. With cloud devenv they also need to be recreated after the cluster wakes up from sleep.
 
 This leads to long time to ready/run in such a container. To avoid this, nightly build creates images with latest packages built in, Buildkit and dev pod share package cache, so devs don't have to redownload them all the time.
 
