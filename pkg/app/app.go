@@ -16,8 +16,7 @@ import (
 	"github.com/google/go-github/v42/github"
 	"golang.org/x/oauth2"
 
-	// TODO(jaredallard): Move this into gobox
-	githubauth "github.com/getoutreach/gobox/pkg/github"
+	githubauth "github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
