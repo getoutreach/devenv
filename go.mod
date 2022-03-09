@@ -27,7 +27,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/versent/saml2aws/v2 v2.34.0
-	github.com/vmware-tanzu/velero v1.7.1
+	github.com/vmware-tanzu/velero v1.8.0
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	google.golang.org/grpc v1.43.0
 	gopkg.in/yaml.v2 v2.4.0
