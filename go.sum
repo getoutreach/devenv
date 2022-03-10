@@ -744,6 +744,8 @@ github.com/getkin/kin-openapi v0.76.0/go.mod h1:660oXbgy5JFMKreazJaQTw7o+X00qeSy
 github.com/getoutreach/gobox v1.29.0/go.mod h1:Apu3eiwCQZlBSRkL1SgFnn0e2MDhhQGFBYQLiY7/HCI=
 github.com/getoutreach/gobox v1.35.0 h1:knwWjVKJDpDracD1orxHQ6GdayWodBIMBoW2zEhLvLk=
 github.com/getoutreach/gobox v1.35.0/go.mod h1:BwBGx4MrcAfFufbVZzQC2/L+lDN2yMwBjuElWKy7FUM=
+github.com/getoutreach/gobox v1.35.1 h1:PJQgUgGBkEKQOU/OGaEYg6Egc8+oXg7G7EuoKMg++/4=
+github.com/getoutreach/gobox v1.35.1/go.mod h1:BwBGx4MrcAfFufbVZzQC2/L+lDN2yMwBjuElWKy7FUM=
 github.com/getoutreach/localizer v1.12.0 h1:GxmfsCtTXDcbceKLKs4reIw4XnZpRH5tkSGncWee5lk=
 github.com/getoutreach/localizer v1.12.0/go.mod h1:gKArRCbfSj3FmyHKmR/WnCYon62E9K9jYYMOWcyllSE=
 github.com/getoutreach/vault-client v1.4.0 h1:9Tn6nuCNVBJ4K7UK4iBXPOreewTwhaZtdqJlJiVaSNw=
