@@ -742,8 +742,6 @@ github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1 h1:Xh9mvwEmhbdXlRS
 github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1/go.mod h1:ElSskYZe3oM8kThaHGJ+kiN2yyUMVXMZ7WxF9QqLDS8=
 github.com/getkin/kin-openapi v0.76.0/go.mod h1:660oXbgy5JFMKreazJaQTw7o+X00qeSyhcnluiMv+Xg=
 github.com/getoutreach/gobox v1.29.0/go.mod h1:Apu3eiwCQZlBSRkL1SgFnn0e2MDhhQGFBYQLiY7/HCI=
-github.com/getoutreach/gobox v1.35.0 h1:knwWjVKJDpDracD1orxHQ6GdayWodBIMBoW2zEhLvLk=
-github.com/getoutreach/gobox v1.35.0/go.mod h1:BwBGx4MrcAfFufbVZzQC2/L+lDN2yMwBjuElWKy7FUM=
 github.com/getoutreach/gobox v1.35.1 h1:PJQgUgGBkEKQOU/OGaEYg6Egc8+oXg7G7EuoKMg++/4=
 github.com/getoutreach/gobox v1.35.1/go.mod h1:BwBGx4MrcAfFufbVZzQC2/L+lDN2yMwBjuElWKy7FUM=
 github.com/getoutreach/localizer v1.12.0 h1:GxmfsCtTXDcbceKLKs4reIw4XnZpRH5tkSGncWee5lk=
