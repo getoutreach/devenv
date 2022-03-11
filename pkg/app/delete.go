@@ -51,6 +51,8 @@ func (a *App) Delete(ctx context.Context) error {
 	switch a.Type {
 	case TypeBootstrap:
 		err = a.deleteBootstrap(ctx)
+	case TypeDevspace:
+		return fmt.Errorf("devenv does not support deleting a devspace application (yet)")
 	case TypeLegacy:
 		err = a.deleteLegacy(ctx)
 	default:

@@ -2,18 +2,15 @@
 package registry
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"html/template"
-	"path"
 
+	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/box"
-	"github.com/getoutreach/gobox/pkg/region"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -63,24 +60,6 @@ func NewCmdRegistry(log logrus.FieldLogger) *cli.Command {
 	}
 }
 
-func (o *Options) parseRegistryPath(conf *box.DevelopmentRegistries, devenvName string) (string, error) {
-	str, err := template.New("render").Parse(conf.Path)
-	if err != nil {
-		return "", errors.Wrap(err,
-			"failed to parse endpoint as a go-template string, this is an error in box configuration. Report this to the owning team",
-		)
-	}
-
-	var buf bytes.Buffer
-	if err := str.Execute(&buf, map[string]string{
-		"DevenvName": devenvName,
-	}); err != nil {
-		return "", errors.Wrap(err, "failed to execute go-template endpoint string")
-	}
-
-	return buf.String(), nil
-}
-
 func (o *Options) getDevenvName(ctx context.Context, b *box.Config) (string, error) {
 	conf, err := config.LoadConfig(ctx)
 	if err != nil {
@@ -117,49 +96,13 @@ func (o *Options) RunGet(ctx context.Context) error { //nolint:funlen // Why: ac
 		return err
 	}
 
-	runtimeConf := &b.DeveloperEnvironmentConfig.RuntimeConfig
-	developmentRegistries := &runtimeConf.DevelopmentRegistries
-	loftConf := &runtimeConf.Loft
-
-	// find the cloud that we're configured to use
-	cloudName := loftConf.DefaultCloud
-	cloud := region.CloudFromCloudName(cloudName)
-	if cloud == nil {
-		return fmt.Errorf("unknown cloud '%s'", cloudName)
-	}
-
-	registries, ok := developmentRegistries.Clouds[cloudName]
-	if !ok {
-		return fmt.Errorf("no image registries configured for cloud '%s'", cloudName)
-	}
-	regions := registries.Regions()
-
-	// find the best region for us, based on the available regions from box
-	regionName, err := cloud.Regions(ctx).Filter(regions).Nearest(ctx, o.log)
-	if err != nil {
-		regionName = loftConf.DefaultRegion
-		o.log.WithError(err).Warn("Failed to find nearest region, falling back to us")
-	}
-
-	imageRegistryBase := ""
-	for _, e := range registries {
-		if e.Region == regionName {
-			// use the first one configured for the region
-			imageRegistryBase = e.Endpoint
-			break
-		}
-	}
-	if imageRegistryBase == "" {
-		return fmt.Errorf("failed to find a development image registry")
-	}
-
-	registryPath, err := o.parseRegistryPath(&runtimeConf.DevelopmentRegistries, devenvName)
+	imageRegistry, err := apps.DevImageRegistry(ctx, o.log, b, devenvName)
 	if err != nil {
 		return err
 	}
 
 	// print out the endpoint based on the templated path output + base endpoint
 	// from box
-	fmt.Println(path.Join(imageRegistryBase, registryPath))
+	fmt.Println(imageRegistry)
 	return nil
 }

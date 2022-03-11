@@ -4,23 +4,22 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
 
 	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/box"
-	"github.com/getoutreach/gobox/pkg/sshhelper"
-	"github.com/getoutreach/gobox/pkg/trace"
-	dockerparser "github.com/novln/docker-parser"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -38,160 +37,123 @@ func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	return app.Deploy(ctx)
 }
 
-// deployLegacy attempts to deploy an application by running the file at
-// ./scripts/deploy-to-dev.sh, relative to the repository root.
-func (a *App) deployLegacy(ctx context.Context) error {
-	a.log.Info("Deploying application into devenv...")
-	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/deploy-to-dev.sh", "update")
-	if err != nil {
-		return errors.Wrap(err, "failed to create command")
+// deployCommand returns the command that should be run to deploy the application
+// There are two ways to deploy:
+// 1. If there's an override script for the deployment, we use that.
+// 2. If there's no override script, we use devspace deploy directly.
+// We also check if devspace is able to deploy the app (has deployments configuration).
+func (a *App) deployCommand(ctx context.Context) (*exec.Cmd, error) {
+	// 1. We check whether there's an override script for the deployment.
+	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "deploy-to-dev.sh")); err == nil {
+		return cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/deploy-to-dev.sh", "deploy")
 	}
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
-	return cmd.Run()
-}
 
-// deployBootstrap deploys an application created by Bootstrap
-func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
-	// Only build a docker image if we're running locally.
-	// Note: This is deprecated, devspace/tilt instead.
-	builtDockerImage := false
-	if a.Local {
-		if a.kr.Type == kubernetesruntime.RuntimeTypeLocal {
-			a.log.Warn("Building a local docker image via apps deploy is deprecated")
-			if err := a.buildDockerImage(ctx); err != nil {
-				return errors.Wrap(err, "failed to build image")
-			}
-			builtDockerImage = true
-		} else {
-			a.log.Warn("Skipping docker image build, not supported with remote clusters")
-			a.log.Warn("This will likely be stuck at \"Waiting for Pods\".")
+	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "devenv-apps-deploy.sh")); err == nil {
+		return cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/devenv-apps-deploy.sh", "deploy")
+	}
+
+	// 2. We check whether there's a devspace.yaml file in the repository.
+	var devspaceYamlPath string
+
+	if _, err := os.Stat(filepath.Join(a.Path, "devspace.yaml")); err == nil {
+		devspaceYamlPath = filepath.Join(a.Path, "devspace.yaml")
+	} else if _, err := os.Stat(filepath.Join(a.Path, ".bootstrap", "devspace.yaml")); err == nil {
+		devspaceYamlPath = filepath.Join(a.Path, ".bootstrap", "devspace.yaml")
+	}
+
+	// 3. We check whether the devspace has deployments configured.
+	if devspaceYamlPath != "" {
+		// 4. We do have to make sure devspace CLI is installed.
+		devspace, err := ensureDevspace(a.log)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to ensure devspace is installed")
 		}
+
+		// We assume individual profiles don't add deployment configs. If they do, this won't work.
+		cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, "print", "--config", devspaceYamlPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create devspace print command")
+		}
+
+		vars, err := a.commandEnv(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		cmd.Env = append(cmd.Env, vars...)
+		devspaceConfig, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to run devspace print command")
+		}
+
+		deploymentsExp := regexp.MustCompile("deployments:")
+		cfgPos := deploymentsExp.FindIndex(devspaceConfig)
+
+		if len(cfgPos) == 0 {
+			return nil, errors.New("no deployments found in devspace.yaml")
+		}
+
+		args := []string{"deploy", "--config", devspaceYamlPath}
+		// We know ahead of time what namespace bootstrap apps deploy to. so we can use that.
+		if a.Type == TypeBootstrap {
+			args = append(args, "--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName), "--no-warn")
+		}
+
+		return cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, args...)
 	}
 
-	a.log.Info("Deploying application into devenv...")
-
-	// Note: This is done this way because a.Version is not sanitized and could
-	// be used to run arbitrary shell commands.
-	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/shell-wrapper.sh", "deploy-to-dev.sh", "update")
-	if err != nil {
-		return errors.Wrap(err, "failed to create command")
-	}
-
-	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
-	if b, err := cmd.CombinedOutput(); err != nil {
-		a.log.Error(string(b))
-		return errors.Wrap(err, "failed to deploy changes")
-	}
-
-	// Deprecated: Use devspace/tilt instead. Will be removed soon.
-	if builtDockerImage {
-		// Delete pods to ensure they are using our image we just pushed into the env
-		return devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
-			Namespaces: []string{a.RepositoryName + "--bento1a"},
-			Type: &corev1.Pod{
-				TypeMeta: v1.TypeMeta{
-					Kind:       "Pod",
-					APIVersion: corev1.SchemeGroupVersion.Identifier(),
-				},
-			},
-			Validator: func(obj *unstructured.Unstructured) bool {
-				var pod *corev1.Pod
-				err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &pod)
-				if err != nil {
-					return true
-				}
-
-				for i := range pod.Spec.Containers {
-					cont := &pod.Spec.Containers[i]
-
-					ref, err := dockerparser.Parse(cont.Image)
-					if err != nil {
-						continue
-					}
-
-					// check if it matched our applications image name.
-					// eventually we should do a better job at checking this (not building it ourself)
-					if !strings.Contains(ref.Name(), a.RepositoryName) {
-						continue
-					}
-
-					// return false here to not filter out the pod
-					// because we found a container we wanted
-					return false
-				}
-
-				return true
-			},
-		})
-	}
-
-	return nil
+	return nil, fmt.Errorf("no way to deploy application")
 }
 
-// buildDockerImage builds a docker image from a bootstrap repo
-// and deploys it into the developer environment cache
-//
-// !!! Note: This is deprecated: devspace, or tilt, should be used
-// !!! for development instead. This will be removed in a future release.
-func (a *App) buildDockerImage(ctx context.Context) error {
-	ctx = trace.StartCall(ctx, "deployapp.buildDockerImage")
-	defer trace.EndCall(ctx)
-
-	a.log.Info("Configuring ssh-agent for Docker")
-
-	sshAgent := sshhelper.GetSSHAgent()
-
-	_, err := sshhelper.LoadDefaultKey("github.com", sshAgent, a.log)
+// commandEnv returns the environment variables that should be set for the deploy/dev commands
+func (a *App) commandEnv(ctx context.Context) ([]string, error) {
+	registry, err := a.getImageRegistry(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to load Github SSH key into in-memory keyring")
+		return nil, errors.Wrap(err, "failed to get image registry")
 	}
 
-	a.log.Info("Building Docker image (this may take awhile)")
-	err = cmdutil.RunKubernetesCommand(ctx, a.Path, false, "make", "docker-build")
-	if err != nil {
-		return err
+	fmt.Printf("DEVENV_IMAGE_REGISTRY=%s\n", registry)
+
+	vars := []string{
+		fmt.Sprintf("DEPLOY_TO_DEV_VERSION=%s", a.Version),
+		fmt.Sprintf("DEVENV_APP_VERSION=%s", a.Version),
+		fmt.Sprintf("DEVENV_IMAGE_REGISTRY=%s", registry),
+		fmt.Sprintf("DEVENV_KIND=%s", a.kr.Name),
+		fmt.Sprintf("DEVENV_APPNAME=%s", a.RepositoryName),
 	}
 
-	a.log.Info("Pushing built Docker Image into Kubernetes")
-	//nolint:staticcheck // Why: we're aware of the deprecation
-	kindPath, err := kubernetesruntime.EnsureKind(a.log)
-	if err != nil {
-		return errors.Wrap(err, "failed to find/download Kind")
+	return vars, nil
+}
+
+func (a *App) getImageRegistry(ctx context.Context) (registry string, err error) {
+	switch a.kr.Type {
+	case kubernetesruntime.RuntimeTypeLocal:
+		registry = "outreach.local"
+	case kubernetesruntime.RuntimeTypeRemote:
+		registry, err = apps.DevImageRegistry(ctx, a.log, a.box, a.kr.ClusterName)
 	}
+	return
+}
 
-	baseImage := fmt.Sprintf("gcr.io/outreach-docker/%s", a.RepositoryName)
-	taggedImage := fmt.Sprintf("%s:%s", baseImage, a.Version)
+// ensureDevspace ensures that loft exists and returns
+// the location of devspace binary.
+// Note: this outputs text if loft is being downloaded
+func ensureDevspace(log logrus.FieldLogger) (string, error) {
+	devspaceVersion := "v5.18.4"
+	devspaceDownloadURL := fmt.Sprintf(
+		"https://github.com/loft-sh/devspace/releases/download/%s/devspace-%s-%s",
+		devspaceVersion,
+		runtime.GOOS,
+		runtime.GOARCH)
 
-	// tag the image to be the same as the version, which is a required format
-	// to be followed
-	if err = cmdutil.RunKubernetesCommand(ctx, a.Path, true,
-		"docker", "tag", baseImage, taggedImage); err != nil {
-		return errors.Wrap(err, "failed to tag image")
-	}
-
-	// load the docker image into the kind cache
-	err = cmdutil.RunKubernetesCommand(
-		ctx,
-		a.Path,
-		true,
-		kindPath,
-		"load",
-		"docker-image",
-		taggedImage,
-		"--name",
-		kubernetesruntime.KindClusterName,
-	)
-
-	return errors.Wrap(err, "failed to push docker image to Kubernetes")
+	return cmdutil.EnsureBinary(log, "devspace-"+devspaceVersion, "Kubernetes Runtime", devspaceDownloadURL, "")
 }
 
 // Deploy deploys the application into the devenv
 func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 	// Delete all jobs with a db-migration annotation.
 	err := devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
+		// TODO: the namespace is not quiet right I think.
 		Namespaces: []string{a.RepositoryName, fmt.Sprintf("%s--bento1a", a.RepositoryName)},
 		Type: &batchv1.Job{
 			TypeMeta: v1.TypeMeta{
@@ -201,7 +163,7 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 		},
 		Validator: func(obj *unstructured.Unstructured) bool {
 			var job *batchv1.Job
-			err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &job)
+			err := apiruntime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &job)
 			if err != nil {
 				return true
 			}
@@ -214,16 +176,17 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 		a.log.WithError(err).Error("failed to delete jobs")
 	}
 
-	switch a.Type {
-	case TypeBootstrap:
-		err = a.deployBootstrap(ctx)
-	case TypeLegacy:
-		err = a.deployLegacy(ctx)
-	default:
-		err = fmt.Errorf("unknown application type %s", a.Type)
-	}
+	cmd, err := a.deployCommand(ctx)
 	if err != nil {
 		return err
+	}
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err = cmd.Run(); err != nil {
+		return errors.Wrap(err, "failed to deploy application")
 	}
 
 	if err := devenvutil.WaitForAllPodsToBeReady(ctx, a.k, a.log); err != nil {

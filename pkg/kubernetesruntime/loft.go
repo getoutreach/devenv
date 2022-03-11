@@ -57,7 +57,7 @@ func NewLoftRuntime() *LoftRuntime {
 }
 
 // ensureLoft ensures that loft exists and returns
-// the location of kind. Note: this outputs text
+// the location of loft binary. Note: this outputs text
 // if loft is being downloaded
 func (*LoftRuntime) ensureLoft(log logrus.FieldLogger) (string, error) {
 	return cmdutil.EnsureBinary(log, "loft-"+loftVersion, "Kubernetes Runtime", loftDownloadURL, "")
