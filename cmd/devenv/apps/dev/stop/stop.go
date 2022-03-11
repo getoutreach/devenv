@@ -1,9 +1,8 @@
-package dev
+package stop
 
 import (
 	"context"
 
-	"github.com/getoutreach/devenv/cmd/devenv/apps/dev/stop"
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -20,13 +19,10 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	devLongDesc = `
-		Starts the development mode for the application.
+	stopLongDesc = `
+		Stops the development mode for the application.
 	`
-	devExample = `
-		# Starts the development mode for the application.
-		devenv apps dev
-
+	stopExample = `
 		# Stop the development mode for the application.
 		devenv apps dev stop
 	`
@@ -59,12 +55,9 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 // NewCmd creates a new cli.Command for the `apps dev` command
 func NewCmd(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
-		Name:        "dev",
-		Usage:       "Starts the development mode for the application.",
-		Description: cmdutil.NewDescription(devLongDesc, devExample),
-		Subcommands: []*cli.Command{
-			stop.NewCmd(log),
-		},
+		Name:        "stop",
+		Usage:       "Stops the development mode for the application.",
+		Description: cmdutil.NewDescription(stopLongDesc, stopExample),
 		Action: func(c *cli.Context) error {
 			o, err := NewOptions(log)
 			if err != nil {
@@ -103,5 +96,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Dev(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
+	return app.DevStop(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
 }
