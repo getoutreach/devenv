@@ -27,7 +27,7 @@ func ensureDevspace(log logrus.FieldLogger) (string, error) {
 		runtime.GOOS,
 		runtime.GOARCH)
 
-	return cmdutil.EnsureBinary(log, "devspace-"+devspaceVersion, "Kubernetes Runtime", devspaceDownloadURL, "")
+	return cmdutil.EnsureBinary(log, "devspace-"+devspaceVersion, "devspace", devspaceDownloadURL, "")
 }
 
 func (a *App) getImageRegistry(ctx context.Context) (registry string, err error) {
