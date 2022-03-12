@@ -5,11 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"regexp"
 
 	"github.com/getoutreach/devenv/internal/apps"
-	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/devenvutil"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/box"
@@ -42,66 +39,16 @@ func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 // 2. If there's no override script, we use devspace deploy directly.
 // We also check if devspace is able to deploy the app (has deployments configuration).
 func (a *App) deployCommand(ctx context.Context) (*exec.Cmd, error) {
-	// 1. We check whether there's an override script for the deployment.
-	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "deploy-to-dev.sh")); err == nil {
-		return cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/deploy-to-dev.sh", "deploy")
-	}
+	return a.command(ctx, &devspaceCommandOptions{
+		requiredConfig: "deployments",
+		devspaceArgs:   []string{"deploy"},
 
-	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "devenv-apps-deploy.sh")); err == nil {
-		return cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/devenv-apps-deploy.sh", "deploy")
-	}
-
-	// 2. We check whether there's a devspace.yaml file in the repository.
-	var devspaceYamlPath string
-
-	if _, err := os.Stat(filepath.Join(a.Path, "devspace.yaml")); err == nil {
-		devspaceYamlPath = filepath.Join(a.Path, "devspace.yaml")
-	} else if _, err := os.Stat(filepath.Join(a.Path, ".bootstrap", "devspace.yaml")); err == nil {
-		devspaceYamlPath = filepath.Join(a.Path, ".bootstrap", "devspace.yaml")
-	}
-
-	// 3. We check whether the devspace has deployments configured.
-	if devspaceYamlPath != "" {
-		// 4. We do have to make sure devspace CLI is installed.
-		devspace, err := ensureDevspace(a.log)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to ensure devspace is installed")
-		}
-
-		// We assume individual profiles don't add deployment configs. If they do, this won't work.
-		cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, "print", "--config", devspaceYamlPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create devspace print command")
-		}
-
-		vars, err := a.commandEnv(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		cmd.Env = append(cmd.Env, vars...)
-		devspaceConfig, err := cmd.CombinedOutput()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to run devspace print command")
-		}
-
-		deploymentsExp := regexp.MustCompile("deployments:")
-		cfgPos := deploymentsExp.FindIndex(devspaceConfig)
-
-		if len(cfgPos) == 0 {
-			return nil, errors.New("no deployments found in devspace.yaml")
-		}
-
-		args := []string{"deploy", "--config", devspaceYamlPath}
-		// We know ahead of time what namespace bootstrap apps deploy to. so we can use that.
-		if a.Type == TypeBootstrap {
-			args = append(args, "--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName), "--no-warn")
-		}
-
-		return cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, args...)
-	}
-
-	return nil, fmt.Errorf("no way to deploy application")
+		fallbackCommandPaths: []string{
+			"./scripts/deploy-to-dev.sh",
+			"./scripts/devenv-apps-deploy.sh",
+		},
+		fallbackCommandArgs: []string{"deploy"},
+	})
 }
 
 // Deploy deploys the application into the devenv
