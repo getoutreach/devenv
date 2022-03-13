@@ -2,7 +2,7 @@
 
 ## macOS
 
-Make sure that Homebrew is installed, then download the [Brewfile](https://github.com/getoutreach/devenv/blob/main/Brewfile), 
+Make sure that Homebrew is installed, then download the [Brewfile](https://github.com/getoutreach/devenv/blob/main/Brewfile),
 and run with it in the current directory:
 
 ```bash
