@@ -55,6 +55,15 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 		fmt.Sprintf("DEVENV_TYPE=%s", a.kr.Name),
 	}
 
+	if a.kr.Type == kubernetesruntime.RuntimeTypeLocal {
+		kind, err := kubernetesruntime.EnsureKind(a.log)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to ensure kind is installed")
+		}
+
+		vars = append(vars, fmt.Sprintf("DEVENV_KIND_BIN=%s", kind))
+	}
+
 	return vars, nil
 }
 
@@ -119,8 +128,12 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 			return nil, errors.Wrap(err, "failed to run devspace print command")
 		}
 
-		devExp := regexp.MustCompile(fmt.Sprintf("%s:", opts.requiredConfig))
-		cfgPos := devExp.FindIndex(devspaceConfig)
+		if err := a.clusterTypeSupported(ctx, devspace, devspaceYamlPath, vars); err != nil {
+			return nil, err
+		}
+
+		configExp := regexp.MustCompile(fmt.Sprintf("%s:", opts.requiredConfig))
+		cfgPos := configExp.FindIndex(devspaceConfig)
 		if len(cfgPos) == 0 {
 			return nil, fmt.Errorf("no %s found in devspace.yaml", opts.requiredConfig)
 		}
@@ -142,4 +155,33 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 	}
 
 	return nil, fmt.Errorf("no fallback script or devspace.yaml found for the application")
+}
+
+func (a *App) clusterTypeSupported(ctx context.Context, devspaceBin, devspaceConfigPath string, envVars []string) error {
+	if a.kr.Type == kubernetesruntime.RuntimeTypeLocal && a.Type == TypeBootstrap {
+		// For KiND and devspace, a kind profile must be configured.
+		cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path,
+			devspaceBin, "list", "profiles", "--disable-profile-activation", "--config", devspaceConfigPath)
+		if err != nil {
+			return errors.Wrap(err, "failed to create devspace print command")
+		}
+		cmd.Env = append(cmd.Env, envVars...)
+
+		// devspaceProfiles will look something like this:
+		// Name   Active   Description
+		// KiND   false    Enables deploying to KiND dev-environment. Automatically acti...
+		devspaceProfiles, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Print(string(devspaceProfiles))
+			return errors.Wrap(err, "failed to run devspace list profiles command")
+		}
+
+		kindProfileExp := regexp.MustCompile("KiND")
+		cfgPos := kindProfileExp.FindIndex(devspaceProfiles)
+		if len(cfgPos) == 0 {
+			return errors.New("local devenv not supported with devspace")
+		}
+	}
+
+	return nil
 }

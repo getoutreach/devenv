@@ -44,7 +44,10 @@ require (
 	k8s.io/kubectl v0.23.1
 )
 
-require github.com/docker/go-connections v0.4.0
+require (
+	github.com/docker/go-connections v0.4.0
+	github.com/novln/docker-parser v1.0.0
+)
 
 require (
 	cloud.google.com/go/compute v0.1.0 // indirect
