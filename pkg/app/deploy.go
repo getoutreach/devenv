@@ -196,10 +196,16 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 // 1. If there's an override script for the deployment, we use that.
 // 2. If there's no override script, we use devspace deploy directly.
 // We also check if devspace is able to deploy the app (has deployments configuration).
+// Skips building images locally if app is already prebuilt (!Local)
 func (a *App) deployCommand(ctx context.Context) (*exec.Cmd, error) {
+	args := []string{"deploy"}
+	if !a.Local {
+		args = append(args, "--skip-build")
+	}
+
 	return a.command(ctx, &devspaceCommandOptions{
 		requiredConfig: "deployments",
-		devspaceArgs:   []string{"deploy"},
+		devspaceArgs:   args,
 
 		fallbackCommandPaths: []string{
 			"./scripts/deploy-to-dev.sh",

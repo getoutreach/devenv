@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -31,6 +32,10 @@ func ensureDevspace(log logrus.FieldLogger) (string, error) {
 }
 
 func (a *App) getImageRegistry(ctx context.Context) (registry string, err error) {
+	if !a.Local {
+		return "gcr.io/outreach-docker", nil
+	}
+
 	switch a.kr.Type {
 	case kubernetesruntime.RuntimeTypeLocal:
 		registry = "outreach.local"
@@ -53,6 +58,9 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 		fmt.Sprintf("DEVENV_DEPLOY_IMAGE_REGISTRY=%s", registry),
 		fmt.Sprintf("DEVENV_DEPLOY_APPNAME=%s", a.RepositoryName),
 		fmt.Sprintf("DEVENV_TYPE=%s", a.kr.Name),
+
+		// We need to override IMAGE_REGISTRY devspace variable otherwise things fail for local deployments
+		fmt.Sprintf("DEVSPACE_FLAGS=--var=IMAGE_REGISTRY=%s", registry),
 	}
 
 	if a.kr.Type == kubernetesruntime.RuntimeTypeLocal {
@@ -115,6 +123,10 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 			return nil, errors.Wrap(err, "failed to ensure devspace is installed")
 		}
 
+		if err := a.clusterTypeSupported(ctx, devspace, devspaceYamlPath, vars); err != nil {
+			return nil, err
+		}
+
 		// We assume individual profiles don't add dev configs. If they do, this won't work.
 		cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, "print", "--config", devspaceYamlPath)
 		if err != nil {
@@ -128,10 +140,6 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 			return nil, errors.Wrap(err, "failed to run devspace print command")
 		}
 
-		if err := a.clusterTypeSupported(ctx, devspace, devspaceYamlPath, vars); err != nil {
-			return nil, err
-		}
-
 		configExp := regexp.MustCompile(fmt.Sprintf("%s:", opts.requiredConfig))
 		cfgPos := configExp.FindIndex(devspaceConfig)
 		if len(cfgPos) == 0 {
@@ -139,13 +147,13 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 		}
 
 		args := opts.devspaceArgs
-
 		args = append(args, "--config", devspaceYamlPath)
 		// We know ahead of time what namespace bootstrap apps deploy to. so we can use that.
 		if a.Type == TypeBootstrap {
 			args = append(args, "--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName), "--no-warn")
 		}
 
+		a.log.Infof("Running devspace %s", strings.Join(args, " "))
 		cmd, err = cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, args...)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create devspace command")
@@ -158,8 +166,9 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 }
 
 func (a *App) clusterTypeSupported(ctx context.Context, devspaceBin, devspaceConfigPath string, envVars []string) error {
-	if a.kr.Type == kubernetesruntime.RuntimeTypeLocal && a.Type == TypeBootstrap {
+	if a.Local && a.kr.Type == kubernetesruntime.RuntimeTypeLocal && a.Type == TypeBootstrap {
 		// For KiND and devspace, a kind profile must be configured.
+		// We can skip the check if app is not built locally.
 		cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path,
 			devspaceBin, "list", "profiles", "--disable-profile-activation", "--config", devspaceConfigPath)
 		if err != nil {
