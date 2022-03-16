@@ -81,6 +81,21 @@ func (o *Options) parseRegistryPath(conf *box.DevelopmentRegistries, devenvName 
 	return buf.String(), nil
 }
 
+func (o *Options) getDevenvType(ctx context.Context, b *box.Config) (kubernetesruntime.RuntimeType, error) {
+	conf, err := config.LoadConfig(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to load config")
+	}
+	kr, err := devenvutil.EnsureDevenvRunning(ctx, conf, b)
+
+	if err != nil {
+		return "", errors.Wrap(err, "failed to lookup current devenv type")
+	}
+
+	krConf := kr.GetConfig()
+	return krConf.Type, nil
+}
+
 func (o *Options) getDevenvName(ctx context.Context, b *box.Config) (string, error) {
 	conf, err := config.LoadConfig(ctx)
 	if err != nil {
@@ -110,6 +125,16 @@ func (o *Options) RunGet(ctx context.Context) error { //nolint:funlen // Why: ac
 	b, err := box.LoadBox()
 	if err != nil {
 		return errors.Wrap(err, "failed to load box configuration")
+	}
+
+	devenvType, err := o.getDevenvType(ctx, b)
+	if err != nil {
+		return err
+	}
+
+	if devenvType == kubernetesruntime.RuntimeTypeLocal {
+		fmt.Println("gcr.io/outreach-docker")
+		return nil
 	}
 
 	devenvName, err := o.getDevenvName(ctx, b)
