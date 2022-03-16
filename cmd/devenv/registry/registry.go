@@ -86,8 +86,8 @@ func (o *Options) getDevenvType(ctx context.Context, b *box.Config) (kubernetesr
 	if err != nil {
 		return "", errors.Wrap(err, "failed to load config")
 	}
-	kr, err := devenvutil.EnsureDevenvRunning(ctx, conf, b)
 
+	kr, err := devenvutil.EnsureDevenvRunning(ctx, conf, b)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to lookup current devenv type")
 	}
