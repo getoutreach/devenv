@@ -175,6 +175,7 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 	return cmd, nil
 }
 
+// clusterTypeSupported checks whether devspace is configured to work with KiND clusters
 func (a *App) clusterTypeSupported(ctx context.Context, devspaceBin, devspaceConfigPath string, envVars []string) error {
 	if !a.Local || a.kr.Type != kubernetesruntime.RuntimeTypeLocal || a.Type != TypeBootstrap {
 		return nil
