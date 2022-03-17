@@ -1,8 +1,7 @@
-package deploy
+package stop
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/app"
@@ -20,31 +19,26 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	deployLongDesc = `
-		Deploys an Outreach application into your developer environment.
-		The application name (appName) provided should match, exactly, an Outreach repository name.
+	stopLongDesc = `
+		Stops the development mode for the application.
 	`
-	deployExample = `
-		# Deploy an application to the developer environment
-		devenv apps deploy <appName>
-
-		# Deploy a local directory application to the developer environment
-		devenv apps deploy .
+	stopExample = `
+		# Stop the development mode for the application.
+		devenv apps dev stop
 	`
 )
 
-// Options are various options for the `apps deploy` command
+// Options are various options for the `apps dev` command
 type Options struct {
 	log  logrus.FieldLogger
 	k    kubernetes.Interface
 	conf *rest.Config
 
-	// App is the app to deploy
-	App         string
-	UseDevspace bool
+	// App is the app to dev
+	App string
 }
 
-// NewOptions create an initialized options struct for the `apps deploy` command
+// NewOptions create an initialized options struct for the `apps dev` command
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	k, conf, err := kube.GetKubeClientWithConfig()
 	if err != nil {
@@ -58,35 +52,28 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	}, nil
 }
 
-// NewCmd creates a new cli.Command for the `apps deploy` command
+// NewCmd creates a new cli.Command for the `apps dev` command
 func NewCmd(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
-		Name:        "deploy",
-		Usage:       "Deploy an application to the developer environment",
-		Description: cmdutil.NewDescription(deployLongDesc, deployExample),
-		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:  "x-use-devspace",
-				Usage: "Uses devspace to deploy the application. Might not be supported by all applications and all environments.",
-			},
-		},
+		Name:        "stop",
+		Usage:       "Stops the development mode for the application.",
+		Description: cmdutil.NewDescription(stopLongDesc, stopExample),
 		Action: func(c *cli.Context) error {
-			if c.Args().Len() == 0 {
-				return fmt.Errorf("missing application")
-			}
 			o, err := NewOptions(log)
 			if err != nil {
 				return err
 			}
-
 			o.App = c.Args().First()
-			o.UseDevspace = c.Bool("x-use-devspace")
+			// TODO use git to get root directory
+			if o.App == "" {
+				o.App = "."
+			}
 			return o.Run(c.Context)
 		},
 	}
 }
 
-// Run runs the `apps deploy` command
+// Run runs the `apps dev` command
 func (o *Options) Run(ctx context.Context) error {
 	b, err := box.LoadBox()
 	if err != nil {
@@ -109,5 +96,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Deploy(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig(), o.UseDevspace)
+	return app.DevStop(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
 }
