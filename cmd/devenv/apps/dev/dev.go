@@ -71,7 +71,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				return err
 			}
 			o.App = c.Args().First()
-			// TODO use git to get root directory
+			// TODO(DTSS-1494) use git to get root directory
 			if o.App == "" {
 				o.App = "."
 			}

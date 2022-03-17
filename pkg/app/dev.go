@@ -18,7 +18,6 @@ import (
 func Dev(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
 	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
 	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
-	// TODO: figure out what version do we want to use where.
 	app.Version = "latest"
 	if err != nil {
 		return errors.Wrap(err, "parse app")
@@ -32,7 +31,6 @@ func Dev(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b 
 func DevStop(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
 	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
 	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
-	// TODO: figure out what version do we want to use where.
 	app.Version = "latest"
 	if err != nil {
 		return errors.Wrap(err, "parse app")
@@ -74,7 +72,7 @@ func (a *App) devStopCommand(ctx context.Context) (*exec.Cmd, error) {
 
 // Dev starts the development mode for the application.
 func (a *App) Dev(ctx context.Context) error {
-	// TODO: Handle deleting jobs. devspace v6 will support doing this.
+	// TODO(DTSS-1496): Handle deleting jobs. devspace v6 will support doing this.
 
 	cmd, err := a.devCommand(ctx)
 	if err != nil {
@@ -92,7 +90,7 @@ func (a *App) Dev(ctx context.Context) error {
 	return a.appsClient.Set(ctx, &apps.App{Name: a.RepositoryName, Version: a.Version})
 }
 
-// Dev starts the development mode for the application.
+// Dev stop the development mode for the application.
 func (a *App) DevStop(ctx context.Context) error {
 	cmd, err := a.devStopCommand(ctx)
 	if err != nil {

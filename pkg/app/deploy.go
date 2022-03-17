@@ -271,7 +271,7 @@ func (a *App) DeployDevspace(ctx context.Context) error { //nolint:funlen
 func (a *App) deleteJobs(ctx context.Context) error {
 	// Delete all jobs with a db-migration annotation.
 	err := devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
-		// TODO: the namespace is not quiet right I think.
+		// TODO(DTSS-1455): the namespace is not quiet right I think.
 		Namespaces: []string{a.RepositoryName, fmt.Sprintf("%s--bento1a", a.RepositoryName)},
 		Type: &batchv1.Job{
 			TypeMeta: v1.TypeMeta{
