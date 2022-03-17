@@ -31,6 +31,9 @@ func ensureDevspace(log logrus.FieldLogger) (string, error) {
 	return cmdutil.EnsureBinary(log, "devspace-"+devspaceVersion, "devspace", devspaceDownloadURL, "")
 }
 
+// getImageRegistry returns the image registry for the app
+// If the app is built locally, it returns the dev registry (either devenv.local or one configured for use with remote cluster)
+// If the app is built remotely, it returns the image registry from box config.
 func (a *App) getImageRegistry(ctx context.Context) (registry string, err error) {
 	if !a.Local {
 		return a.box.DeveloperEnvironmentConfig.ImageRegistry, nil
@@ -75,15 +78,22 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 	return vars, nil
 }
 
+// devspaceCommandOptions contains options for creating exec.Cmd to run either a devspace or fallback command
 type devspaceCommandOptions struct {
+	// this config top level key has to be defined in devspace.yaml
 	requiredConfig string
-	devspaceArgs   []string
+
+	// args to pass to the devspace command
+	devspaceArgs []string
 
 	// If one of these exists, we don't invoke devspace.
 	fallbackCommandPaths []string
-	fallbackCommandArgs  []string
+
+	// ars to pass to the fallback command
+	fallbackCommandArgs []string
 }
 
+// command returns the exec.Cmd to run the devspace (or fallback) command
 func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.Cmd, error) {
 	// We can grab the env vars here, we'll need them in almost every case.
 	vars, err := a.commandEnv(ctx)
@@ -115,81 +125,83 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 		devspaceYamlPath = filepath.Join(a.Path, ".bootstrap", "devspace.yaml")
 	}
 
-	// 3. We check whether the devspace has dev configured.
-	if devspaceYamlPath != "" {
-		// 4. We do have to make sure devspace CLI is installed.
-		devspace, err := ensureDevspace(a.log)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to ensure devspace is installed")
-		}
-
-		if err := a.clusterTypeSupported(ctx, devspace, devspaceYamlPath, vars); err != nil {
-			return nil, err
-		}
-
-		// We assume individual profiles don't add dev configs. If they do, this won't work.
-		cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, "print", "--config", devspaceYamlPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create devspace print command")
-		}
-		cmd.Env = append(cmd.Env, vars...)
-
-		devspaceConfig, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Print(string(devspaceConfig))
-			return nil, errors.Wrap(err, "failed to run devspace print command")
-		}
-
-		configExp := regexp.MustCompile(fmt.Sprintf("%s:", opts.requiredConfig))
-		cfgPos := configExp.FindIndex(devspaceConfig)
-		if len(cfgPos) == 0 {
-			return nil, fmt.Errorf("no %s found in devspace.yaml", opts.requiredConfig)
-		}
-
-		args := opts.devspaceArgs
-		args = append(args, "--config", devspaceYamlPath)
-		// We know ahead of time what namespace bootstrap apps deploy to. so we can use that.
-		if a.Type == TypeBootstrap {
-			args = append(args, "--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName), "--no-warn")
-		}
-
-		a.log.Infof("Running devspace %s", strings.Join(args, " "))
-		cmd, err = cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, args...)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create devspace command")
-		}
-		cmd.Env = append(cmd.Env, vars...)
-		return cmd, nil
+	if devspaceYamlPath == "" {
+		return nil, fmt.Errorf("no fallback script or devspace.yaml found for the application")
 	}
 
-	return nil, fmt.Errorf("no fallback script or devspace.yaml found for the application")
+	// 3. We do have to make sure devspace CLI is installed.
+	devspace, err := ensureDevspace(a.log)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to ensure devspace is installed")
+	}
+
+	if err := a.clusterTypeSupported(ctx, devspace, devspaceYamlPath, vars); err != nil {
+		return nil, err
+	}
+
+	// 4. We check whether the devspace has requiredConfig configured.
+	// We assume individual profiles don't add dev configs. If they do, this won't work.
+	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, "print", "--config", devspaceYamlPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create devspace print command")
+	}
+	cmd.Env = append(cmd.Env, vars...)
+
+	devspaceConfig, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Print(string(devspaceConfig))
+		return nil, errors.Wrap(err, "failed to run devspace print command")
+	}
+
+	configExp := regexp.MustCompile(fmt.Sprintf("%s:", opts.requiredConfig))
+	cfgPos := configExp.FindIndex(devspaceConfig)
+	if len(cfgPos) == 0 {
+		return nil, fmt.Errorf("no %s found in devspace.yaml", opts.requiredConfig)
+	}
+
+	args := opts.devspaceArgs
+	args = append(args, "--config", devspaceYamlPath)
+	// We know ahead of time what namespace bootstrap apps deploy to. so we can use that.
+	if a.Type == TypeBootstrap {
+		args = append(args, "--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName), "--no-warn")
+	}
+
+	a.log.Infof("Running devspace %s", strings.Join(args, " "))
+	cmd, err = cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, args...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create devspace command")
+	}
+	cmd.Env = append(cmd.Env, vars...)
+	return cmd, nil
 }
 
 func (a *App) clusterTypeSupported(ctx context.Context, devspaceBin, devspaceConfigPath string, envVars []string) error {
-	if a.Local && a.kr.Type == kubernetesruntime.RuntimeTypeLocal && a.Type == TypeBootstrap {
-		// For KiND and devspace, a kind profile must be configured.
-		// We can skip the check if app is not built locally.
-		cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path,
-			devspaceBin, "list", "profiles", "--disable-profile-activation", "--config", devspaceConfigPath)
-		if err != nil {
-			return errors.Wrap(err, "failed to create devspace print command")
-		}
-		cmd.Env = append(cmd.Env, envVars...)
+	if !a.Local || a.kr.Type != kubernetesruntime.RuntimeTypeLocal || a.Type != TypeBootstrap {
+		return nil
+	}
 
-		// devspaceProfiles will look something like this:
-		// Name   Active   Description
-		// KiND   false    Enables deploying to KiND dev-environment. Automatically acti...
-		devspaceProfiles, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Print(string(devspaceProfiles))
-			return errors.Wrap(err, "failed to run devspace list profiles command")
-		}
+	// For KiND and devspace, a kind profile must be configured.
+	// We can skip the check if app is not built locally.
+	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path,
+		devspaceBin, "list", "profiles", "--disable-profile-activation", "--config", devspaceConfigPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to create devspace print command")
+	}
+	cmd.Env = append(cmd.Env, envVars...)
 
-		kindProfileExp := regexp.MustCompile("KiND")
-		cfgPos := kindProfileExp.FindIndex(devspaceProfiles)
-		if len(cfgPos) == 0 {
-			return errors.New("local devenv not supported with devspace")
-		}
+	// devspaceProfiles will look something like this:
+	// Name   Active   Description
+	// KiND   false    Enables deploying to KiND dev-environment. Automatically acti...
+	devspaceProfiles, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Print(string(devspaceProfiles))
+		return errors.Wrap(err, "failed to run devspace list profiles command")
+	}
+
+	kindProfileExp := regexp.MustCompile("KiND")
+	cfgPos := kindProfileExp.FindIndex(devspaceProfiles)
+	if len(cfgPos) == 0 {
+		return errors.New("local devenv not supported with devspace")
 	}
 
 	return nil

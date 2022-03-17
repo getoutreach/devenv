@@ -23,16 +23,19 @@ var (
 	`
 )
 
+// Options holds the options for the registry command
 type Options struct {
 	log logrus.FieldLogger
 }
 
+// NewOptions creates a new Options instance for the registry command
 func NewOptions(log logrus.FieldLogger) (*Options, error) {
 	return &Options{
 		log: log,
 	}, nil
 }
 
+// NewCmdRegistry creates a new command for the registry subcommand
 func NewCmdRegistry(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
 		Name:        "registry",
@@ -60,6 +63,7 @@ func NewCmdRegistry(log logrus.FieldLogger) *cli.Command {
 	}
 }
 
+// getDevenvName returns the name of the devenv in case it's a loft dev environment
 func (o *Options) getDevenvName(ctx context.Context, b *box.Config) (string, error) {
 	conf, err := config.LoadConfig(ctx)
 	if err != nil {

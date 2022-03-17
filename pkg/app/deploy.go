@@ -21,7 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	apiruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -102,7 +102,7 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 			},
 			Validator: func(obj *unstructured.Unstructured) bool {
 				var pod *corev1.Pod
-				err := apiruntime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &pod)
+				err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &pod)
 				if err != nil {
 					return true
 				}
@@ -193,12 +193,11 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 
 // Deploy deploys the application into the devenv
 func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
-	var err error
-	if err = a.deleteJobs(ctx); err != nil {
+	if err := a.deleteJobs(ctx); err != nil {
 		a.log.WithError(err).Error("failed to delete jobs")
 	}
 
-	//nolint:exhaustive // Why: We don't want to delete the app that supports devspace without the x-use-devspace flag.
+	var err error
 	switch a.Type {
 	case TypeBootstrap:
 		err = a.deployBootstrap(ctx)
@@ -227,6 +226,7 @@ func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 func (a *App) deployCommand(ctx context.Context) (*exec.Cmd, error) {
 	args := []string{"deploy"}
 	if !a.Local {
+		// We don't want to build docker images from source when deploying prebuilt apps.
 		args = append(args, "--skip-build")
 	}
 
@@ -242,7 +242,7 @@ func (a *App) deployCommand(ctx context.Context) (*exec.Cmd, error) {
 	})
 }
 
-// Deploy deploys the application into the devenv
+// Deploy deploys the application into the devenv using devspace deploy command
 func (a *App) DeployDevspace(ctx context.Context) error { //nolint:funlen
 	if err := a.deleteJobs(ctx); err != nil {
 		a.log.WithError(err).Error("failed to delete jobs")
@@ -257,7 +257,7 @@ func (a *App) DeployDevspace(ctx context.Context) error { //nolint:funlen
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err = cmd.Run(); err != nil {
+	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, "failed to deploy application")
 	}
 
@@ -268,6 +268,7 @@ func (a *App) DeployDevspace(ctx context.Context) error { //nolint:funlen
 	return a.appsClient.Set(ctx, &apps.App{Name: a.RepositoryName, Version: a.Version})
 }
 
+// deleteJobs deletes all jobs with DeleteJobAnnotation
 func (a *App) deleteJobs(ctx context.Context) error {
 	// Delete all jobs with a db-migration annotation.
 	err := devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
@@ -281,7 +282,7 @@ func (a *App) deleteJobs(ctx context.Context) error {
 		},
 		Validator: func(obj *unstructured.Unstructured) bool {
 			var job *batchv1.Job
-			err := apiruntime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &job)
+			err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &job)
 			if err != nil {
 				return true
 			}

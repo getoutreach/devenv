@@ -72,7 +72,6 @@ func (a *App) deleteCommand(ctx context.Context) (*exec.Cmd, error) {
 
 func (a *App) Delete(ctx context.Context) error {
 	var err error
-	//nolint:exhaustive // Why: We don't want to delete the app that supports devspace without the x-use-devspace flag.
 	switch a.Type {
 	case TypeBootstrap:
 		err = a.deleteBootstrap(ctx)
@@ -89,6 +88,7 @@ func (a *App) Delete(ctx context.Context) error {
 	return a.appsClient.Delete(ctx, a.RepositoryName)
 }
 
+// DeleteDevspace deletes the application using devspace purge commnad
 func (a *App) DeleteDevspace(ctx context.Context) error {
 	cmd, err := a.deleteCommand(ctx)
 	if err != nil {

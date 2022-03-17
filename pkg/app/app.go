@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// TODO: Do we want to redo Type? Given we support more than 1 fallback/override script kinda invalidates it.
+// IDEA(pelisy): Do we want to redo Type? Given we support more than 1 fallback/override script kinda invalidates it.
 
 var validRepoReg = regexp.MustCompile(`^([A-Za-z_\-.])+$`)
 
@@ -34,7 +34,6 @@ type Type string
 
 const (
 	TypeBootstrap Type = "bootstrap"
-	TypeDevspace  Type = "devspace"
 	TypeLegacy    Type = "legacy"
 
 	DeleteJobAnnotation = "outreach.io/db-migration-delete"
@@ -351,16 +350,6 @@ func (a *App) determineType(fileExists func(string) bool) error {
 		// All bootstrap services are set up for use with devspace but there are more rules
 		// applicable just to bootstrap services.
 		a.Type = TypeBootstrap
-		return nil
-	}
-
-	if fileExists("devspace.yaml") {
-		a.Type = TypeDevspace
-		return nil
-	}
-	if fileExists(".bootstrap/devspace.yaml") {
-		// Some repositories have a .bootstrap folder but are not bootstrap services.
-		a.Type = TypeDevspace
 		return nil
 	}
 

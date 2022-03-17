@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// parseRegistryPath parses the registry path from the devenv name and box config
 func parseRegistryPath(conf *box.DevelopmentRegistries, devenvName string) (string, error) {
 	str, err := template.New("render").Parse(conf.Path)
 	if err != nil {
