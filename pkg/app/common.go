@@ -17,9 +17,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ensureDevspace ensures that loft exists and returns
+// ensureDevspace ensures that devspace exists and returns
 // the location of devspace binary.
-// Note: this outputs text if loft is being downloaded
+// Note: this outputs text if devspace is being downloaded
 func ensureDevspace(log logrus.FieldLogger) (string, error) {
 	devspaceVersion := "v5.18.4"
 	devspaceDownloadURL := fmt.Sprintf(
@@ -33,12 +33,12 @@ func ensureDevspace(log logrus.FieldLogger) (string, error) {
 
 func (a *App) getImageRegistry(ctx context.Context) (registry string, err error) {
 	if !a.Local {
-		return "gcr.io/outreach-docker", nil
+		return a.box.DeveloperEnvironmentConfig.ImageRegistry, nil
 	}
 
 	switch a.kr.Type {
 	case kubernetesruntime.RuntimeTypeLocal:
-		registry = "outreach.local"
+		registry = "devenv.local"
 	case kubernetesruntime.RuntimeTypeRemote:
 		registry, err = apps.DevImageRegistry(ctx, a.log, a.box, a.kr.ClusterName)
 	}
