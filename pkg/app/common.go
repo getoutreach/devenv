@@ -79,8 +79,8 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 	return vars, nil
 }
 
-// devspaceCommandOptions contains options for creating exec.Cmd to run either a devspace or fallback command
-type devspaceCommandOptions struct {
+// commandBuilderOptions contains options for creating exec.Cmd to run either a devspace or fallback command
+type commandBuilderOptions struct {
 	// this config top level key has to be defined in devspace.yaml
 	requiredConfig string
 
@@ -95,14 +95,35 @@ type devspaceCommandOptions struct {
 }
 
 // command returns the exec.Cmd to run the devspace (or fallback) command
-func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.Cmd, error) {
+func (a *App) command(ctx context.Context, opts *commandBuilderOptions) (*exec.Cmd, error) {
 	// We can grab the env vars here, we'll need them in almost every case.
 	vars, err := a.commandEnv(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// 1. We check whether there's an override script for the deployment.
+	cmd, err := a.overrideCommand(ctx, opts, vars)
+	if err != nil {
+		return nil, err
+	}
+	if cmd != nil {
+		return cmd, nil
+	}
+
+	cmd, err = a.devspaceCommand(ctx, opts, vars)
+	if err != nil {
+		return nil, err
+	}
+	if cmd != nil {
+		return cmd, nil
+	}
+
+	return nil, fmt.Errorf("no fallback script or devspace.yaml found for the application")
+}
+
+// overrideCommand returns the exec.Cmd to run the override script
+func (a *App) overrideCommand(ctx context.Context, opts *commandBuilderOptions, vars []string) (*exec.Cmd, error) {
+	// We check whether there's an override script for the deployment.
 	for _, p := range opts.fallbackCommandPaths {
 		if _, err := os.Stat(filepath.Join(a.Path, p)); err != nil {
 			continue
@@ -112,13 +133,17 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 		if err != nil {
 			return nil, err
 		}
-
 		cmd.Env = append(cmd.Env, vars...)
 
 		return cmd, nil
 	}
 
-	// 2. We check whether there's a devspace.yaml file in the repository.
+	return nil, nil
+}
+
+// devspaceCommand returns the exec.Cmd to run the devspace command
+func (a *App) devspaceCommand(ctx context.Context, opts *commandBuilderOptions, vars []string) (*exec.Cmd, error) {
+	// We check whether there's a devspace.yaml file in the repository.
 	var devspaceYamlPath string
 	if _, err := os.Stat(filepath.Join(a.Path, "devspace.yaml")); err == nil {
 		devspaceYamlPath = filepath.Join(a.Path, "devspace.yaml")
@@ -130,7 +155,7 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 		return nil, fmt.Errorf("no fallback script or devspace.yaml found for the application")
 	}
 
-	// 3. We do have to make sure devspace CLI is installed.
+	// We do have to make sure devspace CLI is installed.
 	devspace, err := ensureDevspace(a.log)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to ensure devspace is installed")
@@ -162,7 +187,7 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 
 // devspaceConfigured checks whether the devspace.yaml has the required config
 func (a *App) devspaceConfigured(
-	ctx context.Context, opts *devspaceCommandOptions, devspace, devspaceYamlPath string, vars []string) error {
+	ctx context.Context, opts *commandBuilderOptions, devspace, devspaceYamlPath string, vars []string) error {
 	// 4. We check whether the devspace has requiredConfig configured.
 	// We assume individual profiles don't add dev configs. If they do, this won't work.
 	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, "print", "--skip-info", "--config", devspaceYamlPath)

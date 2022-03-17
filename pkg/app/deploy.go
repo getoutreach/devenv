@@ -230,7 +230,7 @@ func (a *App) deployCommand(ctx context.Context) (*exec.Cmd, error) {
 		args = append(args, "--skip-build")
 	}
 
-	return a.command(ctx, &devspaceCommandOptions{
+	return a.command(ctx, &commandBuilderOptions{
 		requiredConfig: "deployments",
 		devspaceArgs:   args,
 

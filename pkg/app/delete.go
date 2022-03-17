@@ -58,7 +58,7 @@ func (a *App) deleteBootstrap(ctx context.Context) error {
 // 2. If there's no override script, we use devspace purge directly.
 // We also check if devspace is able to deploy the app (has deployments configuration).
 func (a *App) deleteCommand(ctx context.Context) (*exec.Cmd, error) {
-	return a.command(ctx, &devspaceCommandOptions{
+	return a.command(ctx, &commandBuilderOptions{
 		requiredConfig: "deployments",
 		devspaceArgs:   []string{"purge"},
 
