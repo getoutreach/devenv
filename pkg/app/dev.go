@@ -74,7 +74,7 @@ func (a *App) devStopCommand(ctx context.Context) (*exec.Cmd, error) {
 
 // Dev starts the development mode for the application.
 func (a *App) Dev(ctx context.Context) error {
-	// TODO: Handle deleting jobs. Ideally, this would be done by devspace too.
+	// TODO: Handle deleting jobs. devspace v6 will support doing this.
 
 	cmd, err := a.devCommand(ctx)
 	if err != nil {
