@@ -15,6 +15,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 // ensureDevspace ensures that devspace exists and returns
@@ -139,24 +140,8 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 		return nil, err
 	}
 
-	// 4. We check whether the devspace has requiredConfig configured.
-	// We assume individual profiles don't add dev configs. If they do, this won't work.
-	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, "print", "--config", devspaceYamlPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create devspace print command")
-	}
-	cmd.Env = append(cmd.Env, vars...)
-
-	devspaceConfig, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Print(string(devspaceConfig))
-		return nil, errors.Wrap(err, "failed to run devspace print command")
-	}
-
-	configExp := regexp.MustCompile(fmt.Sprintf("%s:", opts.requiredConfig))
-	cfgPos := configExp.FindIndex(devspaceConfig)
-	if len(cfgPos) == 0 {
-		return nil, fmt.Errorf("no %s found in devspace.yaml", opts.requiredConfig)
+	if err := a.devspaceConfigured(ctx, opts, devspace, devspaceYamlPath, vars); err != nil {
+		return nil, err
 	}
 
 	args := opts.devspaceArgs
@@ -167,12 +152,42 @@ func (a *App) command(ctx context.Context, opts *devspaceCommandOptions) (*exec.
 	}
 
 	a.log.Infof("Running devspace %s", strings.Join(args, " "))
-	cmd, err = cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, args...)
+	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, args...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create devspace command")
 	}
 	cmd.Env = append(cmd.Env, vars...)
 	return cmd, nil
+}
+
+// devspaceConfigured checks whether the devspace.yaml has the required config
+func (a *App) devspaceConfigured(
+	ctx context.Context, opts *devspaceCommandOptions, devspace, devspaceYamlPath string, vars []string) error {
+	// 4. We check whether the devspace has requiredConfig configured.
+	// We assume individual profiles don't add dev configs. If they do, this won't work.
+	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, "print", "--skip-info", "--config", devspaceYamlPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to create devspace print command")
+	}
+	cmd.Env = append(cmd.Env, vars...)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Print(string(out))
+		return errors.Wrap(err, "failed to run devspace print command")
+	}
+
+	var cfg map[string]interface{}
+	if err := yaml.Unmarshal(out, &cfg); err != nil {
+		fmt.Print(string(out))
+		return errors.Wrap(err, "failed to parse devspace print output")
+	}
+
+	if _, ok := cfg[opts.requiredConfig]; !ok {
+		return fmt.Errorf("devspace.yaml is missing required config %s", opts.requiredConfig)
+	}
+
+	return nil
 }
 
 // clusterTypeSupported checks whether devspace is configured to work with KiND clusters
@@ -190,6 +205,7 @@ func (a *App) clusterTypeSupported(ctx context.Context, devspaceBin, devspaceCon
 	}
 	cmd.Env = append(cmd.Env, envVars...)
 
+	// We cannot use print command here, because it strips the profiles.
 	// devspaceProfiles will look something like this:
 	// Name   Active   Description
 	// KiND   false    Enables deploying to KiND dev-environment. Automatically acti...
