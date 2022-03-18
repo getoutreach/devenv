@@ -85,6 +85,7 @@ type Options struct {
 	SnapshotChannel   box.SnapshotLockChannel
 	KubernetesRuntime kubernetesruntime.Runtime
 	Base              bool
+	UseDevspace       bool
 
 	log     logrus.FieldLogger
 	d       dockerclient.APIClient
@@ -135,6 +136,10 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 				Name:  "base",
 				Usage: "Deploy a developer environment with nothing in it",
 			},
+			&cli.BoolFlag{
+				Name:  "x-use-devspace",
+				Usage: "Uses devspace to deploy the application. Might not be supported by all applications and all environments.",
+			},
 			&cli.StringFlag{
 				Name:  "snapshot-target",
 				Usage: "Snapshot target to use",
@@ -165,6 +170,7 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 			cmdutil.CLIStringSliceToStringSlice(c.StringSlice("deploy-app"), &o.DeployApps)
 
 			o.Base = c.Bool("base")
+			o.UseDevspace = c.Bool("x-use-devspace")
 			o.SnapshotTarget = c.String("snapshot-target")
 			o.SnapshotChannel = box.SnapshotLockChannel(c.String("snapshot-channel"))
 

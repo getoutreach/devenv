@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
@@ -14,12 +16,16 @@ import (
 )
 
 func Delete(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
-	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
+	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig, useDevspace bool) error {
 	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
 	defer app.Close()
+
+	if useDevspace {
+		return app.DeleteDevspace(ctx)
+	}
 
 	return app.Delete(ctx)
 }
@@ -46,6 +52,24 @@ func (a *App) deleteBootstrap(ctx context.Context) error {
 	return nil
 }
 
+// deleteCommand returns the command that should be run to delete the application
+// There are two ways to deploy:
+// 1. If there's an override script for the deployment, we use that.
+// 2. If there's no override script, we use devspace purge directly.
+// We also check if devspace is able to deploy the app (has deployments configuration).
+func (a *App) deleteCommand(ctx context.Context) (*exec.Cmd, error) {
+	return a.command(ctx, &commandBuilderOptions{
+		requiredConfig: "deployments",
+		devspaceArgs:   []string{"purge"},
+
+		fallbackCommandPaths: []string{
+			"./scripts/deploy-to-dev.sh",
+			"./scripts/devenv-apps-deploy.sh",
+		},
+		fallbackCommandArgs: []string{"delete"},
+	})
+}
+
 func (a *App) Delete(ctx context.Context) error {
 	var err error
 	switch a.Type {
@@ -59,6 +83,24 @@ func (a *App) Delete(ctx context.Context) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	return a.appsClient.Delete(ctx, a.RepositoryName)
+}
+
+// DeleteDevspace deletes the application using devspace purge commnad
+func (a *App) DeleteDevspace(ctx context.Context) error {
+	cmd, err := a.deleteCommand(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err = cmd.Run(); err != nil {
+		return errors.Wrap(err, "failed to delete application")
 	}
 
 	return a.appsClient.Delete(ctx, a.RepositoryName)
