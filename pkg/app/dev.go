@@ -23,8 +23,6 @@ func Dev(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b 
 	}
 	defer app.Close()
 
-	// We don't want to deploy the app from source, so we just immediately replace it with dev container.
-	app.Local = false
 	app.Version = "latest"
 
 	return app.Dev(ctx)
@@ -39,8 +37,6 @@ func DevStop(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface
 	}
 	defer app.Close()
 
-	// We don't want to deploy the app from source, so we just immediately replace it with dev container.
-	app.Local = false
 	app.Version = "latest"
 
 	return app.DevStop(ctx)
