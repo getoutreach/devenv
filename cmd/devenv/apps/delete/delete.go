@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/config"
@@ -41,7 +40,8 @@ type Options struct {
 	conf *rest.Config
 
 	// App to delete
-	App string
+	App         string
+	UseDevspace bool
 }
 
 // NewOptions creates a new options struct for this command
@@ -65,6 +65,12 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 		Aliases:     []string{"purge"},
 		Usage:       "Delete an application in the developer environment",
 		Description: cmdutil.NewDescription(deleteLongDesc, deleteExample),
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "x-use-devspace",
+				Usage: "Uses devspace to deploy the application. Might not be supported by all applications and all environments.",
+			},
+		},
 		Action: func(c *cli.Context) error {
 			if c.Args().Len() == 0 {
 				return fmt.Errorf("missing application")
@@ -75,6 +81,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			}
 
 			o.App = c.Args().First()
+			o.UseDevspace = c.Bool("x-use-devspace")
 			return o.Run(c.Context)
 		},
 	}
@@ -97,22 +104,5 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	appsClient := apps.NewKubernetesConfigmapClient(o.k, "")
-	deployedApps, err := appsClient.List(ctx)
-	if err != nil {
-		return err
-	}
-
-	found := false
-	for _, a := range deployedApps {
-		if a.Name == o.App {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("Failed to find application named '%s' that was deployed", o.App)
-	}
-
-	return app.Delete(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
+	return app.Delete(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig(), o.UseDevspace)
 }

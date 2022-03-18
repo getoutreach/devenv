@@ -16,14 +16,15 @@ import (
 	"github.com/google/go-github/v42/github"
 	"golang.org/x/oauth2"
 
-	// TODO(jaredallard): Move this into gobox
-	githubauth "github.com/getoutreach/gobox/pkg/github"
+	githubauth "github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
+
+// IDEA(pelisy): Do we want to redo Type? Given we support more than 1 fallback/override script kinda invalidates it.
 
 var validRepoReg = regexp.MustCompile(`^([A-Za-z_\-.])+$`)
 
@@ -96,6 +97,18 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 		app.Local = true
 		app.Version = "local"
 		app.RepositoryName = filepath.Base(appNameOrPath)
+
+		if !filepath.IsAbs(app.Path) {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get current working dir")
+			}
+
+			app.Path, err = filepath.Abs(filepath.Join(cwd, appNameOrPath))
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to convert relative app path to absolute")
+			}
+		}
 
 		if version != "" {
 			return nil, fmt.Errorf("when deploying a local-app a version must not be set")
@@ -296,23 +309,13 @@ func (a *App) downloadRepository(ctx context.Context, repo string) (cleanup func
 
 // determineTypeLocal determines the type of a local application
 func (a *App) determineTypeLocal(_ context.Context) error {
-	// bootstrap has bootstrap.lock
-	if _, err := os.Stat(filepath.Join(a.Path, "bootstrap.lock")); err == nil {
-		a.Type = TypeBootstrap
-		return nil
+	fileExists := func(path string) bool {
+		parts := strings.Split(path, "/")
+		_, err := os.Stat(filepath.Join(parts...))
+		return err == nil
 	}
 
-	// legacy applications use scripts/deploy-to-dev.sh
-	if _, err := os.Stat(filepath.Join(a.Path, "scripts", "deploy-to-dev.sh")); err == nil {
-		a.Type = TypeLegacy
-		return nil
-	}
-
-	// else not supported
-	return fmt.Errorf(
-		"%s doesn't appear to support being deployed via the devenv, please contact application owner",
-		a.RepositoryName,
-	)
+	return a.determineType(fileExists)
 }
 
 // determineType determines the type of repository a service is
@@ -330,24 +333,39 @@ func (a *App) determineTypeRemote(ctx context.Context) error {
 		return errors.Wrap(err, "failed to check if repository exists")
 	}
 
-	if _, _, _, err = gh.Repositories.GetContents(ctx, a.box.Org, a.RepositoryName, "bootstrap.lock",
-		&github.RepositoryContentGetOptions{
+	fileExists := func(path string) bool {
+		versionOpts := &github.RepositoryContentGetOptions{
 			Ref: a.Version,
-		}); err == nil {
-		a.Type = TypeBootstrap
-	} else if _, _, _, err = gh.Repositories.GetContents(ctx, a.box.Org, a.RepositoryName, "scripts/deploy-to-dev.sh",
-		&github.RepositoryContentGetOptions{
-			Ref: a.Version,
-		}); err == nil {
-		a.Type = TypeLegacy
-	} else {
-		return fmt.Errorf(
-			"%s doesn't appear to support being deployed via the devenv, please contact application owners",
-			a.RepositoryName,
-		)
+		}
+		_, _, _, err = gh.Repositories.GetContents(ctx, a.box.Org, a.RepositoryName, path, versionOpts)
+
+		return err == nil
 	}
 
-	return nil
+	return a.determineType(fileExists)
+}
+
+func (a *App) determineType(fileExists func(string) bool) error {
+	if fileExists("bootstrap.lock") {
+		// All bootstrap services are set up for use with devspace but there are more rules
+		// applicable just to bootstrap services.
+		a.Type = TypeBootstrap
+		return nil
+	}
+
+	if fileExists("scripts/deploy-to-dev.sh") {
+		a.Type = TypeLegacy
+		return nil
+	}
+	if fileExists("scripts/devenv-apps-dev.sh") {
+		a.Type = TypeLegacy
+		return nil
+	}
+
+	return fmt.Errorf(
+		"%s doesn't appear to support being deployed via the devenv, please contact application owners",
+		a.RepositoryName,
+	)
 }
 
 // determineRepository name determines a repositories name from the path
@@ -359,13 +377,8 @@ func (a *App) determineRepositoryName() error {
 			return nil
 		}
 
-		if filepath.IsAbs(a.Path) {
-			a.RepositoryName = filepath.Base(a.Path)
-			return nil
-		}
-
-		// can't resolve names of relative paths at this point
-		return fmt.Errorf("failed to resolve application's name")
+		a.RepositoryName = filepath.Base(a.Path)
+		return nil
 	}
 
 	// read the repository's service.yaml for bootstrap applications
