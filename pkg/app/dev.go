@@ -46,7 +46,7 @@ func DevStop(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface
 // 2. If there's no override script, we use devspace dev directly.
 // We also check if devspace is able to start dev mode of the app (has dev configuration).
 func (a *App) devCommand(ctx context.Context) (*exec.Cmd, error) {
-	return a.command(ctx, &devspaceCommandOptions{
+	return a.command(ctx, &commandBuilderOptions{
 		requiredConfig: "dev",
 		devspaceArgs:   []string{"dev"},
 
@@ -61,7 +61,7 @@ func (a *App) devCommand(ctx context.Context) (*exec.Cmd, error) {
 // 2. If there's no override script, we use devspace reset pods directly.
 // We also check if devspace is able to start dev mode of the app (has dev configuration).
 func (a *App) devStopCommand(ctx context.Context) (*exec.Cmd, error) {
-	return a.command(ctx, &devspaceCommandOptions{
+	return a.command(ctx, &commandBuilderOptions{
 		requiredConfig: "dev",
 		devspaceArgs:   []string{"reset", "pods"},
 
