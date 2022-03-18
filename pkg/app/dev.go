@@ -18,11 +18,14 @@ import (
 func Dev(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
 	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
 	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
-	app.Version = "latest"
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
 	defer app.Close()
+
+	// We don't want to deploy the app from source, so we just immediately replace it with dev container.
+	app.Local = false
+	app.Version = "latest"
 
 	return app.Dev(ctx)
 }
@@ -31,11 +34,14 @@ func Dev(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b 
 func DevStop(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
 	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
 	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
-	app.Version = "latest"
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
 	defer app.Close()
+
+	// We don't want to deploy the app from source, so we just immediately replace it with dev container.
+	app.Local = false
+	app.Version = "latest"
 
 	return app.DevStop(ctx)
 }
