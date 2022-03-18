@@ -90,7 +90,7 @@ type commandBuilderOptions struct {
 	// If one of these exists, we don't invoke devspace.
 	fallbackCommandPaths []string
 
-	// ars to pass to the fallback command
+	// args to pass to the fallback command
 	fallbackCommandArgs []string
 }
 
@@ -182,13 +182,14 @@ func (a *App) devspaceCommand(ctx context.Context, opts *commandBuilderOptions, 
 		return nil, errors.Wrap(err, "failed to create devspace command")
 	}
 	cmd.Env = append(cmd.Env, vars...)
+
 	return cmd, nil
 }
 
 // devspaceConfigured checks whether the devspace.yaml has the required config
 func (a *App) devspaceConfigured(
 	ctx context.Context, opts *commandBuilderOptions, devspace, devspaceYamlPath string, vars []string) error {
-	// 4. We check whether the devspace has requiredConfig configured.
+	// We check whether the devspace has requiredConfig configured.
 	// We assume individual profiles don't add dev configs. If they do, this won't work.
 	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, "print", "--skip-info", "--config", devspaceYamlPath)
 	if err != nil {
