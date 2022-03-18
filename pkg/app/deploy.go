@@ -21,7 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	apiruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -102,7 +102,7 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 			},
 			Validator: func(obj *unstructured.Unstructured) bool {
 				var pod *corev1.Pod
-				err := apiruntime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &pod)
+				err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &pod)
 				if err != nil {
 					return true
 				}
@@ -192,7 +192,7 @@ func (a *App) buildDockerImage(ctx context.Context) error {
 }
 
 // Deploy deploys the application into the devenv
-func (a *App) Deploy(ctx context.Context) error {
+func (a *App) Deploy(ctx context.Context) error { //nolint:funlen
 	if err := a.deleteJobs(ctx); err != nil {
 		a.log.WithError(err).Error("failed to delete jobs")
 	}
@@ -283,82 +283,6 @@ func (a *App) deleteJobs(ctx context.Context) error {
 		Validator: func(obj *unstructured.Unstructured) bool {
 			var job *batchv1.Job
 			err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &job)
-			if err != nil {
-				return true
-			}
-
-			// filter jobs without our annotation
-			return job.Annotations[DeleteJobAnnotation] != "true"
-		},
-	})
-
-	return err
-}
-
-// deployCommand returns the command that should be run to deploy the application
-// There are two ways to deploy:
-// 1. If there's an override script for the deployment, we use that.
-// 2. If there's no override script, we use devspace deploy directly.
-// We also check if devspace is able to deploy the app (has deployments configuration).
-// Skips building images locally if app is already prebuilt (!Local)
-func (a *App) deployCommand(ctx context.Context) (*exec.Cmd, error) {
-	args := []string{"deploy"}
-	if !a.Local {
-		args = append(args, "--skip-build")
-	}
-
-	return a.command(ctx, &devspaceCommandOptions{
-		requiredConfig: "deployments",
-		devspaceArgs:   args,
-
-		fallbackCommandPaths: []string{
-			"./scripts/deploy-to-dev.sh",
-			"./scripts/devenv-apps-deploy.sh",
-		},
-		fallbackCommandArgs: []string{"update"},
-	})
-}
-
-// Deploy deploys the application into the devenv
-func (a *App) DeployDevspace(ctx context.Context) error { //nolint:funlen
-	if err := a.deleteJobs(ctx); err != nil {
-		a.log.WithError(err).Error("failed to delete jobs")
-	}
-
-	cmd, err := a.deployCommand(ctx)
-	if err != nil {
-		return err
-	}
-
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err = cmd.Run(); err != nil {
-		return errors.Wrap(err, "failed to deploy application")
-	}
-
-	if err := devenvutil.WaitForAllPodsToBeReady(ctx, a.k, a.log); err != nil {
-		return err
-	}
-
-	return a.appsClient.Set(ctx, &apps.App{Name: a.RepositoryName, Version: a.Version})
-}
-
-func (a *App) deleteJobs(ctx context.Context) error {
-	// Delete all jobs with a db-migration annotation.
-	err := devenvutil.DeleteObjects(ctx, a.log, a.k, a.conf, devenvutil.DeleteObjectsObjects{
-		// TODO(DTSS-1455): the namespace is not quiet right I think.
-		Namespaces: []string{a.RepositoryName, fmt.Sprintf("%s--bento1a", a.RepositoryName)},
-		Type: &batchv1.Job{
-			TypeMeta: v1.TypeMeta{
-				Kind:       "Job",
-				APIVersion: batchv1.SchemeGroupVersion.Identifier(),
-			},
-		},
-		Validator: func(obj *unstructured.Unstructured) bool {
-			var job *batchv1.Job
-			err := apiruntime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &job)
 			if err != nil {
 				return true
 			}

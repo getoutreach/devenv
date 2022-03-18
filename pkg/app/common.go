@@ -79,7 +79,6 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 	return vars, nil
 }
 
-
 // commandBuilderOptions contains options for creating exec.Cmd to run either a devspace or fallback command
 type commandBuilderOptions struct {
 	// this config top level key has to be defined in devspace.yaml
@@ -134,13 +133,12 @@ func (a *App) overrideCommand(ctx context.Context, opts *commandBuilderOptions, 
 		if err != nil {
 			return nil, err
 		}
-
 		cmd.Env = append(cmd.Env, vars...)
 
 		return cmd, nil
 	}
 
-  return nil, nil
+	return nil, nil
 }
 
 // devspaceCommand returns the exec.Cmd to run the devspace command
@@ -184,7 +182,7 @@ func (a *App) devspaceCommand(ctx context.Context, opts *commandBuilderOptions, 
 		return nil, errors.Wrap(err, "failed to create devspace command")
 	}
 	cmd.Env = append(cmd.Env, vars...)
-  
+
 	return cmd, nil
 }
 

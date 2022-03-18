@@ -34,7 +34,6 @@ type Type string
 
 const (
 	TypeBootstrap Type = "bootstrap"
-	TypeDevspace  Type = "devspace"
 	TypeLegacy    Type = "legacy"
 
 	DeleteJobAnnotation = "outreach.io/db-migration-delete"

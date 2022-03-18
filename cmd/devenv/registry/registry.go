@@ -63,7 +63,6 @@ func NewCmdRegistry(log logrus.FieldLogger) *cli.Command {
 	}
 }
 
-
 // getDevenvName returns the name of the devenv in case it's a loft dev environment
 func (o *Options) getDevenvName(ctx context.Context, b *box.Config) (string, error) {
 	conf, err := config.LoadConfig(ctx)
