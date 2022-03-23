@@ -39,7 +39,7 @@ type Options struct {
 	conf *rest.Config
 
 	// App is the app to dev
-	App string
+	App        string
 	LocalImage bool
 }
 
