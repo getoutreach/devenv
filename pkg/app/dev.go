@@ -24,8 +24,8 @@ func Dev(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b 
 	defer app.Close()
 
 	app.Local = localImage
-	if !localImage && app.Version == "local" {
-		app.Version = "latest"
+	if !localImage && app.Version == AppVersionLocal {
+		app.Version = AppVersionLatest
 	}
 
 	return app.Dev(ctx)

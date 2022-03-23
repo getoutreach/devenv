@@ -37,6 +37,9 @@ const (
 	TypeLegacy    Type = "legacy"
 
 	DeleteJobAnnotation = "outreach.io/db-migration-delete"
+
+	AppVersionLocal  = "local"
+	AppVersionLatest = "latest"
 )
 
 type App struct {
@@ -95,7 +98,7 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	if !validRepoReg.MatchString(appNameOrPath) || appNameOrPath == "." || appNameOrPath == ".." {
 		app.Path = appNameOrPath
 		app.Local = true
-		app.Version = "local"
+		app.Version = AppVersionLocal
 		app.RepositoryName = filepath.Base(appNameOrPath)
 
 		if !filepath.IsAbs(app.Path) {
