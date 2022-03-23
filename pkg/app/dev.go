@@ -16,14 +16,17 @@ import (
 
 // Dev is a wrapper around NewApp().Dev()
 func Dev(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
-	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig) error {
+	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig, localImage bool) error {
 	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
 	defer app.Close()
 
-	app.Version = "latest"
+	app.Local = localImage
+	if !localImage && app.Version == "local" {
+		app.Version = "latest"
+	}
 
 	return app.Dev(ctx)
 }
@@ -36,8 +39,6 @@ func DevStop(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface
 		return errors.Wrap(err, "parse app")
 	}
 	defer app.Close()
-
-	app.Version = "latest"
 
 	return app.DevStop(ctx)
 }
