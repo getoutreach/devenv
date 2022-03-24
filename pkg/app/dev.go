@@ -98,9 +98,18 @@ func (a *App) Dev(ctx context.Context, terminal bool) error {
 
 	if err = cmd.Run(); err != nil {
 		// We don't want to return an error if the app has been interrupted/killed. It's an expected state.
-		if errors.Is(err, &exec.ExitError{}) && ctx.Err() != nil {
+		if ctx.Err() != nil {
 			return nil
 		}
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() == 130 {
+				return nil
+			}
+			a.log.Infof("exit code: %d", exitErr.ExitCode())
+		}
+
 		return errors.Wrap(err, "failed to start dev mode for the application")
 	}
 
