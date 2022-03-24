@@ -58,8 +58,14 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 		registry = a.box.DeveloperEnvironmentConfig.ImageRegistry
 	}
 
+	binPath, err := os.Executable()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get devenv executable path")
+	}
+
 	vars := []string{
 		fmt.Sprintf("DEPLOY_TO_DEV_VERSION=%s", a.Version),
+		fmt.Sprintf("DEVENV_BIN=%s", binPath),
 		fmt.Sprintf("DEVENV_DEPLOY_VERSION=%s", a.Version),
 		fmt.Sprintf("DEVENV_DEPLOY_IMAGE_SOURCE=%s", imageSource),
 		fmt.Sprintf("DEVENV_DEPLOY_IMAGE_REGISTRY=%s", registry),
@@ -81,11 +87,19 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 		vars = append(vars, fmt.Sprintf("DEVENV_KIND_BIN=%s", kind))
 	}
 
+	devspace, err := ensureDevspace(a.log)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to ensure devspace is installed")
+	}
+	vars = append(vars, fmt.Sprintf("DEVENV_DEVSPACE_BIN=%s", devspace))
+
 	return vars, nil
 }
 
 // commandBuilderOptions contains options for creating exec.Cmd to run either a devspace or fallback command
 type commandBuilderOptions struct {
+	environmentVariabes []string
+
 	// this config top level key has to be defined in devspace.yaml
 	requiredConfig string
 
@@ -106,6 +120,7 @@ func (a *App) command(ctx context.Context, opts *commandBuilderOptions) (*exec.C
 	if err != nil {
 		return nil, err
 	}
+	vars = append(vars, opts.environmentVariabes...)
 
 	cmd, err := a.overrideCommand(ctx, opts, vars)
 	if err != nil {

@@ -41,6 +41,7 @@ type Options struct {
 	// App is the app to dev
 	App        string
 	LocalImage bool
+	Terminal   bool
 }
 
 // NewOptions create an initialized options struct for the `apps dev` command
@@ -68,6 +69,10 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				Name:  "local-image",
 				Usage: "Use images built from source. By default dev uses images from CI for deployments to speed up the process.",
 			},
+			&cli.BoolFlag{
+				Name:  "terminal",
+				Usage: "Open interactive terminal after the dev mode has started.",
+			},
 		},
 		Subcommands: []*cli.Command{
 			stop.NewCmd(log),
@@ -83,6 +88,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				o.App = "."
 			}
 			o.LocalImage = c.Bool("local-image")
+			o.Terminal = c.Bool("terminal")
 			return o.Run(c.Context)
 		},
 	}
@@ -111,5 +117,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Dev(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig(), o.LocalImage)
+	return app.Dev(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig(), o.LocalImage, o.Terminal)
 }
