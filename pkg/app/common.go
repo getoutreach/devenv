@@ -33,13 +33,8 @@ func ensureDevspace(log logrus.FieldLogger) (string, error) {
 }
 
 // getImageRegistry returns the image registry for the app
-// If the app is built locally, it returns the dev registry (either devenv.local or one configured for use with remote cluster)
-// If the app is built remotely, it returns the image registry from box config.
+// It returns the dev registry (either devenv.local or one configured for use with remote cluster)
 func (a *App) getImageRegistry(ctx context.Context) (registry string, err error) {
-	if !a.Local {
-		return a.box.DeveloperEnvironmentConfig.ImageRegistry, nil
-	}
-
 	switch a.kr.Type {
 	case kubernetesruntime.RuntimeTypeLocal:
 		registry = "devenv.local"
@@ -51,15 +46,31 @@ func (a *App) getImageRegistry(ctx context.Context) (registry string, err error)
 
 // commandEnv returns the environment variables that should be set for the deploy/dev commands
 func (a *App) commandEnv(ctx context.Context) ([]string, error) {
-	registry, err := a.getImageRegistry(ctx)
+	devRegistry, err := a.getImageRegistry(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get image registry")
 	}
 
+	imageSource := "local"
+	registry := devRegistry
+	if !a.Local {
+		imageSource = "remote"
+		registry = a.box.DeveloperEnvironmentConfig.ImageRegistry
+	}
+
+	binPath, err := os.Executable()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get devenv executable path")
+	}
+
 	vars := []string{
 		fmt.Sprintf("DEPLOY_TO_DEV_VERSION=%s", a.Version),
+		fmt.Sprintf("DEVENV_BIN=%s", binPath),
 		fmt.Sprintf("DEVENV_DEPLOY_VERSION=%s", a.Version),
+		fmt.Sprintf("DEVENV_DEPLOY_IMAGE_SOURCE=%s", imageSource),
 		fmt.Sprintf("DEVENV_DEPLOY_IMAGE_REGISTRY=%s", registry),
+		fmt.Sprintf("DEVENV_DEPLOY_DEV_IMAGE_REGISTRY=%s", devRegistry),
+		fmt.Sprintf("DEVENV_DEPLOY_BOX_IMAGE_REGISTRY=%s", a.box.DeveloperEnvironmentConfig.ImageRegistry),
 		fmt.Sprintf("DEVENV_DEPLOY_APPNAME=%s", a.RepositoryName),
 		fmt.Sprintf("DEVENV_TYPE=%s", a.kr.Name),
 
@@ -76,11 +87,19 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 		vars = append(vars, fmt.Sprintf("DEVENV_KIND_BIN=%s", kind))
 	}
 
+	devspace, err := ensureDevspace(a.log)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to ensure devspace is installed")
+	}
+	vars = append(vars, fmt.Sprintf("DEVENV_DEVSPACE_BIN=%s", devspace))
+
 	return vars, nil
 }
 
 // commandBuilderOptions contains options for creating exec.Cmd to run either a devspace or fallback command
 type commandBuilderOptions struct {
+	environmentVariabes []string
+
 	// this config top level key has to be defined in devspace.yaml
 	requiredConfig string
 
@@ -101,6 +120,7 @@ func (a *App) command(ctx context.Context, opts *commandBuilderOptions) (*exec.C
 	if err != nil {
 		return nil, err
 	}
+	vars = append(vars, opts.environmentVariabes...)
 
 	cmd, err := a.overrideCommand(ctx, opts, vars)
 	if err != nil {
@@ -176,7 +196,7 @@ func (a *App) devspaceCommand(ctx context.Context, opts *commandBuilderOptions, 
 		args = append(args, "--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName), "--no-warn")
 	}
 
-	a.log.Infof("Running devspace %s", strings.Join(args, " "))
+	a.log.Infof("Running %s devspace %s", strings.Join(vars, " "), strings.Join(args, " "))
 	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, devspace, args...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create devspace command")
