@@ -71,7 +71,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			},
 			&cli.BoolFlag{
 				Name:  "terminal",
-				Usage: "Open interactive terminal after the dev mode has started.",
+				Usage: "Open an interactive terminal to the dev container instead of running the application",
 			},
 		},
 		Subcommands: []*cli.Command{
