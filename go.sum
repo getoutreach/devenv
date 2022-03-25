@@ -1542,8 +1542,9 @@ github.com/linode/linodego v0.7.1/go.mod h1:ga11n3ivecUrPCHN0rANxKmfWBJVkOXfLMZi
 github.com/linuxkit/virtsock v0.0.0-20201010232012-f8cee7dfc7a3/go.mod h1:3r6x7q95whyfWQpmGZTu3gk3v2YkMi05HEzl7Tf7YEo=
 github.com/lithammer/dedent v1.1.0 h1:VNzHMVCBNG1j0fh3OrsFRkVUwStdDArbgBWoPAffktY=
 github.com/lithammer/dedent v1.1.0/go.mod h1:jrXYCQtgg0nJiN+StA2KgR7w6CiQNv9Fd/Z9BP0jIOc=
-github.com/loft-sh/agentapi/v2 v2.1.2 h1:vw5m+vjjSRGZ9dw4fu+atJmgIBhRUmIU/KaoRzyo3bA=
 github.com/loft-sh/agentapi/v2 v2.1.2/go.mod h1:M2Y/Y/uOVJrYCiNk1cQ/iZ5B8yAqdvBghM1kbgQNnq0=
+github.com/loft-sh/agentapi/v2 v2.1.6 h1:BhI0UoTk6u57ylQjCKbSzdzdmE9CzERZp/KrgYfFfMU=
+github.com/loft-sh/agentapi/v2 v2.1.6/go.mod h1:M2Y/Y/uOVJrYCiNk1cQ/iZ5B8yAqdvBghM1kbgQNnq0=
 github.com/loft-sh/api/v2 v2.1.2 h1:l1c/tPOR6BLckaYnpOy1CWxXaJjco37M/1zJ+wFvrqI=
 github.com/loft-sh/api/v2 v2.1.2/go.mod h1:msYai+WZuvk6/u951TvPDvx1MB+wLDNw56q2Y4FRwSc=
 github.com/loft-sh/apiserver v0.0.0-20211216225656-cafe09adc0b8 h1:AwRDdL4KSuT28PXCVyOoPNkMJNrYJgI4pdsjS+D9aRo=

@@ -16,7 +16,7 @@ require (
 	github.com/getoutreach/vault-client v1.4.0
 	github.com/google/go-github/v42 v42.0.0
 	github.com/jetstack/cert-manager v1.7.1
-	github.com/loft-sh/agentapi/v2 v2.1.2
+	github.com/loft-sh/agentapi/v2 v2.1.6
 	github.com/loft-sh/loftctl/v2 v2.1.2
 	github.com/manifoldco/promptui v0.9.0
 	github.com/minio/minio-go/v7 v7.0.21
