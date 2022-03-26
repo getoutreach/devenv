@@ -2,6 +2,7 @@ package dev
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/getoutreach/devenv/cmd/devenv/apps/dev/stop"
 	"github.com/getoutreach/devenv/internal/vault"
@@ -38,10 +39,11 @@ type Options struct {
 	k    kubernetes.Interface
 	conf *rest.Config
 
-	// App is the app to dev
-	App        string
-	LocalImage bool
-	Terminal   bool
+	// Path is the app to dev
+	AppProfile    string
+	AppNameOrPath string
+	LocalImage    bool
+	Terminal      bool
 }
 
 // NewOptions create an initialized options struct for the `apps dev` command
@@ -73,6 +75,10 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				Name:  "terminal",
 				Usage: "Open an interactive terminal to the dev container instead of running the application",
 			},
+			&cli.StringFlag{
+				Name:  "app",
+				Usage: "When project has multiple applications, specify which application to dev",
+			},
 		},
 		Subcommands: []*cli.Command{
 			stop.NewCmd(log),
@@ -82,13 +88,19 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			if err != nil {
 				return err
 			}
-			o.App = c.Args().First()
+			o.AppNameOrPath = c.Args().First()
 			// TODO(DTSS-1494) use git to get root directory
-			if o.App == "" {
-				o.App = "."
+			if o.AppNameOrPath == "" {
+				o.AppNameOrPath = "."
 			}
 			o.LocalImage = c.Bool("local-image")
 			o.Terminal = c.Bool("terminal")
+
+			// TODO: Add flag validation for profiles
+			appFlag := c.String("app")
+			if appFlag != "" {
+				o.AppProfile = fmt.Sprintf("app__%s", appFlag)
+			}
 			return o.Run(c.Context)
 		},
 	}
@@ -117,5 +129,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Dev(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig(), o.LocalImage, o.Terminal)
+	return app.Dev(ctx, o.log, o.k, b, o.conf, o.AppNameOrPath, kr.GetConfig(), o.LocalImage, o.Terminal, o.AppProfile)
 }
