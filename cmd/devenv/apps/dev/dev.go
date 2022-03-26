@@ -96,7 +96,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			o.LocalImage = c.Bool("local-image")
 			o.Terminal = c.Bool("terminal")
 
-			// TODO: Add flag validation for profiles
+			// TODO(DTSS-1466): Add flag validation for profiles
 			appFlag := c.String("app")
 			if appFlag != "" {
 				o.AppProfile = fmt.Sprintf("app__%s", appFlag)
