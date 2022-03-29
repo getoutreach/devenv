@@ -40,10 +40,10 @@ type Options struct {
 	conf *rest.Config
 
 	// Path is the app to dev
-	DeploymentProfile    string
-	AppNameOrPath string
-	LocalImage    bool
-	Terminal      bool
+	DeploymentProfile string
+	AppNameOrPath     string
+	LocalImage        bool
+	Terminal          bool
 }
 
 // NewOptions create an initialized options struct for the `apps dev` command
