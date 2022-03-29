@@ -164,8 +164,7 @@ func (o *Options) GetStatus(ctx context.Context) (*Status, error) {
 		return status, nil
 	}
 
-	timeout := int64(5)
-	_, err := o.k.CoreV1().Pods("default").List(ctx, metav1.ListOptions{Limit: 1, TimeoutSeconds: &timeout})
+	_, err := o.k.CoreV1().Pods("default").List(ctx, metav1.ListOptions{Limit: 1})
 	if err != nil {
 		status.Status = Degraded
 		status.Reason = errors.Wrap(err, "failed to reach kubernetes").Error()
