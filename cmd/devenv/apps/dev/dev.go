@@ -40,7 +40,7 @@ type Options struct {
 	conf *rest.Config
 
 	// Path is the app to dev
-	AppProfile    string
+	DeploymentProfile    string
 	AppNameOrPath string
 	LocalImage    bool
 	Terminal      bool
@@ -76,8 +76,8 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				Usage: "Open an interactive terminal to the dev container instead of running the application",
 			},
 			&cli.StringFlag{
-				Name:  "app",
-				Usage: "When project has multiple applications, specify which application to dev",
+				Name:  "deployment",
+				Usage: "When project has multiple deployments, specify which deployment to substitute for the dev container",
 			},
 		},
 		Subcommands: []*cli.Command{
@@ -96,10 +96,10 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			o.LocalImage = c.Bool("local-image")
 			o.Terminal = c.Bool("terminal")
 
-			// TODO(DTSS-1466): Add flag validation for profiles
-			appFlag := c.String("app")
-			if appFlag != "" {
-				o.AppProfile = fmt.Sprintf("app__%s", appFlag)
+			// If not set, go with default deployment
+			deploymentFlag := c.String("deployment")
+			if deploymentFlag != "" {
+				o.DeploymentProfile = fmt.Sprintf("deployment__%s", deploymentFlag)
 			}
 			return o.Run(c.Context)
 		},
@@ -129,5 +129,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Dev(ctx, o.log, o.k, b, o.conf, o.AppNameOrPath, kr.GetConfig(), o.LocalImage, o.Terminal, o.AppProfile)
+	return app.Dev(ctx, o.log, o.k, b, o.conf, o.AppNameOrPath, kr.GetConfig(), o.LocalImage, o.Terminal, o.DeploymentProfile)
 }
