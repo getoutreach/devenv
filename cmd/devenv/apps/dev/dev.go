@@ -39,11 +39,17 @@ type Options struct {
 	k    kubernetes.Interface
 	conf *rest.Config
 
-	// Path is the app to dev
+	// DeploymentProfile is the profile to use with devspace, it's passed in in an env variable $DEVENV_DEV_DEPLOYMENT_PROFILE
 	DeploymentProfile string
-	AppNameOrPath     string
-	LocalImage        bool
-	Terminal          bool
+
+	// AppNameOrPath is the app to dev either (in case of dev it should always be path)
+	AppNameOrPath string
+
+	// LocalImage is a flag for enabling building images from source instead of using images from CI
+	LocalImage bool
+
+	// Terminal is a flag passed to devspace as DEVENV_DEV_TERMINAL=true. It activates the profile for starting terminal instead of service.
+	Terminal bool
 }
 
 // NewOptions create an initialized options struct for the `apps dev` command
