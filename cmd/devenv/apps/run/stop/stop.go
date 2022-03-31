@@ -24,7 +24,7 @@ var (
 	`
 	stopExample = `
 		# Stop the development mode for the application.
-		devenv apps dev stop
+		devenv apps run stop
 	`
 )
 
@@ -96,5 +96,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.DevStop(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
+	return app.RunStop(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig())
 }
