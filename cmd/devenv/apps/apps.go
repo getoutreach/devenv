@@ -3,8 +3,8 @@ package apps
 import (
 	"github.com/getoutreach/devenv/cmd/devenv/apps/delete"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/deploy"
-	"github.com/getoutreach/devenv/cmd/devenv/apps/run"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/list"
+	"github.com/getoutreach/devenv/cmd/devenv/apps/run"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/update"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
