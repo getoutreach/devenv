@@ -1,10 +1,10 @@
-package dev
+package run
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/getoutreach/devenv/cmd/devenv/apps/dev/stop"
+	"github.com/getoutreach/devenv/cmd/devenv/apps/run/stop"
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -21,15 +21,24 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	devLongDesc = `
-		Starts the development mode for the application.
+	runLongDesc = `
+		Runs the application from source code.
 	`
-	devExample = `
-		# Starts the development mode for the application.
-		devenv apps dev
+	runExample = `
+		# Runs the application from source code.
+		devenv apps run
 
-		# Stop the development mode for the application.
-		devenv apps dev stop
+		# Opens a terminal into dev container - not all apps support this.
+		devenv apps run --with-terminal
+
+		# Builds image from source code and deploys the app with that image, then replaces the pods with dev image and runs the app.
+		devenv apps run --with-local-image
+
+		# Replace non-default deployment with dev container.
+		devenv apps run --deployment=deployment-name
+
+		# Clean up after dev image deployments.
+		devenv apps run stop
 	`
 )
 
@@ -69,17 +78,20 @@ func NewOptions(log logrus.FieldLogger) (*Options, error) {
 // NewCmd creates a new cli.Command for the `apps dev` command
 func NewCmd(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
-		Name:        "dev",
-		Usage:       "Starts the development mode for the application.",
-		Description: cmdutil.NewDescription(devLongDesc, devExample),
+		Name:        "run",
+		Aliases:     []string{"dev"},
+		Usage:       "Runs the application from source code.",
+		Description: cmdutil.NewDescription(runLongDesc, runExample),
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
-				Name:  "local-image",
-				Usage: "Use images built from source. By default dev uses images from CI for deployments to speed up the process.",
+				Name:    "with-local-image",
+				Aliases: []string{"i", "local-image"},
+				Usage:   "Use images built from source. By default dev uses images from CI for deployments to speed up the process.",
 			},
 			&cli.BoolFlag{
-				Name:  "terminal",
-				Usage: "Open an interactive terminal to the dev container instead of running the application",
+				Name:    "with-terminal",
+				Aliases: []string{"t", "terminal"},
+				Usage:   "Open an interactive terminal to the dev container instead of running the application",
 			},
 			&cli.StringFlag{
 				Name:  "deployment",
@@ -99,8 +111,8 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			if o.AppNameOrPath == "" {
 				o.AppNameOrPath = "."
 			}
-			o.LocalImage = c.Bool("local-image")
-			o.Terminal = c.Bool("terminal")
+			o.LocalImage = c.Bool("with-local-image")
+			o.Terminal = c.Bool("with-terminal")
 
 			// If not set, go with default deployment
 			deploymentFlag := c.String("deployment")
@@ -135,5 +147,5 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Dev(ctx, o.log, o.k, b, o.conf, o.AppNameOrPath, kr.GetConfig(), o.LocalImage, o.Terminal, o.DeploymentProfile)
+	return app.Run(ctx, o.log, o.k, b, o.conf, o.AppNameOrPath, kr.GetConfig(), o.LocalImage, o.Terminal, o.DeploymentProfile)
 }
