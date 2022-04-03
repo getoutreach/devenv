@@ -17,19 +17,27 @@ versions:
   terraform: 0.14.7
 arguments:
   circleAPIKey: ""
+  commands:
+    - devenv
   dependencies:
     optional: []
     required: []
   description: Kubernetes Developer Environment Platform
+  grpcClients: []
   opslevel:
     confluenceSpaceKey: ""
+    datadogDashboards:
+      mainLink: ""
     designDocumentLink: ""
   oss: true
+  releaseOptions:
+    allowMajorVersions: true
+    allowPrereleases: true
   reportingTeam: fnd-dtss
   type:
     - library
 modules:
-  - url: https://github.com/getoutreach/stencil-base
+  - name: github.com/getoutreach/stencil-base
     version: ""
 opsLevel:
   serviceTier: 0
