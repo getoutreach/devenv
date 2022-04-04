@@ -1,6 +1,6 @@
 APP := devenv
 OSS := true
-_ := $(shell ./scripts/devbase.sh) 
+_ := $(shell ./scripts/bootstrap-lib.sh) 
 
 include .bootstrap/root/Makefile
 
