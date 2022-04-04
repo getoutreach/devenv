@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "editorconfig.editorconfig",
-    "hashicorp.terraform",
     "golang.go",
     "heptio.jsonnet",
     "xrc-inc.jsonnet-formatter",

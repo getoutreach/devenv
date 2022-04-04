@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# This script ensures we have a copy of devbase
+# This script ensures we have a copy of bootstrap's libray
+# framework downloaded.
 set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
