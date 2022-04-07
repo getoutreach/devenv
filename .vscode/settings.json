@@ -14,6 +14,7 @@
   "go.lintFlags": [],
   "go.formatTool": "goimports",
   "go.useLanguageServer": true,
+  "go.testEnvFile": "${workspaceFolder}/.vscode/private.env",
   "go.alternateTools": {
     // This makes sure we use the correct version
     // of golangci-lint in our editors.
@@ -36,5 +37,11 @@
   },
   "gopls": {
     "build.buildFlags": ["-tags=or_test,or_dev,or_e2e,or_int"]
+  },
+  "[terraform]": {
+    "editor.defaultFormatter": "hashicorp.terraform"
+  },
+  "protoc": {
+    "options": ["--proto_path=${workspaceRoot}/api"]
   }
 }

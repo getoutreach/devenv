@@ -1,7 +1,20 @@
+# Please re-run stencil after any changes to this file.
 version: 2.1
-
 orbs:
   shared: getoutreach/shared@dev:first
+
+# Extra contexts to expose to all jobs below
+contexts: &contexts
+  ### Start contexts inserted by other modules
+
+  ### End contexts inserted by other modules
+  ###Block(extraContexts)
+  - docker-registry
+  - npm-credentials
+  - ghaccesstoken
+  - aws-credentials
+  - vault-dev
+  ###EndBlock(extraContexts)
 
 jobs:
   ###Block(circleJobs)
@@ -21,92 +34,31 @@ jobs:
           command: make e2e-override
   ###EndBlock(circleJobs)
 
-  test:
-    executor:
-      name: shared/testbed-docker
-      docker_tag: stable
-    resource_class: large
-    docker:
-      - image: gcr.io/outreach-docker/bootstrap/ci:stable
-        auth:
-          username: _json_key
-          password: $GCLOUD_SERVICE_ACCOUNT
-    environment:
-      ###Block(testEnvVars)
-      ###EndBlock(testEnvVars)
-    steps:
-      - shared/setup_environment:
-          setup_remote_docker: true
-      - run:
-          name: Wait for Infrastructure to be Ready
-          command: ./scripts/shell-wrapper.sh ci/testing/wait-for-infra.sh
-      - shared/with_go_cache
-      - run:
-          name: Run unit tests
-          # Store the results of our tests in the $TEST_RESULTS directory
-          command: make test | tee ${TEST_RESULTS}/go-test.out
-      - run:
-          name: Upload Code Coverage
-          command: ./scripts/shell-wrapper.sh ci/testing/coveralls.sh
-      - shared/save_go_cache # We save at the end because binaries are included with this
-      - shared/upload_test_results
+  ### Start jobs inserted by other modules
 
-  ### Deviation(docker): We build a docker image in release
-  release-dryrun:
-    executor:
-      name: shared/testbed-machine
-    resource_class: xlarge
-    steps:
-      - shared/setup_environment:
-          machine: true
-      - shared/with_go_cache
-      - shared/with_node_cache:
-          save: true
-      - run:
-          name: Setting up Docker Builder
-          command: |-
-            # Setup buildkit for arm64
-            source "./.bootstrap/shell/lib/buildx.sh"
-      - run:
-          name: Release (Dry-run)
-          command: ./scripts/shell-wrapper.sh ci/release/dryrun.sh
-      - shared/save_go_cache # We save at the end because binaries are included with this
-  release:
-    executor:
-      name: shared/testbed-machine
-    resource_class: xlarge
-    steps:
-      - shared/setup_environment:
-          machine: true
-      - shared/with_go_cache
-      - shared/with_node_cache:
-          save: true
-      - run:
-          name: Setting up Docker Builder
-          command: |-
-            # Setup buildkit for arm64
-            source "./.bootstrap/shell/lib/buildx.sh"
-      - run:
-          name: Release
-          command: GH_TOKEN=$OUTREACH_GITHUB_TOKEN yarn --frozen-lockfile semantic-release
-      - shared/save_go_cache # We save at the end because binaries are included with this
-
-  trigger_documentation:
-    executor:
-      name: shared/testbed-docker
-      docker_tag: stable
-    steps:
-      - shared/setup_environment
-      - shared/with_go_cache
-      - run:
-          name: Trigger Documentation Update
-          command: ./scripts/shell-wrapper.sh ci/release/docs.sh
+  ### End jobs inserted by other modules
 
 workflows:
   version: 2
   ###Block(circleWorkflows)
+
   ###EndBlock(circleWorkflows)
-  build_and_test:
+
+  ### Start workflows inserted by other modules
+
+  ### End workflows inserted by other modules
+  release_branch:
+    triggers:
+      - schedule:
+          cron: 0 0 15 * *
+          filters:
+            branches:
+              only:
+                - release
+    jobs:
+      - shared/merge_into_release
+
+  release:
     jobs:
       ###Block(circleWorkflowJobs)
       - e2e:
@@ -116,43 +68,48 @@ workflows:
             - npm-credentials
             - vault-dev
       ###EndBlock(circleWorkflowJobs)
-      - release:
-          context:
-            - docker-registry
-            - ghaccesstoken
-            - npm-credentials
+      - shared/release: &release
+          dryrun: false
+          context: *contexts
+          ###Block(circleReleaseExtra)
+          machine: true
+          executor:
+            name: shared/testbed-machine
+          resource_class: xlarge
+          ###EndBlock(circleReleaseExtra)
           requires:
-            - test
-          ###Block(circleReleaseRequires)
-          ###EndBlock(circleReleaseRequires)
+            ###Block(circleReleaseRequires)
+
+            ###EndBlock(circleReleaseRequires)
+            - shared/test
           filters:
             branches:
               only:
                 - master
                 - main
-                - rc
-      - release-dryrun:
-          context:
-            - docker-registry
-            - ghaccesstoken
-            - npm-credentials
+                - release
+      # Dryrun release for PRs
+      - shared/release:
+          <<: *release
+          dryrun: true
           filters:
             branches:
               ignore:
                 - master
                 - main
-                - rc
-      - test:
-          context:
-            - docker-registry
-            - ghaccesstoken
-            - npm-credentials
-      - trigger_documentation:
-          context:
-            - docker-registry
-            - ghaccesstoken
+                - release
+      - shared/test:
+          context: *contexts
+          app_name: devenv
+
+      - shared/publish_docs:
+          context: *contexts
           filters:
             branches:
               ignore: /.*/
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-.*)*/
+      - shared/finalize-coverage:
+          context: *contexts
+          requires:
+            - shared/test

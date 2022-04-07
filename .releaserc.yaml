@@ -1,11 +1,15 @@
 preset: conventionalcommits
 branches:
-  - name: master
   - name: main
-  - name: rc
-    prerelease: true
+    prerelease: "rc"
+  - name: release
 plugins:
-  - "@semantic-release/commit-analyzer"
+  - - "@semantic-release/commit-analyzer"
+    - releaseRules:
+        - type: revert
+          release: patch
+        - type: perf
+          release: patch
   # Build the binaries
   - - "@semantic-release/exec"
     # We use generateNotesCmd instead of a different step because it has access
@@ -19,10 +23,11 @@ plugins:
     - assets:
         - "dist/*.tar.gz"
         - "dist/checksums.txt"
-        ### Deviation(brewfile): We need to include a file.
-        - "Brewfile"
 
+  ### IMPORTANT: This needs a block later.
   # Build and push our docker image
+  - - "@semantic-release/exec"
+    - verifyReleaseCmd: 'bash -c ''if [[ -n "$CI" ]]; then source "./.bootstrap/shell/lib/buildx.sh"; fi'''
   - - "@semantic-release/exec"
     # Again using this just to get it to run on dryrun because `prepare` is skipped
     - generateNotesCmd: "make docker-build-override APP_VERSION=v${nextRelease.version} >&2"
