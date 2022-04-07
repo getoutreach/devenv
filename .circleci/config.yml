@@ -1,7 +1,7 @@
 # Please re-run stencil after any changes to this file.
 version: 2.1
 orbs:
-  shared: getoutreach/shared@1.57.0
+  shared: getoutreach/shared@dev:first
 
 # Extra contexts to expose to all jobs below
 contexts: &contexts
@@ -99,7 +99,6 @@ workflows:
                 - main
                 - release
       - shared/test:
-          resource_class: large
           context: *contexts
           app_name: devenv
 
