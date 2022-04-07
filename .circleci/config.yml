@@ -1,7 +1,7 @@
 # Please re-run stencil after any changes to this file.
 version: 2.1
 orbs:
-  shared: getoutreach/shared@1.56.0
+  shared: getoutreach/shared@1.57.0
 
 # Extra contexts to expose to all jobs below
 contexts: &contexts
@@ -68,9 +68,15 @@ workflows:
             - npm-credentials
             - vault-dev
       ###EndBlock(circleWorkflowJobs)
-      - shared/release:
+      - shared/release: &release
           dryrun: false
           context: *contexts
+          ###Block(circleReleaseExtra)
+          machine: true
+          executor:
+            name: shared/testbed-machine
+          resource_class: xlarge
+          ###EndBlock(circleReleaseExtra)
           requires:
             ###Block(circleReleaseRequires)
 
@@ -82,8 +88,10 @@ workflows:
                 - master
                 - main
                 - release
+      # Dryrun release for PRs
       - shared/release:
-          context: *contexts
+          <<: *release
+          dryrun: true
           filters:
             branches:
               ignore:
@@ -91,6 +99,7 @@ workflows:
                 - main
                 - release
       - shared/test:
+          resource_class: large
           context: *contexts
           app_name: devenv
 
