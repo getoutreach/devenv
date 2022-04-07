@@ -32,13 +32,13 @@ arguments:
   oss: true
   releaseOptions:
     allowMajorVersions: true
-    allowPrereleases: true
+    enablePrereleases: true
   reportingTeam: fnd-dtss
   type:
     - library
 modules:
   - name: github.com/getoutreach/stencil-base
-    version: ""
+  - name: github.com/getoutreach/stencil-circleci
 opsLevel:
   serviceTier: 0
   lifecycle: ""
