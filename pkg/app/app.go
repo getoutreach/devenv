@@ -360,7 +360,11 @@ func (a *App) determineType(fileExists func(string) bool) error {
 		a.Type = TypeLegacy
 		return nil
 	}
-	if fileExists("scripts/devenv-apps-dev.sh") {
+	if fileExists("scripts/devenv-apps-deploy.sh") {
+		a.Type = TypeLegacy
+		return nil
+	}
+	if fileExists("scripts/devenv-apps-run.sh") {
 		a.Type = TypeLegacy
 		return nil
 	}

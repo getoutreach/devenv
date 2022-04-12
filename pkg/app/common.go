@@ -193,7 +193,10 @@ func (a *App) devspaceCommand(ctx context.Context, opts *commandBuilderOptions, 
 	args = append(args, "--config", devspaceYamlPath)
 	// We know ahead of time what namespace bootstrap apps deploy to. so we can use that.
 	if a.Type == TypeBootstrap {
-		args = append(args, "--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName), "--no-warn")
+		args = append(args,
+			"--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName),
+			"--no-warn",
+		)
 	}
 
 	a.log.Infof("Running %s devspace %s", strings.Join(vars, " "), strings.Join(args, " "))
