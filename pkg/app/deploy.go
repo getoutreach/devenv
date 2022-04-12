@@ -53,6 +53,12 @@ func (a *App) deployLegacy(ctx context.Context) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
+	// If we can, we should add the variables
+	if vars, err := a.commandEnv(ctx); err == nil {
+		cmd.Env = append(cmd.Env, vars...)
+	}
+
 	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
 	return cmd.Run()
 }
@@ -81,6 +87,11 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 	cmd, err := cmdutil.CreateKubernetesCommand(ctx, a.Path, "./scripts/shell-wrapper.sh", "deploy-to-dev.sh", "update")
 	if err != nil {
 		return errors.Wrap(err, "failed to create command")
+	}
+
+	// If we can, we should add the variables
+	if vars, err := a.commandEnv(ctx); err == nil {
+		cmd.Env = append(cmd.Env, vars...)
 	}
 
 	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)

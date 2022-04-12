@@ -22,7 +22,7 @@ import (
 // the location of devspace binary.
 // Note: this outputs text if devspace is being downloaded
 func ensureDevspace(log logrus.FieldLogger) (string, error) {
-	devspaceVersion := "v5.18.4"
+	devspaceVersion := "v6.0.0-alpha.11"
 	devspaceDownloadURL := fmt.Sprintf(
 		"https://github.com/loft-sh/devspace/releases/download/%s/devspace-%s-%s",
 		devspaceVersion,
@@ -193,7 +193,10 @@ func (a *App) devspaceCommand(ctx context.Context, opts *commandBuilderOptions, 
 	args = append(args, "--config", devspaceYamlPath)
 	// We know ahead of time what namespace bootstrap apps deploy to. so we can use that.
 	if a.Type == TypeBootstrap {
-		args = append(args, "--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName), "--no-warn")
+		args = append(args,
+			"--namespace", fmt.Sprintf("%s--bento1a", a.RepositoryName),
+			"--no-warn",
+		)
 	}
 
 	a.log.Infof("Running %s devspace %s", strings.Join(vars, " "), strings.Join(args, " "))

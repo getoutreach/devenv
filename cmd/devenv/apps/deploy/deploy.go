@@ -3,6 +3,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/app"
@@ -66,8 +67,9 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 		Description: cmdutil.NewDescription(deployLongDesc, deployExample),
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
-				Name:  "x-use-devspace",
-				Usage: "Uses devspace to deploy the application. Might not be supported by all applications and all environments.",
+				Name:    "x-use-devspace",
+				EnvVars: []string{"DEVENV_DEPLOY_USE_DEVSPACE"},
+				Usage:   "Uses devspace to deploy the application. Might not be supported by all applications and all environments.",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -81,6 +83,11 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 
 			o.App = c.Args().First()
 			o.UseDevspace = c.Bool("x-use-devspace")
+			if o.UseDevspace {
+				// This flag can be set either using $DEVENV_DEPLOY_USE_DEVSPACE or `--x-use-devspace` flag.
+				// We want to ensure that child processes inherit this flag automaatically.
+				os.Setenv("DEVENV_DEPLOY_USE_DEVSPACE", "1")
+			}
 			return o.Run(c.Context)
 		},
 	}
