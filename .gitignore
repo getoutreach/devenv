@@ -5,9 +5,7 @@
 *.so
 *.dylib
 
-# Editors (please update any new editor files in
-# https://github.com/getoutreach/bootstrap/edit/master/pkg/codegen/templates/.gitignore.tpl
-# so every updated project gets it)
+# Editor files
 *.swp
 *~
 \#*\#
