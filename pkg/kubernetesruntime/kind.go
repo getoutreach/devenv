@@ -32,7 +32,6 @@ const (
 
 var configTemplate = template.Must(template.New("kind.yaml").Parse(string(embed.MustRead(embed.Config.ReadFile("config/kind.yaml")))))
 
-// Deprecated: This will be removed when there's a new way of doing this.
 // EnsureKind downloads kind
 var EnsureKind = (&KindRuntime{}).ensureKind
 
