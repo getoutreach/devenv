@@ -25,7 +25,7 @@ dev-environment has already started to be provisioned)_:
 devenv provision
 ```
 
-To deploy additional services, use the `--deploy-app $APP_NAME` flag, where `$APP_NAME` is the name
+To deploy additional services, use the `devenv apps deploy $APP_NAME` flag, where `$APP_NAME` is the name
 of your service's GitHub repository. Every [`bootstrap` (coming soon!)](https://github.com/getoutreach/bootstrap)-created
 service can be deployed into this environment without any extra configuration.
 

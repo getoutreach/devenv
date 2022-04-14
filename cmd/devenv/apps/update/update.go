@@ -120,7 +120,7 @@ func (o *Options) Run(ctx context.Context) error {
 			}
 		}
 		if foundApp == nil {
-			return fmt.Errorf("Unknown app '%s', please use deploy-app to deploy it first", o.AppName)
+			return fmt.Errorf("Unknown app '%s', please use devenv apps deploy first", o.AppName)
 		}
 
 		// only update the app provided

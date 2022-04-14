@@ -417,7 +417,7 @@ func (o *Options) generateSnapshot(ctx context.Context, s3c *s3.Client,
 		o.log.Info("Deploying applications into devenv")
 		for _, app := range t.DeployApps {
 			o.log.WithField("application", app).Info("Deploying application")
-			cmd := exec.CommandContext(ctx, os.Args[0], "--skip-update", "deploy-app", app) //nolint:gosec
+			cmd := exec.CommandContext(ctx, os.Args[0], "--skip-update", "apps", "deploy", app) //nolint:gosec
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
 			cmd.Stdin = os.Stdin
@@ -439,7 +439,7 @@ func (o *Options) generateSnapshot(ctx context.Context, s3c *s3.Client,
 		o.log.Info("Deploying applications into devenv")
 		for _, app := range t.PostDeployApps {
 			o.log.WithField("application", app).Info("Deploying application")
-			cmd := exec.CommandContext(ctx, os.Args[0], "--skip-update", "deploy-app", app) //nolint:gosec
+			cmd := exec.CommandContext(ctx, os.Args[0], "--skip-update", "apps", "deploy", app) //nolint:gosec
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
 			cmd.Stdin = os.Stdin
