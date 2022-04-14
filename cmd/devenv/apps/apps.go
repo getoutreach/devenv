@@ -5,6 +5,7 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/apps/deploy"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/list"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/run"
+	"github.com/getoutreach/devenv/cmd/devenv/apps/shell"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/update"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -24,6 +25,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			delete.NewCmd(log),
 			list.NewCmd(log),
 			run.NewCmd(log),
+			shell.NewCmd(log),
 		},
 	}
 }
