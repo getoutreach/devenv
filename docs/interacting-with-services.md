@@ -27,8 +27,7 @@ To deploy a specific revision of a service, run `devenv apps deploy <appName@Com
 
 ### Deploying Local Changes
 
-To deploy your application into Kubernetes locally, run `devenv deploy-app --local .`. Press `y` when prompted
-to build a Docker image.
+To deploy your application into Kubernetes locally, run `devenv apps deploy .`.
 
 ## Updating Services
 
