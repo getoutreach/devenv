@@ -1,12 +1,12 @@
-version: v1.9.1
-generated: 2022-04-07T21:18:35.939772Z
+version: v1.9.2
+generated: 2022-04-15T19:59:22.1201227Z
 modules:
 - name: github.com/getoutreach/stencil-base
   url: https://github.com/getoutreach/stencil-base
-  version: v0.1.0
+  version: v0.2.0
 - name: github.com/getoutreach/stencil-circleci
   url: https://github.com/getoutreach/stencil-circleci
-  version: v0.1.2
+  version: v0.1.3
 files:
 - name: .editorconfig
   template: .editorconfig.tpl
