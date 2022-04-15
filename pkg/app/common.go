@@ -96,6 +96,16 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 	return vars, nil
 }
 
+// commandEnvLegacyOverrides returns the environment variables that should be set for legacy (pre-devspace) commands
+func (a *App) commandEnvLegacyOverrides(ctx context.Context) ([]string, error) {
+	vars := []string{
+		fmt.Sprintf("DEVENV_DEPLOY_IMAGE_REGISTRY=%s", a.box.DeveloperEnvironmentConfig.ImageRegistry),
+		fmt.Sprintf("DEVENV_DEPLOY_DEV_IMAGE_REGISTRY=%s", a.box.DeveloperEnvironmentConfig.ImageRegistry),
+		fmt.Sprintf("DEVENV_DEPLOY_BOX_IMAGE_REGISTRY=%s", a.box.DeveloperEnvironmentConfig.ImageRegistry),
+	}
+	return vars, nil
+}
+
 // commandBuilderOptions contains options for creating exec.Cmd to run either a devspace or fallback command
 type commandBuilderOptions struct {
 	environmentVariabes []string
