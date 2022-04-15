@@ -59,9 +59,7 @@ func (a *App) deployLegacy(ctx context.Context) error {
 		cmd.Env = append(cmd.Env, vars...)
 	}
 	// And since pre-devspace certain features weren't supported, we need to overwrite some of the env vars
-	if vars, err := a.commandEnvLegacyOverrides(ctx); err == nil {
-		cmd.Env = append(cmd.Env, vars...)
-	}
+	cmd.Env = append(cmd.Env, a.commandEnvLegacyOverrides()...)
 
 	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
 	return cmd.Run()
@@ -98,9 +96,7 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 		cmd.Env = append(cmd.Env, vars...)
 	}
 	// And since pre-devspace certain features weren't supported, we need to overwrite some of the env vars
-	if vars, err := a.commandEnvLegacyOverrides(ctx); err == nil {
-		cmd.Env = append(cmd.Env, vars...)
-	}
+	cmd.Env = append(cmd.Env, a.commandEnvLegacyOverrides()...)
 
 	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
 	if b, err := cmd.CombinedOutput(); err != nil {
