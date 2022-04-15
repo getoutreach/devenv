@@ -54,10 +54,12 @@ func (a *App) deployLegacy(ctx context.Context) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// If we can, we should add the variables
+	// If we can, we should add the deployment variables
 	if vars, err := a.commandEnv(ctx); err == nil {
 		cmd.Env = append(cmd.Env, vars...)
 	}
+	// And since pre-devspace certain features weren't supported, we need to overwrite some of the env vars
+	cmd.Env = append(cmd.Env, a.commandEnvLegacyOverrides()...)
 
 	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
 	return cmd.Run()
@@ -89,10 +91,12 @@ func (a *App) deployBootstrap(ctx context.Context) error { //nolint:funlen
 		return errors.Wrap(err, "failed to create command")
 	}
 
-	// If we can, we should add the variables
+	// If we can, we should add the deployment variables
 	if vars, err := a.commandEnv(ctx); err == nil {
 		cmd.Env = append(cmd.Env, vars...)
 	}
+	// And since pre-devspace certain features weren't supported, we need to overwrite some of the env vars
+	cmd.Env = append(cmd.Env, a.commandEnvLegacyOverrides()...)
 
 	cmd.Env = append(cmd.Env, "DEPLOY_TO_DEV_VERSION="+a.Version)
 	if b, err := cmd.CombinedOutput(); err != nil {
