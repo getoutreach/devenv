@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/getoutreach/devenv/cmd/devenv/apps/run/stop"
 	"github.com/getoutreach/devenv/internal/vault"
 	"github.com/getoutreach/devenv/pkg/app"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
@@ -68,9 +67,6 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				Name:  "deployment",
 				Usage: "When project has multiple deployments, specify which deployment to substitute for the dev container",
 			},
-		},
-		Subcommands: []*cli.Command{
-			stop.NewCmd(log),
 		},
 		Action: func(c *cli.Context) error {
 			o, err := NewOptions(log)
