@@ -61,14 +61,14 @@ func reconcileDockerForMacConfig(_ context.Context, settingsFile string) (bool, 
 
 	modified := false
 	if cpu, ok := settings["cpus"].(float64); ok {
-		if int(cpu) != recommendedCPU {
+		if int(cpu) < recommendedCPU {
 			modified = true
 			settings["cpus"] = recommendedCPU
 		}
 	}
 
 	if memory, ok := settings["memoryMiB"].(float64); ok {
-		if int(memory) != recommendedMemory {
+		if int(memory) < recommendedMemory {
 			modified = true
 			settings["memoryMiB"] = recommendedMemory
 		}
