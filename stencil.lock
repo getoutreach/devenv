@@ -1,13 +1,19 @@
-version: v1.9.1
-generated: 2022-04-07T21:18:35.939772Z
+version: v1.10.0
+generated: 2022-04-27T18:13:22.725646Z
 modules:
-- name: github.com/getoutreach/stencil-base
-  url: https://github.com/getoutreach/stencil-base
-  version: v0.1.0
 - name: github.com/getoutreach/stencil-circleci
   url: https://github.com/getoutreach/stencil-circleci
-  version: v0.1.2
+  version: v0.1.3
+- name: github.com/getoutreach/stencil-base
+  url: https://github.com/getoutreach/stencil-base
+  version: v0.2.0
 files:
+- name: .circleci/config.yml
+  template: .circleci/config.yml.tpl
+  module: github.com/getoutreach/stencil-circleci
+- name: _helpers
+  template: _helpers.tpl
+  module: github.com/getoutreach/stencil-circleci
 - name: .editorconfig
   template: .editorconfig.tpl
   module: github.com/getoutreach/stencil-base
@@ -62,9 +68,3 @@ files:
 - name: scripts/shell-wrapper.sh
   template: scripts/shell-wrapper.sh.tpl
   module: github.com/getoutreach/stencil-base
-- name: .circleci/config.yml
-  template: .circleci/config.yml.tpl
-  module: github.com/getoutreach/stencil-circleci
-- name: _helpers
-  template: _helpers.tpl
-  module: github.com/getoutreach/stencil-circleci
