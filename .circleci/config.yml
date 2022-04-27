@@ -5,12 +5,16 @@ orbs:
 
 # Extra contexts to expose to all jobs below
 contexts:
-  &contexts []
+  &contexts
   ### Start contexts inserted by other modules
 
   ### End contexts inserted by other modules
   ###Block(extraContexts)
-
+  - docker-registry
+  - npm-credentials
+  - ghaccesstoken
+  - aws-credentials
+  - vault-dev
   ###EndBlock(extraContexts)
 
 jobs:
@@ -64,12 +68,19 @@ workflows:
             - ghaccesstoken
             - npm-credentials
             - vault-dev
+          machine: true
+          executor:
+            name: shared/testbed-machine
+          resource_class: xlarge
       ###EndBlock(circleWorkflowJobs)
       - shared/release: &release
           dryrun: false
           context: *contexts
           ###Block(circleReleaseExtra)
-
+          machine: true
+          executor:
+            name: shared/testbed-machine
+          resource_class: xlarge
           ###EndBlock(circleReleaseExtra)
           requires:
             ###Block(circleReleaseRequires)
