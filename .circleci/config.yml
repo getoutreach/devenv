@@ -68,10 +68,6 @@ workflows:
             - ghaccesstoken
             - npm-credentials
             - vault-dev
-          machine: true
-          executor:
-            name: shared/testbed-machine
-          resource_class: xlarge
       ###EndBlock(circleWorkflowJobs)
       - shared/release: &release
           dryrun: false
