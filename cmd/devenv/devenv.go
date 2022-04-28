@@ -44,6 +44,10 @@ import (
 // down by devconfig.sh.
 var HoneycombTracingKey = "NOTSET" //nolint:gochecknoglobals // Why: We can't compile in things as a const.
 
+// TeleforkAPIKey gets set by the Makefile at compile-time which is pulled
+// down by devconfig.sh.
+var TeleforkAPIKey = "NOTSET" //nolint:gochecknoglobals // Why: We can't compile in things as a const.
+
 ///Block(honeycombDataset)
 const HoneycombDataset = ""
 
@@ -121,5 +125,5 @@ func main() {
 	///EndBlock(postApp)
 
 	// Insert global flags, tracing, updating and start the application.
-	gcli.HookInUrfaveCLI(ctx, cancel, &app, log, HoneycombTracingKey, HoneycombDataset)
+	gcli.HookInUrfaveCLI(ctx, cancel, &app, log, HoneycombTracingKey, HoneycombDataset, TeleforkAPIKey)
 }
