@@ -77,7 +77,26 @@ func (lr *LoftRuntime) getLoftConfigPath() (string, error) {
 	return filepath.Join(homeDir, ".loft", "config.json"), nil
 }
 
-func (lr *LoftRuntime) PreCreate(ctx context.Context) error { //nolint:funlen // Why: will address later
+// IsAccessible validates whether the runtime IsAccessible
+func (lr *LoftRuntime) IsAccessible(ctx context.Context) (bool, error) {
+	if err := lr.ensureClient(); err != nil {
+		return false, err
+	}
+
+	// Check if we're authenticated already
+	loggedIn, err := lr.isLoggedIn(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return loggedIn, nil
+}
+
+func (lr *LoftRuntime) ensureClient() error {
+	if lr.loftctl != nil {
+		return nil
+	}
+
 	loftConf, err := lr.getLoftConfigPath()
 	if err != nil {
 		return errors.Wrap(err, "failed to determine loft config path")
@@ -88,14 +107,30 @@ func (lr *LoftRuntime) PreCreate(ctx context.Context) error { //nolint:funlen //
 		return err
 	}
 
-	// Check if we're authenticated already
-	if lr.loftctl != nil {
-		managementClient, err := lr.loftctl.Management()
-		if err == nil {
-			if _, _, err := loftctlhelper.GetCurrentUser(ctx, managementClient); err == nil {
-				return nil
-			}
+	return nil
+}
+
+func (lr *LoftRuntime) isLoggedIn(ctx context.Context) (bool, error) {
+	managementClient, err := lr.loftctl.Management()
+
+	if err != nil {
+		return false, err
+	}
+
+	if err == nil {
+		if _, _, err := loftctlhelper.GetCurrentUser(ctx, managementClient); err == nil {
+			return true, nil
 		}
+	}
+
+	return false, nil
+}
+
+func (lr *LoftRuntime) PreCreate(ctx context.Context) error {
+	if isAccessible, err := lr.IsAccessible(ctx); err != nil {
+		return err
+	} else if isAccessible {
+		return nil
 	}
 
 	// We're probably not, re-authenticate

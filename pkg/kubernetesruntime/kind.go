@@ -51,6 +51,11 @@ func (*KindRuntime) ensureKind(log logrus.FieldLogger) (string, error) { //nolin
 	return cmdutil.EnsureBinary(log, "kind-"+KindVersion, "Kubernetes Runtime", KindDownloadURL, "")
 }
 
+// IsAccessible validates whether the runtime IsAccessible
+func (*KindRuntime) IsAccessible(ctx context.Context) (bool, error) {
+	return true, nil
+}
+
 func (*KindRuntime) PreCreate(ctx context.Context) error {
 	return nil
 }

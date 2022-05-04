@@ -162,8 +162,11 @@ func (o *Options) Run(ctx gocontext.Context) error {
 	clusters := make([]*kubernetesruntime.RuntimeCluster, 0)
 	for _, r := range runtimes {
 		r.Configure(o.log, b)
-		if err := r.PreCreate(ctx); err != nil {
-			o.log.WithError(err).Warnf("Failed to setup runtime %s, skipping", r.GetConfig().Name)
+
+		if isAccessible, err := r.IsAccessible(ctx); err != nil {
+			o.log.WithError(err).Warnf("Failed to check runtime %s availability, skipping", r.GetConfig().Name)
+			continue
+		} else if !isAccessible {
 			continue
 		}
 
