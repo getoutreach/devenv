@@ -87,6 +87,9 @@ type Runtime interface {
 	// Start starts (awakens) a kubernetes cluster from this runtime
 	Start(context.Context) error
 
+	// // IsAccessible validates whether the runtime IsAccessible
+	IsAccessible(context.Context) (bool, error)
+
 	// PreCreate is ran before creating a kubernetes cluster, useful
 	// for implementing pre-requirements.
 	PreCreate(context.Context) error
