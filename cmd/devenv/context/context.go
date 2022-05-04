@@ -165,6 +165,7 @@ func (o *Options) Run(ctx gocontext.Context) error {
 
 		if isAccessible, err := r.IsAccessible(ctx); err != nil {
 			o.log.WithError(err).Warnf("Failed to check runtime %s availability, skipping", r.GetConfig().Name)
+			continue
 		} else if !isAccessible {
 			continue
 		}
