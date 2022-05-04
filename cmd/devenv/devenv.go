@@ -54,6 +54,7 @@ const HoneycombDataset = ""
 ///EndBlock(honeycombDataset)
 
 ///Block(global)
+
 ///EndBlock(global)
 
 func main() {
@@ -61,6 +62,7 @@ func main() {
 	log := logrus.New()
 
 	///Block(init)
+
 	///EndBlock(init)
 
 	app := cli.App{
@@ -98,6 +100,7 @@ func main() {
 	}
 	app.Flags = []cli.Flag{
 		///Block(flags)
+
 		///EndBlock(flags)
 	}
 	app.Commands = []*cli.Command{
