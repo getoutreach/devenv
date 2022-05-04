@@ -23,7 +23,6 @@ plugins:
     - assets:
         - "dist/*.tar.gz"
         - "dist/checksums.txt"
-
   ### IMPORTANT: This needs a block later.
   # Build and push our docker image
   - - "@semantic-release/exec"
