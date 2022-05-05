@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -29,7 +30,32 @@ func ensureDevspace(log logrus.FieldLogger) (string, error) {
 		runtime.GOOS,
 		runtime.GOARCH)
 
-	return cmdutil.EnsureBinary(log, "devspace-"+devspaceVersion, "devspace", devspaceDownloadURL, "")
+	devspace, err := cmdutil.EnsureBinary(log, "devspace-"+devspaceVersion, "devspace", devspaceDownloadURL, "")
+	if err != nil {
+		return "", err
+	}
+
+	b, err := exec.Command(devspace, "list", "plugins").Output()
+	if err != nil {
+		// We don't care enough about the telemetry plugin to crash the whole process
+		return devspace, nil
+	}
+
+	// Adding and updating the telemetry plugin is a best effort attempt.
+	// It should not block or slow down the deployment process.
+	if !bytes.Contains(b, []byte("devtel")) {
+		go func() {
+			//nolint:errcheck // Why: We don't care enough about the telemetry plugin to crash the whole process
+			_ = exec.Command(devspace, "add", "plugin", "https://github.com/getoutreach/devtel").Run()
+		}()
+	} else {
+		go func() {
+			//nolint:errcheck // Why: We don't care enough about the telemetry plugin to crash the whole process
+			_ = exec.Command(devspace, "update", "plugin", "devtel").Run()
+		}()
+	}
+
+	return devspace, nil
 }
 
 // getImageRegistry returns the image registry for the app
