@@ -22,6 +22,9 @@ spec:
     - name: velero-restore
       policy: none
       purge: false
+    - name: outreach-polaroid-bento1a
+      policy: none
+      purge: false
 
     mode: standalone
     replicas: 1
