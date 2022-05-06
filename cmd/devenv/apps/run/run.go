@@ -102,7 +102,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			&cli.BoolFlag{
 				Name:    "skip-portforwarding",
 				Aliases: []string{"p"},
-				Usage:   "Skip forwarding ports. By default ports are forwarded to the dev container.",
+				Usage:   "Skip forwarding ports; useful when running multiple `devenv apps run` commands at once",
 			},
 			&cli.StringFlag{
 				Name:  "deployment",
