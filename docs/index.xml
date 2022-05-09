@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Docs on</title><link>https://engineering.outreach.io/devenv/docs/</link><description>Recent content in Docs on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 09 May 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://engineering.outreach.io/devenv/docs/index.xml" rel="self" type="application/rss+xml"/><item><title>devenv lifcycle</title><link>https://engineering.outreach.io/devenv/docs/lifecycle/</link><pubDate>Mon, 09 May 2022 00:00:00 +0000</pubDate><guid>https://engineering.outreach.io/devenv/docs/lifecycle/</guid><description>To destroy the developer environment, including data in databases:
+devenv destroy To stop the developer environment (which persists the state of the environment, unlike devenv destroy):
+devenv stop To restart the developer environment after stopping it:
+devenv start To initialize a new developer environment (this exits immediately if it detects that a dev-environment has already started to be provisioned):
+devenv provision To deploy additional services, use the devenv apps deploy $APP_NAME flag, where $APP_NAME is the name of your service&amp;rsquo;s GitHub repository.</description></item><item><title>System Requirements</title><link>https://engineering.outreach.io/devenv/docs/system-requirements/</link><pubDate>Mon, 09 May 2022 00:00:00 +0000</pubDate><guid>https://engineering.outreach.io/devenv/docs/system-requirements/</guid><description>macOS #
+Make sure that Homebrew is installed, then download the Brewfile, and run with it in the current directory:
+brew bundle Linux / WSL2 #
+Install the following:
+jq: sudo apt install jq Docker</description></item></channel></rss>
