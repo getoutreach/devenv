@@ -1,4 +1,4 @@
-baseurl = "/devenv"
+baseurl = "https://engineering.outreach.io/devenv"
 canonifyURLs = true
 disableAliases = true
 disableHugoGeneratorInject = true
