@@ -1,0 +1,85 @@
+# Meta Data for SEO
+
+## Homepage
+title = "devenv"
+titleSeparator = "-"
+titleAddition = "A Kubernetes Development Framework"
+description = "devenv enables developers to work with Kubernetes in every environment, by running it in dev. It provides a smart framework to do so."
+
+## Open Graph
+images = ["doks.png"]
+ogLocale = "en_US"
+domainTLD = "engineering.outreach.io"
+titleHome = "devenv"
+
+## JSON-LD
+# schemaType = "Person"
+schemaType = "Organization"
+schemaName = "Outreach"
+schemaAuthor = "Outreach Engineering"
+schemaAuthorTwitter = "https://twitter.com/outreach_io"
+schemaAuthorGitHub = "https://github.com/getoutreach"
+schemaLocale = "en-US"
+schemaLogo = "logo-doks.png"
+schemaLogoWidth = 512
+schemaLogoHeight = 512
+schemaImage = "doks.png"
+schemaImageWidth = 1280
+schemaImageHeight = 640
+schemaTwitter = "https://twitter.com/outreach_io"
+schemaLinkedIn = ""
+schemaGitHub = "https://github.com/getoutreach/devenv"
+schemaSection = "blog"
+
+## Sitelinks Search Box
+siteLinksSearchBox = false
+
+## Chrome Browser
+themeColor = "#fff"
+
+# Images
+quality = 85
+bgColor = "#fff"
+landscapePhotoWidths = [900, 800, 700, 600, 500]
+portraitPhotoWidths = [800, 700, 600, 500]
+lqipWidth = "20x"
+smallLimit = "300"
+
+# Footer
+footer = "Powered by <a class=\"text-muted\" href=\"https://gohugo.io/\">Hugo</a> and <a class=\"text-muted\" href=\"https://getdoks.org/\">Doks</a>"
+
+# Feed
+copyRight = "Copyright (c) 2022 Outreach Engineering"
+
+# Alert
+alert = false
+alertDismissable = true
+alertText = "NEW THINGS!!!"
+
+# Edit Page
+# repoHost [Github | Gitea | GitLab | Bitbucket | BitbucketServer ] is used for building the edit link based on git hoster
+repoHost = "GitHub"
+docsRepo = "https://github.com/getoutreach/devenv"
+docsRepoBranch = "main"
+docsRepoSubPath = "docs"
+editPage = true
+lastMod = true
+
+[options]
+  lazySizes = true
+  clipBoard = true
+  instantPage = true
+  flexSearch = true
+  darkMode = true
+  bootStrapJs = true
+  breadCrumb = false
+  highLight = true
+  kaTex = false
+  multilingualMode = false
+  docsVersioning = false
+  fullWidth = false
+
+[menu]
+  [menu.section]
+    auto = true
+    collapsibleSidebar = true
