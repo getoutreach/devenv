@@ -1,18 +1,10 @@
-# Interacting with Services
-
-This pages goes into detail about how to interact with services.
-
-- [Interacting with Services](#interacting-with-services)
-  - [Deploying a Service](#deploying-a-service)
-    - [Deploying a Specific Revision](#deploying-a-specific-revision)
-    - [Deploying Local Changes](#deploying-local-changes)
-  - [Updating Services](#updating-services)
-    - [Updating to the Latest Version](#updating-to-the-latest-version)
-    - [Deploying a Specific Version](#deploying-a-specific-version)
-  - [Running a Local Service](#running-a-local-service)
-    - [Exposing Your Local Service to the Developer Environment](#exposing-your-local-service-to-the-developer-environment)
-      - [Mapping a port](#mapping-a-port)
-
+---
+title : "Interacting with Services"
+description: "How to interact with services in a devenv"
+date: 2022-05-09
+lastmod: 2022-05-09
+draft: false
+images: []
 ---
 
 ## Deploying a Service

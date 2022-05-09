@@ -1,4 +1,11 @@
-## Lifecycle of the Developer Environment
+---
+title : "devenv lifcycle"
+description: "Common commands when running the devenv and how to interact with one"
+date: 2022-05-09
+lastmod: 2022-05-09
+draft: false
+images: []
+---
 
 To destroy the developer environment, including data in databases:
 
