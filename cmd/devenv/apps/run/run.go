@@ -159,5 +159,6 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Run(ctx, o.log, o.k, b, o.conf, o.AppNameOrPath, kr.GetConfig(), o.LocalImage, o.Terminal, o.SkipPortForwarding, o.DeploymentProfile)
+	return app.Run(ctx, o.log, o.k, b, o.conf, o.AppNameOrPath, kr.GetConfig(),
+		o.LocalImage, o.Terminal, o.SkipPortForwarding, o.DeploymentProfile)
 }
