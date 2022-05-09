@@ -1,4 +1,11 @@
-# System Requirements
+---
+title : "System Requirements"
+description: "Lists the requirements for running a devenv"
+date: 2022-05-09
+lastmod: 2022-05-09
+draft: false
+images: []
+---
 
 ## macOS
 
