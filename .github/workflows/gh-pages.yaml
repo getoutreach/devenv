@@ -24,7 +24,9 @@ jobs:
 
       - name: Build
         working-directory: ./docs
-        run: hugo --minify
+        run: |-
+          npm install
+          npm run build
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
