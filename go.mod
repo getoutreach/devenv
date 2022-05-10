@@ -26,7 +26,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.8.6
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.4.0
-	github.com/versent/saml2aws/v2 v2.34.0
+	github.com/versent/saml2aws/v2 v2.35.0
 	github.com/vmware-tanzu/velero v1.7.1
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 	google.golang.org/grpc v1.43.0
