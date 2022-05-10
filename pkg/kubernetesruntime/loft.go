@@ -83,13 +83,7 @@ func (lr *LoftRuntime) IsAccessible(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	// Check if we're authenticated already
-	loggedIn, err := lr.isLoggedIn(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	return loggedIn, nil
+	return lr.isLoggedIn(ctx), nil
 }
 
 func (lr *LoftRuntime) ensureClient() error {
@@ -110,20 +104,20 @@ func (lr *LoftRuntime) ensureClient() error {
 	return nil
 }
 
-func (lr *LoftRuntime) isLoggedIn(ctx context.Context) (bool, error) {
+func (lr *LoftRuntime) isLoggedIn(ctx context.Context) bool {
 	managementClient, err := lr.loftctl.Management()
 
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	if err == nil {
 		if _, _, err := loftctlhelper.GetCurrentUser(ctx, managementClient); err == nil {
-			return true, nil
+			return true
 		}
 	}
 
-	return false, nil
+	return false
 }
 
 func (lr *LoftRuntime) PreCreate(ctx context.Context) error {
