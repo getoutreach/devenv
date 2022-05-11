@@ -14,6 +14,7 @@ import (
 	"github.com/getoutreach/devenv/internal/apps"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
+	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -92,6 +93,7 @@ func (a *App) commandEnv(ctx context.Context) ([]string, error) {
 	vars := []string{
 		fmt.Sprintf("DEPLOY_TO_DEV_VERSION=%s", a.Version),
 		fmt.Sprintf("DEVENV_BIN=%s", binPath),
+		fmt.Sprintf("DEVENV_VERSION=%s", app.Version),
 		fmt.Sprintf("DEVENV_DEPLOY_VERSION=%s", a.Version),
 		fmt.Sprintf("DEVENV_DEPLOY_IMAGE_SOURCE=%s", imageSource),
 		fmt.Sprintf("DEVENV_DEPLOY_IMAGE_REGISTRY=%s", registry),
