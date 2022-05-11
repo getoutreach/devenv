@@ -10,6 +10,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/containerruntime"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/box"
+	"github.com/getoutreach/gobox/pkg/trace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -72,6 +73,13 @@ func NewOptions(log logrus.FieldLogger, b *box.Config) (*Options, error) {
 	}, nil
 }
 
+func (o *Options) MarshalLog(addField func(key string, v interface{})) {
+	addField("devenv.destroy.remove_image_cache", o.RemoveImageCache)
+	addField("devenv.destroy.remove_snapshot_storage", o.RemoveSnapshotStorage)
+
+	addField("devenv.runtime", o.KubernetesRuntime.GetConfig().Name)
+}
+
 func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 	return &cli.Command{
 		Name:        "destroy",
@@ -88,19 +96,24 @@ func NewCmdDestroy(log logrus.FieldLogger) *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
+			ctx := trace.StartCall(c.Context, "destroy")
+			defer trace.EndCall(ctx)
+
 			b, err := box.LoadBox()
 			if err != nil {
-				return err
+				return trace.SetCallStatus(ctx, err)
 			}
 
 			o, err := NewOptions(log, b)
 			if err != nil {
-				return err
+				return trace.SetCallStatus(ctx, err)
 			}
 			o.RemoveImageCache = c.Bool("remove-image-cache")
 			o.RemoveSnapshotStorage = c.Bool("remove-snapshot-storage")
 
-			return o.Run(c.Context)
+			trace.AddInfo(ctx, o)
+
+			return trace.SetCallStatus(ctx, o.Run(ctx))
 		},
 	}
 }
