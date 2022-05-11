@@ -31,7 +31,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 	google.golang.org/grpc v1.43.0
 	gopkg.in/yaml.v2 v2.4.0
-	gotest.tools/v3 v3.1.0
+	gotest.tools/v3 v3.2.0
 
 	// Kubernetes dependencies
 	// Ensure that the versions here are always the same
