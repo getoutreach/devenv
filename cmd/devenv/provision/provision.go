@@ -32,6 +32,7 @@ import (
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
 	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/getoutreach/gobox/pkg/box"
+	"github.com/getoutreach/gobox/pkg/trace"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -93,6 +94,16 @@ type Options struct {
 	b       *box.Config
 	k       kubernetes.Interface
 	r       *rest.Config
+}
+
+func (o *Options) MarshalLog(addField func(key string, v interface{})) {
+	addField("devenv.provision.deploy_apps", o.DeployApps)
+	addField("devenv.provision.snapshot_target", o.SnapshotTarget)
+	addField("devenv.provision.snapshot_channel", o.SnapshotChannel)
+	addField("devenv.provision.base", o.Base)
+	addField("devenv.provision.use_devspace", o.UseDevspace)
+
+	addField("devenv.runtime", o.KubernetesRuntime.GetConfig().Name)
 }
 
 // NewOptions creates a new provision command
@@ -157,14 +168,17 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 			},
 		},
 		Action: func(c *cli.Context) error {
+			ctx := trace.StartCall(c.Context, "provision")
+			defer trace.EndCall(ctx)
+
 			b, err := box.LoadBox()
 			if err != nil {
-				return errors.Wrap(err, "failed to load box configuration")
+				return trace.SetCallStatus(ctx, errors.Wrap(err, "failed to load box configuration"))
 			}
 
 			o, err := NewOptions(log, b)
 			if err != nil {
-				return err
+				return trace.SetCallStatus(ctx, err)
 			}
 
 			cmdutil.CLIStringSliceToStringSlice(c.StringSlice("deploy-app"), &o.DeployApps)
@@ -176,12 +190,15 @@ func NewCmdProvision(log logrus.FieldLogger) *cli.Command { //nolint:funlen
 
 			runtimeName := c.String("kubernetes-runtime")
 			k8sRuntime, err := kubernetesruntime.GetRuntime(runtimeName)
+
 			if err != nil {
-				return errors.Wrap(err, "failed to load kubernetes runtime")
+				return trace.SetCallStatus(ctx, errors.Wrap(err, "failed to load kubernetes runtime"))
 			}
 			o.KubernetesRuntime = k8sRuntime
 
-			return o.Run(c.Context)
+			trace.AddInfo(ctx, o)
+
+			return trace.SetCallStatus(ctx, o.Run(ctx))
 		},
 	}
 }

@@ -124,7 +124,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			}
 			o.LocalImage = c.Bool("with-local-image")
 			o.Terminal = c.Bool("with-terminal")
-			o.Terminal = c.Bool("skip-portforwarding")
+			o.SkipPortForwarding = c.Bool("skip-portforwarding")
 
 			// If not set, go with default deployment
 			deploymentFlag := c.String("deployment")
@@ -160,5 +160,10 @@ func (o *Options) Run(ctx context.Context) error {
 	}
 
 	return app.Run(ctx, o.log, o.k, b, o.conf, o.AppNameOrPath, kr.GetConfig(),
-		o.LocalImage, o.Terminal, o.SkipPortForwarding, o.DeploymentProfile)
+		app.RunOptions{
+			UseLocalImage:      o.LocalImage,
+			SkipPortForwarding: o.SkipPortForwarding,
+			OpenTerminal:       o.Terminal,
+			DeploymentProfile:  o.DeploymentProfile,
+		})
 }

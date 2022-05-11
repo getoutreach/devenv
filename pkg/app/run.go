@@ -15,22 +15,28 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type RunOptions struct {
+	DeploymentProfile  string
+	OpenTerminal       bool
+	UseLocalImage      bool
+	SkipPortForwarding bool
+}
+
 // Run is a wrapper around NewApp().Run()
 func Run(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
-	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig,
-	localImage, terminal, skipPortForwarding bool, deploymentProfile string) error {
+	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig, opts RunOptions) error {
 	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
 	defer app.Close()
 
-	app.Local = localImage
-	if !localImage && app.Version == AppVersionLocal {
+	app.Local = opts.UseLocalImage
+	if !opts.UseLocalImage && app.Version == AppVersionLocal {
 		app.Version = AppVersionLatest
 	}
 
-	return app.Dev(ctx, terminal, skipPortForwarding, deploymentProfile)
+	return app.Dev(ctx, opts)
 }
 
 // RunStop is a wrapper around NewApp().RunStop()
@@ -50,16 +56,16 @@ func RunStop(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface
 // 1. If there's an override script for the dev mode, we use that.
 // 2. If there's no override script, we use devspace dev directly.
 // We also check if devspace is able to start dev mode of the app (has dev configuration).
-func (a *App) runCommand(ctx context.Context, terminal, skipPortForwarding bool, deploymentProfile string) (*exec.Cmd, error) {
+func (a *App) runCommand(ctx context.Context, opts RunOptions) (*exec.Cmd, error) {
 	vars := make([]string, 0)
-	if terminal {
+	if opts.OpenTerminal {
 		vars = append(vars, "DEVENV_DEV_TERMINAL=true")
 	}
-	if skipPortForwarding {
+	if opts.SkipPortForwarding {
 		vars = append(vars, "DEVENV_DEV_SKIP_PORTFORWARDING=true")
 	}
-	if deploymentProfile != "" {
-		vars = append(vars, fmt.Sprintf("DEVENV_DEV_DEPLOYMENT_PROFILE=%s", deploymentProfile))
+	if opts.DeploymentProfile != "" {
+		vars = append(vars, fmt.Sprintf("DEVENV_DEV_DEPLOYMENT_PROFILE=%s", opts.DeploymentProfile))
 	}
 
 	return a.command(ctx, &commandBuilderOptions{
@@ -89,13 +95,13 @@ func (a *App) runStopCommand(ctx context.Context) (*exec.Cmd, error) {
 }
 
 // Dev starts the development mode for the application.
-func (a *App) Dev(ctx context.Context, terminal, skipPortForwarding bool, deploymentProfile string) error {
+func (a *App) Dev(ctx context.Context, opts RunOptions) error {
 	// TODO(DTSS-1496): Handle deleting jobs. devspace v6 will support doing this.
 
 	// We detach from ctx because the child processes handle kill/interupt signals.
 	// Iterrupt is a valid use case in which we want to stop the dev mode. Bootstrap devspace.yaml has special
 	// handling for devCommand:interrupt event and calls devenv apps dev stop.
-	cmd, err := a.runCommand(context.Background(), terminal, skipPortForwarding, deploymentProfile)
+	cmd, err := a.runCommand(context.Background(), opts)
 	if err != nil {
 		return err
 	}
