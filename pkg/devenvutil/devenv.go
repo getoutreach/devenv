@@ -171,13 +171,14 @@ func DeleteObjects(ctx context.Context, log logrus.FieldLogger,
 
 // FindUnreadyPods checks all namespaces to find pods that are unready, they are
 // then returned. If an error occurs, err is returned.
-func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, error) {
+func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, []*corev1.Pod, error) {
 	pods, err := k.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list pods")
+		return nil, nil, errors.Wrap(err, "failed to list pods")
 	}
 
-	unreadyPods := []string{}
+	unreadyPodNames := []string{}
+	unreadyPods := []*corev1.Pod{}
 	for i := range pods.Items {
 		po := &pods.Items[i]
 		ready := false
@@ -209,15 +210,15 @@ func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, err
 			continue
 		}
 
-		unreadyPods = append(unreadyPods, po.Namespace+"/"+po.Name)
+		unreadyPodNames = append(unreadyPodNames, po.Namespace+"/"+po.Name)
 	}
 
 	// no unready pods, not an error
-	if len(unreadyPods) == 0 {
-		return nil, nil
+	if len(unreadyPodNames) == 0 {
+		return nil, nil, nil
 	}
 
-	return unreadyPods, fmt.Errorf("not all pods were ready")
+	return unreadyPodNames, unreadyPods, fmt.Errorf("not all pods were ready")
 }
 
 // WaitForAllPodsToBeReady waits for all pods to be unready.
@@ -225,18 +226,81 @@ func WaitForAllPodsToBeReady(ctx context.Context, k kubernetes.Interface, log lo
 	ctx, cancel := context.WithTimeout(ctx, time.Minute*10)
 	defer cancel()
 
+	var unreadyPodNames []string
+	var unreadyPods pods
+	var err error
 	for ctx.Err() == nil {
-		unreadyPods, err := FindUnreadyPods(ctx, k)
+		unreadyPodNames, unreadyPods, err = FindUnreadyPods(ctx, k)
 		if err == nil {
 			log.Info("All pods were ready")
 			break
 		}
 
-		log.WithError(err).WithField("pods", unreadyPods).
+		log.WithError(err).WithField("pods", unreadyPodNames).
 			Info("Waiting for pods to be ready")
 
 		async.Sleep(ctx, 30*time.Second)
 	}
 
+	if ctx.Err() != nil {
+		// Write out a bit more detailed info on the prior to exit
+
+		log.WithError(err).WithField("pods", unreadyPods).
+			Info("Waiting for pods to be ready timed out")
+	}
+
 	return ctx.Err()
+}
+
+// pod is a wrapper around []*corev1.Pod so that it can marshal to
+// a structured log
+type pods []*corev1.Pod
+
+// MarshalLog implements the log.Marshaler interface for []*corev1.Pod
+func (p *pods) MarshalLog(addField func(key string, v interface{})) {
+	for _, podValue := range *p {
+		marshalablePod := pod(*podValue)
+		marshalablePod.MarshalLog(addField)
+	}
+}
+
+// pod is a wrapper around corev1.Pod so that it can marshal to
+// a structured log
+type pod corev1.Pod
+
+// MarshalLog implements the log.Marshaler interface for corev1.Pod
+func (p *pod) MarshalLog(addField func(key string, v interface{})) {
+	addField(fmt.Sprintf("pod.%s.phase", p.Name), p.Status.Phase)
+	if p.Status.Message != "" {
+		addField(fmt.Sprintf("pod.%s.status.message", p.Name), p.Status.Message)
+	}
+	for i := range p.Status.ContainerStatuses {
+		cs := containerStatus{p.Status.ContainerStatuses[i], p.Name}
+		cs.MarshalLog(addField)
+	}
+}
+
+// containerStatus is a wrapper around corev1.ContainerStatus so that its
+// can marshal to a structured log
+type containerStatus struct {
+	corev1.ContainerStatus
+	podName string
+}
+
+// MarshalLog implements the log.Marshaler interface for containerStatus
+func (cs *containerStatus) MarshalLog(addField func(key string, v interface{})) {
+	addField(fmt.Sprintf("pod.%s.containerstatuses.%s.ready", cs.podName, cs.Name), cs.Ready)
+	addField(fmt.Sprintf("pod.%s.containerstatuses.%s.restart_count", cs.podName, cs.Name), cs.RestartCount)
+	if cs.State.Waiting != nil {
+		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state", cs.podName, cs.Name), "waiting")
+		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.reason", cs.podName, cs.Name), cs.State.Waiting.Reason)
+	}
+	if cs.State.Running != nil {
+		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state", cs.podName, cs.Name), "running")
+	}
+	if cs.State.Terminated != nil {
+		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state", cs.podName, cs.Name), "terminated")
+		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state.reason", cs.podName, cs.Name), cs.State.Terminated.Reason)
+		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state.exit_code", cs.podName, cs.Name), cs.State.Terminated.ExitCode)
+	}
 }
