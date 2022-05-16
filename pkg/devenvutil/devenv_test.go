@@ -1,17 +1,19 @@
 package devenvutil
 
 import (
-	"encoding/json"
+	"bytes"
+	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestMarshalPods(t *testing.T) {
-	podValues := pods{
-		&corev1.Pod{
+	podValues := []*corev1.Pod{
+		{
 			ObjectMeta: metav1.ObjectMeta{Name: "pod1"},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -25,7 +27,7 @@ func TestMarshalPods(t *testing.T) {
 				Message: "Running",
 			},
 		},
-		&corev1.Pod{
+		{
 			ObjectMeta: metav1.ObjectMeta{Name: "pod2"},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -42,7 +44,7 @@ func TestMarshalPods(t *testing.T) {
 				Phase: corev1.PodFailed,
 			},
 		},
-		&corev1.Pod{
+		{
 			ObjectMeta: metav1.ObjectMeta{Name: "pod3"},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -59,21 +61,15 @@ func TestMarshalPods(t *testing.T) {
 			},
 		},
 	}
-	tl := &testLog{ValueMap: map[string]interface{}{}}
-	podValues.MarshalLog(tl.AddField)
-	b, err := json.Marshal(tl.ValueMap)
-	assert.NilError(t, err)
-	t.Log(string(b))
-	assert.Equal(t,
+
+	// Writing this out here as a test to show how it actually writes
+	buf := &bytes.Buffer{}
+	log := logrus.New()
+	log.SetOutput(buf)
+
+	log.WithField("pods", PodsStateInfo(podValues)).Info("Test")
+
+	assert.Assert(t,
 		// nolint:lll // long line
-		`{"pod.pod1.containerstatuses.container1.ready":false,"pod.pod1.containerstatuses.container1.restart_count":0,"pod.pod1.containerstatuses.container1.state":"running","pod.pod1.phase":"Running","pod.pod1.status.message":"Running","pod.pod2.containerstatuses.container2.ready":false,"pod.pod2.containerstatuses.container2.restart_count":2,"pod.pod2.containerstatuses.container2.state":"terminated","pod.pod2.containerstatuses.container2.state.exit_code":1,"pod.pod2.containerstatuses.container2.state.reason":"crashed","pod.pod2.phase":"Failed","pod.pod3.containerstatuses.container1.ready":false,"pod.pod3.containerstatuses.container1.reason":"waiting on image","pod.pod3.containerstatuses.container1.restart_count":0,"pod.pod3.containerstatuses.container1.state":"waiting","pod.pod3.phase":"Failed"}`,
-		string(b))
-}
-
-type testLog struct {
-	ValueMap map[string]interface{}
-}
-
-func (t *testLog) AddField(key string, value interface{}) {
-	t.ValueMap[key] = value
+		strings.Contains(buf.String(), `pods="map[pod1:map[Message:Running Phase:Running container1:map[Ready:false Restart:0 State:running]] pod2:map[Phase:Failed container2:map[ExitCode:1 Ready:false Reason:crashed Restart:2 State:terminated]] pod3:map[Phase:Failed container1:map[Ready:false Reason:waiting on image Restart:0 State:waiting]]]`))
 }

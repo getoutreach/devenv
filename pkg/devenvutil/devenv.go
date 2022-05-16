@@ -227,7 +227,7 @@ func WaitForAllPodsToBeReady(ctx context.Context, k kubernetes.Interface, log lo
 	defer cancel()
 
 	var unreadyPodNames []string
-	var unreadyPods pods
+	var unreadyPods []*corev1.Pod
 	var err error
 	for ctx.Err() == nil {
 		unreadyPodNames, unreadyPods, err = FindUnreadyPods(ctx, k)
@@ -244,63 +244,56 @@ func WaitForAllPodsToBeReady(ctx context.Context, k kubernetes.Interface, log lo
 
 	if ctx.Err() != nil {
 		// Write out a bit more detailed info on the prior to exit
-
-		log.WithError(err).WithField("pods", unreadyPods).
+		log.WithError(err).WithField("pods", PodsStateInfo(unreadyPods)).
 			Info("Waiting for pods to be ready timed out")
 	}
 
 	return ctx.Err()
 }
 
-// pod is a wrapper around []*corev1.Pod so that it can marshal to
-// a structured log
-type pods []*corev1.Pod
-
-// MarshalLog implements the log.Marshaler interface for []*corev1.Pod
-func (p *pods) MarshalLog(addField func(key string, v interface{})) {
-	for _, podValue := range *p {
-		marshalablePod := pod(*podValue)
-		marshalablePod.MarshalLog(addField)
+// PodsStateInfo returns a string per pod with the state
+func PodsStateInfo(pods []*corev1.Pod) map[string]interface{} {
+	podDetails := map[string]interface{}{}
+	for _, podValue := range pods {
+		podDetails[podValue.Name] = PodStateInfo(podValue)
 	}
+	return podDetails
 }
 
-// pod is a wrapper around corev1.Pod so that it can marshal to
-// a structured log
-type pod corev1.Pod
+// PodStateInfo writes the pod info to a string
+func PodStateInfo(p *corev1.Pod) map[string]interface{} {
+	podDetails := map[string]interface{}{
+		"Phase": p.Status.Phase,
+	}
 
-// MarshalLog implements the log.Marshaler interface for corev1.Pod
-func (p *pod) MarshalLog(addField func(key string, v interface{})) {
-	addField(fmt.Sprintf("pod.%s.phase", p.Name), p.Status.Phase)
 	if p.Status.Message != "" {
-		addField(fmt.Sprintf("pod.%s.status.message", p.Name), p.Status.Message)
+		podDetails["Message"] = p.Status.Message
 	}
 	for i := range p.Status.ContainerStatuses {
-		cs := containerStatus{p.Status.ContainerStatuses[i], p.Name}
-		cs.MarshalLog(addField)
+		d := ContainerStatusInfo(&p.Status.ContainerStatuses[i])
+		podDetails[p.Status.ContainerStatuses[i].Name] = d
 	}
+	return podDetails
 }
 
-// containerStatus is a wrapper around corev1.ContainerStatus so that its
-// can marshal to a structured log
-type containerStatus struct {
-	corev1.ContainerStatus
-	podName string
-}
+// ContainerStatusInfo writes the container status to a string
+func ContainerStatusInfo(cs *corev1.ContainerStatus) map[string]interface{} {
+	containerDetails := map[string]interface{}{
+		"Ready":   cs.Ready,
+		"Restart": cs.RestartCount,
+	}
 
-// MarshalLog implements the log.Marshaler interface for containerStatus
-func (cs *containerStatus) MarshalLog(addField func(key string, v interface{})) {
-	addField(fmt.Sprintf("pod.%s.containerstatuses.%s.ready", cs.podName, cs.Name), cs.Ready)
-	addField(fmt.Sprintf("pod.%s.containerstatuses.%s.restart_count", cs.podName, cs.Name), cs.RestartCount)
 	if cs.State.Waiting != nil {
-		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state", cs.podName, cs.Name), "waiting")
-		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.reason", cs.podName, cs.Name), cs.State.Waiting.Reason)
+		containerDetails["State"] = "waiting"
+		containerDetails["Reason"] = cs.State.Waiting.Reason
 	}
 	if cs.State.Running != nil {
-		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state", cs.podName, cs.Name), "running")
+		containerDetails["State"] = "running"
 	}
 	if cs.State.Terminated != nil {
-		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state", cs.podName, cs.Name), "terminated")
-		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state.reason", cs.podName, cs.Name), cs.State.Terminated.Reason)
-		addField(fmt.Sprintf("pod.%s.containerstatuses.%s.state.exit_code", cs.podName, cs.Name), cs.State.Terminated.ExitCode)
+		containerDetails["State"] = "terminated"
+		containerDetails["ExitCode"] = cs.State.Terminated.ExitCode
+		containerDetails["Reason"] = cs.State.Terminated.Reason
 	}
+	return containerDetails
 }
