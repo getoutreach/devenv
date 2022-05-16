@@ -7,12 +7,12 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.16.3
 	github.com/aws/aws-sdk-go-v2/config v1.15.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.15.1
-	github.com/cenkalti/backoff/v4 v4.1.2
+	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
 	github.com/getoutreach/gobox v1.38.0
-	github.com/getoutreach/localizer v1.12.0
+	github.com/getoutreach/localizer v1.14.4
 	github.com/getoutreach/vault-client v1.4.0
 	github.com/google/go-github/v42 v42.0.0
 	github.com/jetstack/cert-manager v1.7.1
