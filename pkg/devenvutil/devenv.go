@@ -171,13 +171,14 @@ func DeleteObjects(ctx context.Context, log logrus.FieldLogger,
 
 // FindUnreadyPods checks all namespaces to find pods that are unready, they are
 // then returned. If an error occurs, err is returned.
-func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, error) {
+func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, []*corev1.Pod, error) {
 	pods, err := k.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list pods")
+		return nil, nil, errors.Wrap(err, "failed to list pods")
 	}
 
-	unreadyPods := []string{}
+	unreadyPodNames := []string{}
+	unreadyPods := []*corev1.Pod{}
 	for i := range pods.Items {
 		po := &pods.Items[i]
 		ready := false
@@ -209,15 +210,15 @@ func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, err
 			continue
 		}
 
-		unreadyPods = append(unreadyPods, po.Namespace+"/"+po.Name)
+		unreadyPodNames = append(unreadyPodNames, po.Namespace+"/"+po.Name)
 	}
 
 	// no unready pods, not an error
-	if len(unreadyPods) == 0 {
-		return nil, nil
+	if len(unreadyPodNames) == 0 {
+		return nil, nil, nil
 	}
 
-	return unreadyPods, fmt.Errorf("not all pods were ready")
+	return unreadyPodNames, unreadyPods, fmt.Errorf("not all pods were ready")
 }
 
 // WaitForAllPodsToBeReady waits for all pods to be unready.
@@ -225,18 +226,74 @@ func WaitForAllPodsToBeReady(ctx context.Context, k kubernetes.Interface, log lo
 	ctx, cancel := context.WithTimeout(ctx, time.Minute*10)
 	defer cancel()
 
+	var unreadyPodNames []string
+	var unreadyPods []*corev1.Pod
+	var err error
 	for ctx.Err() == nil {
-		unreadyPods, err := FindUnreadyPods(ctx, k)
+		unreadyPodNames, unreadyPods, err = FindUnreadyPods(ctx, k)
 		if err == nil {
 			log.Info("All pods were ready")
 			break
 		}
 
-		log.WithError(err).WithField("pods", unreadyPods).
+		log.WithError(err).WithField("pods", unreadyPodNames).
 			Info("Waiting for pods to be ready")
 
 		async.Sleep(ctx, 30*time.Second)
 	}
 
+	if ctx.Err() != nil {
+		// Write out a bit more detailed info on the prior to exit
+		log.WithError(err).WithField("pods", PodsStateInfo(unreadyPods)).
+			Info("Waiting for pods to be ready timed out")
+	}
+
 	return ctx.Err()
+}
+
+// PodsStateInfo returns a string per pod with the state
+func PodsStateInfo(pods []*corev1.Pod) map[string]interface{} {
+	podDetails := map[string]interface{}{}
+	for _, podValue := range pods {
+		podDetails[podValue.Name] = PodStateInfo(podValue)
+	}
+	return podDetails
+}
+
+// PodStateInfo writes the pod info to a string
+func PodStateInfo(p *corev1.Pod) map[string]interface{} {
+	podDetails := map[string]interface{}{
+		"Phase": p.Status.Phase,
+	}
+
+	if p.Status.Message != "" {
+		podDetails["Message"] = p.Status.Message
+	}
+	for i := range p.Status.ContainerStatuses {
+		d := ContainerStatusInfo(&p.Status.ContainerStatuses[i])
+		podDetails[p.Status.ContainerStatuses[i].Name] = d
+	}
+	return podDetails
+}
+
+// ContainerStatusInfo writes the container status to a string
+func ContainerStatusInfo(cs *corev1.ContainerStatus) map[string]interface{} {
+	containerDetails := map[string]interface{}{
+		"Ready":   cs.Ready,
+		"Restart": cs.RestartCount,
+	}
+
+	if cs.State.Waiting != nil {
+		containerDetails["State"] = "waiting"
+		containerDetails["Reason"] = cs.State.Waiting.Reason
+	}
+	if cs.State.Running != nil {
+		containerDetails["State"] = "running"
+	}
+	if cs.State.Terminated != nil {
+		containerDetails["State"] = "terminated"
+		containerDetails["ExitCode"] = cs.State.Terminated.ExitCode
+		containerDetails["Reason"] = cs.State.Terminated.Reason
+	}
+	return containerDetails
 }
