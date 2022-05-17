@@ -44,18 +44,6 @@ workflows:
 
   ### Start workflows inserted by other modules
   ### End workflows inserted by other modules
-  release_branch:
-    triggers:
-      - schedule:
-          cron: 0 0 15 * *
-          filters:
-            branches:
-              only:
-                - release
-    jobs:
-      - shared/merge:
-          head: release
-          base: main
 
   release:
     jobs:
