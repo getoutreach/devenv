@@ -223,7 +223,7 @@ func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, []*
 
 // WaitForAllPodsToBeReady waits for all pods to be unready.
 func WaitForAllPodsToBeReady(ctx context.Context, k kubernetes.Interface, log logrus.FieldLogger) error {
-	ctx, cancel := context.WithTimeout(ctx, time.Minute*10)
+	ctx, cancel := context.WithTimeout(ctx, time.Minute*20)
 	defer cancel()
 
 	var unreadyPodNames []string
