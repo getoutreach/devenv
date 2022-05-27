@@ -19,12 +19,9 @@ var kubectlScript []byte
 //		devenv --skip-update kubectl "$@"
 //
 // The function also adds the script to $PATH so it's picked by child processes.
-func AddKubectl(opts ...func(*Options)) error {
+func AddKubectl(opts ...Option) error {
 	o := &Options{}
-
-	for _, opt := range opts {
-		opt(o)
-	}
+	o.apply(opts)
 
 	devenvShimDir := o.dir
 	if devenvShimDir == "" {
@@ -42,14 +39,8 @@ func AddKubectl(opts ...func(*Options)) error {
 
 	kubectlPath := filepath.Join(devenvShimDir, "kubectl")
 	if _, err := os.Stat(kubectlPath); os.IsNotExist(err) {
-		f, err := os.OpenFile(kubectlPath, os.O_CREATE|os.O_WRONLY, 0o744)
-		if err != nil {
-			return errors.Wrapf(err, "failed to open file %s", kubectlPath)
-		}
-		defer f.Close()
-
-		_, err = f.Write(kubectlScript)
-		if err != nil {
+		//nolint:gosec // Why: this needs to be an executable.
+		if err := os.WriteFile(kubectlPath, kubectlScript, 0o744); err != nil {
 			return errors.Wrapf(err, "failed to write to file %s", kubectlPath)
 		}
 	} else if err != nil {
