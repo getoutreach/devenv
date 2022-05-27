@@ -4,6 +4,11 @@ _ := $(shell ./scripts/devbase.sh)
 
 include .bootstrap/root/Makefile
 
+LDFLAGS += -X k8s.io/component-base/version.gitMajor=1
+LDFLAGS += -X k8s.io/component-base/version.gitMinor=23
+LDFLAGS += -X k8s.io/component-base/version.gitVersion=v1.23.5
+LDFLAGS += -X k8s.io/component-base/version.gitCommit=272114478c66b8250050dd68d4719c46c2ab2088
+
 ###Block(targets)
 .PHONY: e2e-override
 e2e-override:

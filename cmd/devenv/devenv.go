@@ -36,6 +36,7 @@ import (
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/cmd/devenv/stop"
 	"github.com/getoutreach/devenv/cmd/devenv/tunnel"
+	"github.com/getoutreach/devenv/internal/shim"
 	"github.com/getoutreach/devenv/pkg/cmdutil"
 	///EndBlock(imports)
 )
@@ -91,6 +92,17 @@ func main() {
 			err = os.MkdirAll(filepath.Join(homeDir, ".local", "dev-environment"), 0o755)
 			if err != nil {
 				return err
+			}
+
+			binPath, err := os.Executable()
+			if err != nil {
+				return errors.Wrap(err, "failed to get devenv executable path")
+			}
+			os.Setenv("DEVENV_BIN", binPath)
+
+			err = shim.AddKubectl()
+			if err != nil {
+				return errors.Wrap(err, "failed to create kubectl shim")
 			}
 
 			_, err = box.EnsureBoxWithOptions(ctx, box.WithLogger(log), box.WithMinVersion(2))
