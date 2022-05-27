@@ -5,6 +5,11 @@ _ := $(shell ./scripts/devbase.sh)
 include .bootstrap/root/Makefile
 
 ###Block(targets)
+LDFLAGS += -X k8s.io/component-base/version.gitMajor=1
+LDFLAGS += -X k8s.io/component-base/version.gitMinor=23
+LDFLAGS += -X k8s.io/component-base/version.gitVersion=v1.23.5
+LDFLAGS += -X k8s.io/component-base/version.gitCommit=272114478c66b8250050dd68d4719c46c2ab2088
+
 .PHONY: e2e-override
 e2e-override:
 	TEST_OUTPUT_FORMAT=standard-verbose TEST_FLAGS=-v TEST_TAGS=or_e2e ./scripts/shell-wrapper.sh test.sh

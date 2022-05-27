@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# We want to use the devenv that triggered this command. 
+# devenv sets the environment variable $DEVENV_BIN with path to itself.
+DEVENV_BIN="${DEVENV_BIN:-devenv}"
+
+exec "$DEVENV_BIN" --skip-update kubectl "$@"
