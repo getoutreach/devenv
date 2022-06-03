@@ -37,6 +37,7 @@ require (
 	// Ensure that the versions here are always the same
 	// and that the replace directives are updated to match.
 	// Current version: v0.23.1
+	// Makefile needs to be updated as well.
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/cli-runtime v0.23.1

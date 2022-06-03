@@ -145,5 +145,5 @@ func (a *App) RunStop(ctx context.Context) error {
 		return errors.Wrap(err, "failed to stop dev mode for the application")
 	}
 
-	return a.appsClient.Set(ctx, &apps.App{Name: a.RepositoryName, Version: a.Version})
+	return nil
 }
