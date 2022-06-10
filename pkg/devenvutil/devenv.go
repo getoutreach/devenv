@@ -241,14 +241,12 @@ func WaitForAllPodsToBeReady(ctx context.Context, k kubernetes.Interface, log lo
 
 		async.Sleep(ctx, 30*time.Second)
 	}
-
 	if ctx.Err() != nil {
-		// Write out a bit more detailed info on the prior to exit
-		log.WithError(err).WithField("pods", PodsStateInfo(unreadyPods)).
-			Info("Waiting for pods to be ready timed out")
+		return fmt.Errorf("timed out waiting for pods to be ready: %v", PodsStateInfo(unreadyPods))
 	}
 
-	return ctx.Err()
+	// All pods were ready, so no error
+	return nil
 }
 
 // PodsStateInfo returns a string per pod with the state
