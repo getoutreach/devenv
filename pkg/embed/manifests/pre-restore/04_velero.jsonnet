@@ -9,12 +9,12 @@ else
 
 local manifests = ok.HelmChart(name) {
   namespace:: name,
-  version:: '2.27.3',
+  version:: '2.29.8',
   repo:: 'https://vmware-tanzu.github.io/helm-charts',
   values:: {
     image: {
       repository: 'velero/velero',
-      tag: 'v1.7.1',
+      tag: 'v1.8.1',
       pullPolicy: 'IfNotPresent',
     },
     resources: {
@@ -40,7 +40,7 @@ local manifests = ok.HelmChart(name) {
     initContainers: [
       {
         name: 'velero-plugin-for-aws',
-        image: 'velero/velero-plugin-for-aws:v1.3.0',
+        image: 'velero/velero-plugin-for-aws:v1.4.1',
         imagePullPolicy: 'IfNotPresent',
         volumeMounts: [
           {
