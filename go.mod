@@ -19,7 +19,7 @@ require (
 	github.com/loft-sh/agentapi/v2 v2.2.0
 	github.com/loft-sh/loftctl/v2 v2.2.0
 	github.com/manifoldco/promptui v0.9.0
-	github.com/minio/minio-go/v7 v7.0.21
+	github.com/minio/minio-go/v7 v7.0.27
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/novln/docker-parser v1.0.0
 	github.com/pkg/errors v0.9.1
@@ -29,7 +29,7 @@ require (
 	github.com/versent/saml2aws/v2 v2.35.0
 	github.com/vmware-tanzu/velero v1.8.1
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
-	google.golang.org/grpc v1.43.0
+	google.golang.org/grpc v1.47.0
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools/v3 v3.2.0
 
