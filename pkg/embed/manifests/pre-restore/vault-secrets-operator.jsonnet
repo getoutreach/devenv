@@ -13,7 +13,7 @@ local mockSecret = ok.Secret(name, namespace=name) {
 local manifests = {
   chart: ok.HelmChart(name) {
     namespace:: name,
-    version:: '1.16.5',
+    version:: '1.18.0',
     repo:: 'https://ricoberger.github.io/helm-charts',
     values:: {
       environmentVars: ok.envList({

@@ -5,16 +5,16 @@ metadata:
   namespace: kube-system
 spec:
   chart: minio
-  version: 3.5.2
+  version: 4.0.2
   repo: https://charts.min.io/
   targetNamespace: minio
   valuesContent: |-
     # From: https://hub.docker.com/r/minio/minio/tags/?page=1&ordering=last_updated
     image:
-      tag: RELEASE.2022-02-07T08-17-33Z
+      tag: RELEASE.2022-06-10T16-59-15Z
     # From: https://quay.io/repository/minio/mc?tag=latest&tab=tags
     mcImage:
-      tag: RELEASE.2022-02-07T09-25-34Z
+      tag: RELEASE.2022-05-09T04-08-26Z
     buckets:
     - name: velero
       policy: none
