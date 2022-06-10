@@ -26,7 +26,7 @@ local clusterTypeConf = {
 
 local manifests = ok.HelmChart('ingress-nginx') {
   namespace:: name,
-  version:: '4.0.17',
+  version:: '4.1.4',
   repo:: 'https://kubernetes.github.io/ingress-nginx',
   values:: {
     controller: {

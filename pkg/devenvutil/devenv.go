@@ -2,10 +2,12 @@ package devenvutil
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/getoutreach/devenv/cmd/devenv/status"
 	"github.com/getoutreach/devenv/pkg/config"
 	"github.com/getoutreach/devenv/pkg/kubernetesruntime"
@@ -210,6 +212,7 @@ func FindUnreadyPods(ctx context.Context, k kubernetes.Interface) ([]string, []*
 			continue
 		}
 
+		unreadyPods = append(unreadyPods, po)
 		unreadyPodNames = append(unreadyPodNames, po.Namespace+"/"+po.Name)
 	}
 
@@ -226,36 +229,39 @@ func WaitForAllPodsToBeReady(ctx context.Context, k kubernetes.Interface, log lo
 	ctx, cancel := context.WithTimeout(ctx, time.Minute*20)
 	defer cancel()
 
-	var unreadyPodNames []string
 	var unreadyPods []*corev1.Pod
 	var err error
 	for ctx.Err() == nil {
-		unreadyPodNames, unreadyPods, err = FindUnreadyPods(ctx, k)
+		_, unreadyPods, err = FindUnreadyPods(ctx, k)
 		if err == nil {
 			log.Info("All pods were ready")
 			break
 		}
 
-		log.WithError(err).WithField("pods", unreadyPodNames).
+		log.WithError(err).WithField("pods", PodsStateInfo(unreadyPods)).
 			Info("Waiting for pods to be ready")
 
 		async.Sleep(ctx, 30*time.Second)
 	}
-
 	if ctx.Err() != nil {
-		// Write out a bit more detailed info on the prior to exit
-		log.WithError(err).WithField("pods", PodsStateInfo(unreadyPods)).
-			Info("Waiting for pods to be ready timed out")
+		stateInfo := PodsStateInfo(unreadyPods)
+		b, err := json.Marshal(stateInfo)
+		if err != nil {
+			// If we couldn't marshal it, use spew to try to get a string
+			b = []byte(spew.Sdump(stateInfo))
+		}
+		return fmt.Errorf("timed out waiting for pods to be ready: %s", b)
 	}
 
-	return ctx.Err()
+	// All pods were ready, so no error
+	return nil
 }
 
 // PodsStateInfo returns a string per pod with the state
 func PodsStateInfo(pods []*corev1.Pod) map[string]interface{} {
 	podDetails := map[string]interface{}{}
-	for _, podValue := range pods {
-		podDetails[podValue.Name] = PodStateInfo(podValue)
+	for _, p := range pods {
+		podDetails[p.Name] = PodStateInfo(p)
 	}
 	return podDetails
 }

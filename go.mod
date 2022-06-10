@@ -27,7 +27,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.4.0
 	github.com/versent/saml2aws/v2 v2.35.0
-	github.com/vmware-tanzu/velero v1.7.1
+	github.com/vmware-tanzu/velero v1.8.1
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 	google.golang.org/grpc v1.43.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -46,7 +46,10 @@ require (
 	k8s.io/kubectl v0.23.5
 )
 
-require github.com/docker/go-connections v0.4.0
+require (
+	github.com/davecgh/go-spew v1.1.1
+	github.com/docker/go-connections v0.4.0
+)
 
 require (
 	cloud.google.com/go/compute v0.1.0 // indirect
@@ -100,7 +103,6 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/daviddengcn/go-colortext v0.0.0-20160507010035-511bcaf42ccd // indirect
 	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -181,6 +183,7 @@ require (
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/mapstructure v1.4.2 // indirect
 	github.com/mitchellh/reflectwalk v1.0.1 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/moby/term v0.0.0-20210610120745-9d4ed1856297 // indirect
