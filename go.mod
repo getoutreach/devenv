@@ -46,7 +46,10 @@ require (
 	k8s.io/kubectl v0.23.5
 )
 
-require github.com/docker/go-connections v0.4.0
+require (
+	github.com/davecgh/go-spew v1.1.1
+	github.com/docker/go-connections v0.4.0
+)
 
 require (
 	cloud.google.com/go/compute v0.1.0 // indirect
@@ -97,7 +100,6 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/daviddengcn/go-colortext v0.0.0-20160507010035-511bcaf42ccd // indirect
 	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
