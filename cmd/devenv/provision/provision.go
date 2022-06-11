@@ -285,6 +285,16 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 
 	// Wait for Velero to load the backup
 	o.log.Info("Creating snapshot storage CRD")
+
+	// HACK: vcluster currently requires that we map storage classes. This will be
+	// removed soon.
+	if o.KubernetesRuntime.GetConfig().Type == kubernetesruntime.RuntimeTypeRemote {
+		o.log.Info("Creating snapshot storage class map")
+		if err := o.createStorageClassMap(ctx); err != nil {
+			return errors.Wrap(err, "failed to create storage class map")
+		}
+	}
+
 	err = devenvutil.Backoff(ctx, 10*time.Second, 10, func() error {
 		err2 := m.CreateBackupStorage(ctx, "devenv", snapshotLocalBucket)
 		if err2 != nil && !kerrors.IsAlreadyExists(err2) {
@@ -395,6 +405,25 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	}
 
 	return devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log)
+}
+
+// createStorageClassMap maps standard to premium-rwo. This is required for GKE
+// to function properly with vcluster at the moment.
+func (o *Options) createStorageClassMap(ctx context.Context) error {
+	_, err := o.k.CoreV1().ConfigMaps("velero").Create(ctx, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "change-storage-class-config",
+			Labels: map[string]string{
+				"velero.io/plugin-config":        "",
+				"velero.io/change-storage-class": "RestoreItemAction",
+			},
+		},
+		Data: map[string]string{
+			// Remap to a CSI driver in GKE.
+			"standard": "premium-rwo",
+		},
+	}, metav1.CreateOptions{})
+	return err
 }
 
 // findIncompleteResticRestores finds all restic restores that are in progress and returns them
