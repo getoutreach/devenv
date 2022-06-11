@@ -298,6 +298,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		return errors.Wrap(err, "failed to verify velero loaded snapshot")
 	}
 
+	o.log.Info("Starting snapshot restore (this may take awhile...)")
 	if err := m.Restore(ctx, snapshotTarget.VeleroBackupName); err != nil {
 		return errors.Wrap(err, "failed to restore snapshot")
 	}
@@ -314,6 +315,11 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	// in the pod being blocked. This appears to happen whenever a pod is "restarted".
 	// Deleting all of these pods prevents that from happening as the restic-wait pod is
 	// removed by velero's admission controller.
+	o.log.Info("Waiting for restic restores to finish")
+	if err := o.waitForResticRestores(ctx); err != nil {
+		return errors.Wrap(err, "failed to wait for restic restores to complete")
+	}
+
 	o.log.Info("Cleaning up snapshot restore artifacts")
 	err = devenvutil.DeleteObjects(ctx, o.log, o.k, o.r, devenvutil.DeleteObjectsObjects{
 		Type: &corev1.Pod{
@@ -324,9 +330,7 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		},
 		Validator: func(obj *unstructured.Unstructured) bool {
 			var pod *corev1.Pod
-			//nolint:govet // Why: we're. OK. Shadowing. err.
-			err := kruntime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &pod)
-			if err != nil {
+			if err := kruntime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &pod); err != nil {
 				return true
 			}
 
@@ -391,6 +395,61 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 	}
 
 	return devenvutil.WaitForAllPodsToBeReady(ctx, o.k, o.log)
+}
+
+// findIncompleteResticRestores finds all restic restores that are in progress and returns them
+// as a list of namespace/name.
+func (o *Options) findIncompleteResticRestores(ctx context.Context) []string {
+	// Wait for all restores to finish
+	pods, err := o.k.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil
+	}
+
+	var resticRestores []string
+	for i := range pods.Items {
+		p := &pods.Items[i]
+
+		for i := range p.Status.InitContainerStatuses {
+			cont := &p.Status.InitContainerStatuses[i]
+			if cont.Name != "restic-wait" {
+				continue
+			}
+
+			// If the container hasn't finished, it's incomplete.
+			if cont.State.Terminated == nil || cont.State.Terminated.ExitCode != 0 {
+				resticRestores = append(resticRestores, fmt.Sprintf("%s/%s", p.Namespace, p.Name))
+			}
+		}
+	}
+
+	return resticRestores
+}
+
+// waitForResticRestores waits for all restic restores to finish
+func (o *Options) waitForResticRestores(ctx context.Context) error {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithDeadline(ctx, time.Now().Add(time.Minute*10))
+	defer cancel()
+
+	var resticRestores []string
+	for ctx.Err() == nil {
+		resticRestores = o.findIncompleteResticRestores(ctx)
+		if len(resticRestores) == 0 {
+			break
+		}
+
+		wait := time.Minute * 1
+		o.log.WithField("pods", resticRestores).Warnf("Waiting for restic restores to finish, trying again in %s ...", wait)
+		async.Sleep(ctx, wait)
+	}
+	if ctx.Err() != nil {
+		return fmt.Errorf("timed out waiting for restic restores to complete: %v", resticRestores)
+	}
+
+	// We finished successfully
+	o.log.Info("Restic restores completed successfully")
+	return nil
 }
 
 func (o *Options) checkPrereqs(ctx context.Context) error {
