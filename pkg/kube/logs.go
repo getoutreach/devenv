@@ -95,6 +95,10 @@ func StreamJobLogs(ctx context.Context, k kubernetes.Interface,
 		io.Copy(w, r) //nolint:errcheck // Why: OK not returning error here
 		r.Close()     //nolint:errcheck // Why: best effort
 
+		// HACK: Naive attempt at giving the job a few seconds to update it's status
+		// after a run. Don't really know a better way of doing this right now.
+		async.Sleep(ctx, time.Second*5)
+
 		// check success to prevent needing to wait later
 		if ready, err := JobSucceeded(ctx, k, name, namespace); err != nil {
 			return errors.Wrap(err, "snapshot stage job failed")
