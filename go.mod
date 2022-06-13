@@ -12,7 +12,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
 	github.com/getoutreach/gobox v1.38.0
-	github.com/getoutreach/localizer v1.12.0
+	github.com/getoutreach/localizer v1.14.5
 	github.com/getoutreach/vault-client v1.4.0
 	github.com/google/go-github/v42 v42.0.0
 	github.com/jetstack/cert-manager v1.7.1
