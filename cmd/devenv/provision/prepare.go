@@ -40,7 +40,7 @@ func (o *Options) deployStage(ctx context.Context, stage string) error { //nolin
 
 		attempts := 0
 		for ctx.Err() == nil {
-			if attempts > 3 {
+			if attempts > 10 {
 				return fmt.Errorf("ran out of attempts")
 			}
 
@@ -60,7 +60,7 @@ func (o *Options) deployStage(ctx context.Context, stage string) error { //nolin
 			attempts++
 			o.log.WithError(err).Warn("Failed to apply manifests, retrying ...")
 
-			async.Sleep(ctx, time.Second*2)
+			async.Sleep(ctx, time.Second*5)
 		}
 		if ctx.Err() != nil {
 			return ctx.Err()
