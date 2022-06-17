@@ -16,10 +16,6 @@ builds:
       - '-w -s -X "github.com/getoutreach/gobox/pkg/app.Version=v{{ .Version }}"'
       - '-X "main.HoneycombTracingKey={{ .Env.HONEYCOMB_APIKEY }}"'
       - '-X "main.TeleforkAPIKey={{ .Env.TELEFORK_APIKEY }}"'
-      - "-X k8s.io/component-base/version.gitMajor=1"
-      - "-X k8s.io/component-base/version.gitMinor=23"
-      - "-X k8s.io/component-base/version.gitVersion=v1.23.5"
-      - "-X k8s.io/component-base/version.gitCommit=272114478c66b8250050dd68d4719c46c2ab2088"
     env:
       - CGO_ENABLED=0
 archives: []
