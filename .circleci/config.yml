@@ -18,23 +18,7 @@ contexts: &contexts
   ###EndBlock(extraContexts)
 
 jobs:
-  ###Block(circleJobs)
-  e2e:
-    executor:
-      name: shared/testbed-machine
-    resource_class: xlarge
-    steps:
-      - shared/setup_environment:
-          machine: true
-      - shared/with_go_cache
-      - shared/save_go_cache
-      - shared/setup_devenv:
-          provision: false
-      - run:
-          name: Run E2E tests
-          command: make e2e-override
-  ###EndBlock(circleJobs)
-
+  {}
   ### Start jobs inserted by other modules
   ### End jobs inserted by other modules
 
@@ -50,12 +34,6 @@ workflows:
   release:
     jobs:
       ###Block(circleWorkflowJobs)
-      - e2e:
-          context:
-            - docker-registry
-            - ghaccesstoken
-            - npm-credentials
-            - vault-dev
       ###EndBlock(circleWorkflowJobs)
       ### Start jobs inserted by other modules
       ### End jobs inserted by other modules
