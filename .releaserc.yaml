@@ -25,13 +25,5 @@ plugins:
         - "dist/checksums.txt"
 
   ### Block(customReleasePlugins)
-  ### IMPORTANT: This needs a block later.
-  # Build and push our docker image
-  - - "@semantic-release/exec"
-    - verifyReleaseCmd: 'bash -c ''if [[ -n "$CI" ]]; then source "./.bootstrap/shell/lib/buildx.sh"; fi'''
-  - - "@semantic-release/exec"
-    # Again using this just to get it to run on dryrun because `prepare` is skipped
-    - generateNotesCmd: "make docker-build-override APP_VERSION=v${nextRelease.version} >&2"
-  - - "@semantic-release/exec"
-    - publishCmd: "make docker-push-override APP_VERSION=v${nextRelease.version} >&2"
+
   ### EndBlock(customReleasePlugins)
