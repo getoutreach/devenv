@@ -27,7 +27,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.6.0
 	github.com/versent/saml2aws/v2 v2.35.0
-	github.com/vmware-tanzu/velero v1.8.1
+	github.com/vmware-tanzu/velero v1.9.0
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 	google.golang.org/grpc v1.47.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -146,7 +146,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hashicorp/go-hclog v1.0.0 // indirect
-	github.com/hashicorp/go-plugin v1.4.3 // indirect
 	github.com/honeycombio/beeline-go v1.4.1 // indirect
 	github.com/honeycombio/libhoney-go v1.15.8 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
