@@ -3,4 +3,4 @@
 version: v10.1.1
 generated: 2022-06-23T00:32:05Z
 versions:
-  devbase: jaredallard/fix/support-new-service-tag-in-e2e
+  devbase: v2.0.5
