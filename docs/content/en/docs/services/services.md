@@ -1,5 +1,5 @@
 ---
-title : "Interacting with Services"
+title: "Interacting with Services"
 description: "How to interact with services in a devenv"
 date: 2022-05-09
 lastmod: 2022-05-09

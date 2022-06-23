@@ -12,9 +12,9 @@ service:
   owner: fnd_dtss
   language: Golang
   framework: stencil
-  description: Kubernetes Developer Environment Platform
+  description: >
+    Kubernetes Developer Environment Platform
   ###Block(extraServiceMetadata)
-
   ###EndBlock(extraServiceMetadata)
   aliases:
     ###Block(extraAliases)
@@ -34,7 +34,7 @@ service:
     - key: name
       value: "devenv"
     - key: stencil_version
-      value: "v1.14.1"
+      value: "v1.19.3"
     - key: golang_version
       value: "1.17.9"
     - key: tutorial

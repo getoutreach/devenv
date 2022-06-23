@@ -23,6 +23,8 @@ plugins:
     - assets:
         - "dist/*.tar.gz"
         - "dist/checksums.txt"
+
+  ### Block(customReleasePlugins)
   ### IMPORTANT: This needs a block later.
   # Build and push our docker image
   - - "@semantic-release/exec"
@@ -32,3 +34,4 @@ plugins:
     - generateNotesCmd: "make docker-build-override APP_VERSION=v${nextRelease.version} >&2"
   - - "@semantic-release/exec"
     - publishCmd: "make docker-push-override APP_VERSION=v${nextRelease.version} >&2"
+  ### EndBlock(customReleasePlugins)
