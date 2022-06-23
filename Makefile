@@ -21,4 +21,7 @@ LDFLAGS += -X k8s.io/component-base/version.gitCommit=272114478c66b8250050dd68d4
 .PHONY: install
 install: build
 	@devenvPath="$$(command -v devenv)"; rm "$$devenvPath"; if [[ -w "$$devenvPath" ]]; then cp -v ./bin/devenv "$$devenvPath"; else sudo cp -v ./bin/devenv "$$devenvPath"; fi
+
+docker-build-dev:
+	DOCKER_BUILDKIT=1 docker build --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" .
 ###EndBlock(targets)
