@@ -26,7 +26,7 @@ func getFileFromArchive(r io.Reader, filename string) (io.Reader, error) {
 
 	for {
 		header, err := tarReader.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			return nil, err
@@ -64,7 +64,7 @@ func downloadArchive(resp *http.Response, execPath, filename string) error {
 
 	memStorage := bytes.NewBuffer([]byte{})
 	_, err := io.Copy(io.MultiWriter(memStorage, bar), resp.Body)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
 
@@ -80,7 +80,7 @@ func downloadArchive(resp *http.Response, execPath, filename string) error {
 	defer f.Close()
 
 	_, err = io.Copy(f, memFile)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
 
@@ -99,7 +99,7 @@ func downloadPureFile(resp *http.Response, execPath string) error {
 		"downloading",
 	)
 	_, err = io.Copy(io.MultiWriter(f, bar), resp.Body)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
 
