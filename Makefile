@@ -8,9 +8,8 @@ include .bootstrap/root/Makefile
 # E2E Flags
 export SKIP_LOCALIZER=true
 export TEST_OUTPUT_FORMAT=standard-verbose
-export TEST_FLAGS=-v
+export TEST_FLAGS=-v -timeout 30m0s
 export SKIP_DEVENV_PROVISION=true
-export GO_TEST_TIMEOUT=30m0s
 
 LDFLAGS += -X k8s.io/component-base/version.gitMajor=1
 LDFLAGS += -X k8s.io/component-base/version.gitMinor=23
