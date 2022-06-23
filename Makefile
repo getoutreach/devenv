@@ -24,5 +24,5 @@ install: build
 	@devenvPath="$$(command -v devenv)"; rm "$$devenvPath"; if [[ -w "$$devenvPath" ]]; then cp -v ./bin/devenv "$$devenvPath"; else sudo cp -v ./bin/devenv "$$devenvPath"; fi
 
 docker-build-dev:
-	DOCKER_BUILDKIT=1 docker build --ssh default -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" .
+	DOCKER_BUILDKIT=1 docker build --ssh default -f deployments/devenv/Dockerfile -t "gcr.io/outreach-docker/devenv:$(APP_VERSION)" .
 ###EndBlock(targets)
