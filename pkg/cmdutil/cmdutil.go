@@ -27,10 +27,7 @@ func CLIStringSliceToStringSlice(origSlice []string, newSlice *[]string) {
 	if len(origSlice) != len(*newSlice) {
 		*newSlice = make([]string, len(origSlice))
 	}
-
-	for i, str := range origSlice {
-		(*newSlice)[i] = str
-	}
+	copy(*newSlice, origSlice)
 }
 
 // NewDescription creates a description from a long desc

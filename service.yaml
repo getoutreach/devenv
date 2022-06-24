@@ -20,6 +20,7 @@ arguments:
   circleAPIKey: ""
   commands:
     - devenv
+  commitGuard: false
   dependencies:
     optional: []
     required: []
@@ -38,6 +39,7 @@ arguments:
     allowMajorVersions: true
     enablePrereleases: true
   reportingTeam: fnd-dtss
+  resources: {}
   service: false
   tutorial: false
   vaultSecrets:
@@ -47,12 +49,11 @@ arguments:
     - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
 modules:
   - name: github.com/getoutreach/stencil-base
-    version: v0.3.0-rc.2
   - name: github.com/getoutreach/stencil-golang
-    version: v0.3.0-rc.4
   - name: github.com/getoutreach/stencil-opslevel
-    version: v0.0.2-rc.5
+  - name: github.com/getoutreach/stencil-outreach
   - name: github.com/getoutreach/stencil-circleci
+  - name: github.com/getoutreach/stencil-actions
 opsLevel:
   serviceTier: 0
   lifecycle: ""

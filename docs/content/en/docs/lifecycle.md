@@ -1,5 +1,5 @@
 ---
-title : "devenv lifcycle"
+title: "devenv lifcycle"
 description: "Common commands when running the devenv and how to interact with one"
 date: 2022-05-09
 lastmod: 2022-05-09

@@ -272,7 +272,7 @@ func (s *SnapshotUploader) UploadArchiveContents(ctx context.Context) error {
 	tarReader := tar.NewReader(s.downloadedFile)
 	for {
 		header, err := tarReader.Next() //nolint:govet // Why: OK shadowing err
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			return errors.Wrap(err, "failed to read tar header")
