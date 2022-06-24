@@ -11,7 +11,7 @@ require (
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
-	github.com/getoutreach/gobox v1.38.0
+	github.com/getoutreach/gobox v1.41.5
 	github.com/getoutreach/localizer v1.14.5
 	github.com/getoutreach/vault-client v1.4.0
 	github.com/google/go-github/v42 v42.0.0
@@ -25,7 +25,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/schollz/progressbar/v3 v3.8.6
 	github.com/sirupsen/logrus v1.8.1
-	github.com/urfave/cli/v2 v2.4.0
+	github.com/urfave/cli/v2 v2.6.0
 	github.com/versent/saml2aws/v2 v2.35.0
 	github.com/vmware-tanzu/velero v1.8.1
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
@@ -259,7 +259,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.23.1 // indirect
 	k8s.io/apiserver v0.23.5 // indirect
 	k8s.io/component-helpers v0.23.1 // indirect
