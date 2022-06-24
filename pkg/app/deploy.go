@@ -26,20 +26,73 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type DeploymentOptions struct {
+	UseDevspace        bool
+	SkipDeployed       bool
+	DeployDependencies bool
+}
+
 // Deploy is a wrapper around NewApp().Deploy() that automatically closes
 // the app and deploys it into the devenv
 func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
-	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig, useDevspace bool) error {
+	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig, opts DeploymentOptions) error {
 	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
 	if err != nil {
 		return errors.Wrap(err, "parse app")
 	}
 	defer app.Close()
 
-	if useDevspace {
+	log = log.WithFields(logrus.Fields{
+		"app.name":         app.RepositoryName,
+		"app.version":      app.Version,
+		"withDependencies": opts.DeployDependencies,
+	})
+
+	if opts.DeployDependencies {
+		if err := app.deployDependencies(ctx, log, k, b, conf, kr, opts.UseDevspace); err != nil {
+			return err
+		}
+	}
+
+	if opts.SkipDeployed {
+		if _, err := app.appsClient.Get(ctx, app.RepositoryName); err == nil {
+			log.Infof("Skip deploying app. Already deployed.")
+			return nil
+		}
+	}
+
+	log.Infof("Deploying app")
+	if opts.UseDevspace {
 		return app.DeployDevspace(ctx)
 	}
+
 	return app.Deploy(ctx)
+}
+
+func (a *App) deployDependencies(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
+	conf *rest.Config, kr kubernetesruntime.RuntimeConfig, useDevspace bool) error {
+	cfg, err := a.config()
+	if err != nil {
+		log.WithError(err).Warn("failed to get app config")
+	}
+
+	if cfg == nil {
+		return nil
+	}
+
+	depOpts := DeploymentOptions{UseDevspace: useDevspace, SkipDeployed: true, DeployDependencies: true}
+	for _, dep := range cfg.Dependencies.Required {
+		// TODO: outreach specific hack
+		if dep == "flagship" {
+			dep = "outreach"
+		}
+
+		if err := Deploy(ctx, log, k, b, conf, dep, kr, depOpts); err != nil {
+			return errors.Wrapf(err, "failed to deploy dependency: %s", dep)
+		}
+	}
+
+	return nil
 }
 
 // deployLegacy attempts to deploy an application by running the file at

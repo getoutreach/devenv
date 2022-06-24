@@ -173,6 +173,35 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	return &app, nil
 }
 
+type DevenvConfig struct {
+	Dependencies struct {
+		// Optional is a list of OPTIONAL services e.g. the service can run / gracefully function without it running
+		Optional []string `yaml:"optional"`
+
+		// Required is a list of services that this service cannot function without
+		Required []string `yaml:"required"`
+	} `yaml:"dependencies"`
+}
+
+func (a *App) config() (*DevenvConfig, error) {
+	f, err := os.Open(filepath.Join(a.Path, "devenv.yaml"))
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		f, err = os.Open(filepath.Join(a.Path, "service.yaml"))
+	}
+
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read devenv.yaml or service.yaml")
+	}
+	defer f.Close()
+
+	var cfg DevenvConfig
+	if err = yaml.NewDecoder(f).Decode(&cfg); err != nil {
+		return nil, errors.Wrapf(err, "failed to parse devenv.yaml or service.yaml")
+	}
+
+	return &cfg, nil
+}
+
 // detectVersion determines the latest version of a repository by three criteria
 // - topic "release-type-commits" is set. Uses the latest commit
 // - 0 tags on the repository. Uses the latest commit.
