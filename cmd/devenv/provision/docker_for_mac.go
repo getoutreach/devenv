@@ -67,6 +67,21 @@ func reconcileDockerForMacConfig(_ context.Context, settingsFile string) (bool, 
 		}
 	}
 
+	// This enables support for older containers on macOS. This can be
+	// removed when docker removes support for cgroups v1.
+	if deprecatedCgroupv1, ok := settings["deprecatedCgroupv1"].(bool); ok {
+		if !deprecatedCgroupv1 {
+			modified = true
+			settings["deprecatedCgroupv1"] = true
+		}
+	}
+	if legacyCgroupv1, ok := settings["legacyCgroupv1"].(bool); ok {
+		if !legacyCgroupv1 {
+			modified = true
+			settings["legacyCgroupv1"] = true
+		}
+	}
+
 	if memory, ok := settings["memoryMiB"].(float64); ok {
 		if int(memory) < recommendedMemory {
 			modified = true
