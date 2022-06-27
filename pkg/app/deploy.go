@@ -63,7 +63,7 @@ func Deploy(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 
 	log.Info("Deploying app")
 	forceDevspace := app.Local && kr.Type == kubernetesruntime.RuntimeTypeRemote
-	if useDevspace || forceDevspace {
+	if opts.UseDevspace || forceDevspace {
 		return app.DeployDevspace(ctx)
 	}
 
