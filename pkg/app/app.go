@@ -195,7 +195,7 @@ func (a *App) config() (*DevenvConfig, error) {
 	defer f.Close()
 
 	var cfg DevenvConfig
-	if err = yaml.NewDecoder(f).Decode(&cfg); err != nil {
+	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
 		return nil, errors.Wrapf(err, "failed to parse devenv.yaml or service.yaml")
 	}
 
