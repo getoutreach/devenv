@@ -20,6 +20,7 @@ type RunOptions struct {
 	OpenTerminal       bool
 	UseLocalImage      bool
 	SkipPortForwarding bool
+	DeployDependencies bool
 }
 
 // Run is a wrapper around NewApp().Run()
@@ -34,6 +35,12 @@ func Run(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b 
 	app.Local = opts.UseLocalImage
 	if !opts.UseLocalImage && app.Version == AppVersionLocal {
 		app.Version = AppVersionLatest
+	}
+
+	if opts.DeployDependencies {
+		if err := app.deployDependencies(ctx, log, k, b, conf, kr, true); err != nil {
+			return err
+		}
 	}
 
 	return app.Dev(ctx, opts)

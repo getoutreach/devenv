@@ -41,8 +41,13 @@ type Options struct {
 	conf *rest.Config
 
 	// App is the app to deploy
-	App         string
+	App string
+
+	// UseDevspace is a flag that determines whether to use devspace for deployment or not.
 	UseDevspace bool
+
+	// DeployDependencies is a flag that determines whether to deploy app dependencies or not.
+	DeployDependencies bool
 }
 
 // NewOptions create an initialized options struct for the `apps deploy` command
@@ -71,6 +76,11 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				EnvVars: []string{"DEVENV_DEPLOY_USE_DEVSPACE"},
 				Usage:   "Uses devspace to deploy the application. Might not be supported by all applications and all environments.",
 			},
+			&cli.BoolFlag{
+				Name:    "with-dependencies",
+				Aliases: []string{"with-deps"},
+				Usage:   "Deploys app dependencies as well. This will be true by default in the future.",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			if c.Args().Len() == 0 {
@@ -88,6 +98,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				// We want to ensure that child processes inherit this flag automaatically.
 				os.Setenv("DEVENV_DEPLOY_USE_DEVSPACE", "1")
 			}
+			o.DeployDependencies = c.Bool("with-dependencies")
 			return o.Run(c.Context)
 		},
 	}
@@ -116,5 +127,10 @@ func (o *Options) Run(ctx context.Context) error {
 		}
 	}
 
-	return app.Deploy(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig(), o.UseDevspace)
+	return app.Deploy(ctx, o.log, o.k, b, o.conf, o.App, kr.GetConfig(),
+		app.DeploymentOptions{
+			UseDevspace:        o.UseDevspace,
+			SkipDeployed:       false,
+			DeployDependencies: o.DeployDependencies,
+		})
 }

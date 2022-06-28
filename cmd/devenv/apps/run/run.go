@@ -65,6 +65,9 @@ type Options struct {
 
 	// SkipPortforwarding is a flag passed to devspace as DEVENV_DEV_SKIP_PORTFORWARDING=true. It skips port forwarding.
 	SkipPortForwarding bool
+
+	// DeployDependencies is flag to determine if app dependencies should be deployed as well.
+	DeployDependencies bool
 }
 
 // NewOptions create an initialized options struct for the `apps dev` command
@@ -100,6 +103,10 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				Usage:   "Open an interactive terminal to the dev container instead of running the application",
 			},
 			&cli.BoolFlag{
+				Name:  "with-dependencies",
+				Usage: "Deploys app dependencies as well. This will be true by default in the future.",
+			},
+			&cli.BoolFlag{
 				Name:    "skip-portforwarding",
 				Aliases: []string{"p"},
 				Usage:   "Skip forwarding ports; useful when running multiple `devenv apps run` commands at once",
@@ -125,6 +132,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			o.LocalImage = c.Bool("with-local-image")
 			o.Terminal = c.Bool("with-terminal")
 			o.SkipPortForwarding = c.Bool("skip-portforwarding")
+			o.DeployDependencies = c.Bool("with-dependencies")
 
 			// If not set, go with default deployment
 			deploymentFlag := c.String("deployment")
@@ -165,5 +173,6 @@ func (o *Options) Run(ctx context.Context) error {
 			SkipPortForwarding: o.SkipPortForwarding,
 			OpenTerminal:       o.Terminal,
 			DeploymentProfile:  o.DeploymentProfile,
+			DeployDependencies: o.DeployDependencies,
 		})
 }

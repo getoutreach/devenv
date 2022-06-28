@@ -88,7 +88,8 @@ func (o *Options) deployStage(ctx context.Context, stage string) error { //nolin
 			return nil
 		}
 
-		err := app.Deploy(ctx, o.log, o.k, o.b, o.r, "resourcer", runtimeConf, o.UseDevspace)
+		err := app.Deploy(ctx, o.log, o.k, o.b, o.r, "resourcer", runtimeConf,
+			app.DeploymentOptions{UseDevspace: o.UseDevspace, SkipDeployed: false})
 		if err != nil {
 			return errors.Wrap(err, "failed to deploy resourcer")
 		}
