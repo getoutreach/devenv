@@ -43,7 +43,10 @@ type Options struct {
 	// App is the app to deploy
 	App string
 
-	UseDevspace        bool
+	// UseDevspace is a flag that determines whether to use devspace for deployment or not.
+	UseDevspace bool
+
+	// DeployDependencies is a flag that determines whether to deploy app dependencies or not.
 	DeployDependencies bool
 }
 
@@ -74,8 +77,9 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 				Usage:   "Uses devspace to deploy the application. Might not be supported by all applications and all environments.",
 			},
 			&cli.BoolFlag{
-				Name:  "with-dependencies",
-				Usage: "Deploys app dependencies as well. This will be true by default in the future.",
+				Name:    "with-dependencies",
+				Aliases: []string{"with-deps"},
+				Usage:   "Deploys app dependencies as well. This will be true by default in the future.",
 			},
 		},
 		Action: func(c *cli.Context) error {

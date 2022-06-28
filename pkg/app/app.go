@@ -173,7 +173,9 @@ func NewApp(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface,
 	return &app, nil
 }
 
+// DevenvConfig is the configuration of the app for use with the devenv
 type DevenvConfig struct {
+	// Dependencies are the app dependencies
 	Dependencies struct {
 		// Optional is a list of OPTIONAL services e.g. the service can run / gracefully function without it running
 		Optional []string `yaml:"optional"`
@@ -185,10 +187,6 @@ type DevenvConfig struct {
 
 func (a *App) config() (*DevenvConfig, error) {
 	f, err := os.Open(filepath.Join(a.Path, "devenv.yaml"))
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		f, err = os.Open(filepath.Join(a.Path, "service.yaml"))
-	}
-
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read devenv.yaml or service.yaml")
 	}

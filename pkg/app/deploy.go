@@ -26,9 +26,15 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// DeploymentOptions are the options for deploying the app into devenv.
 type DeploymentOptions struct {
-	UseDevspace        bool
-	SkipDeployed       bool
+	// UseDevspace is the flag that determines whether to use devspace for deployment or not.
+	UseDevspace bool
+
+	// SkipDeployed is the flag that determines whether to skip deploying the app when already deployed to devenv or not.
+	SkipDeployed bool
+
+	// DeployDependencies is the flag that determines whether to deploy app dependencies or not.
 	DeployDependencies bool
 }
 
