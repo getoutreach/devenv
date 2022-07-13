@@ -3,6 +3,7 @@ package apps
 import (
 	"github.com/getoutreach/devenv/cmd/devenv/apps/delete"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/deploy"
+	"github.com/getoutreach/devenv/cmd/devenv/apps/e2e"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/list"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/run"
 	"github.com/getoutreach/devenv/cmd/devenv/apps/shell"
@@ -26,6 +27,7 @@ func NewCmd(log logrus.FieldLogger) *cli.Command {
 			list.NewCmd(log),
 			run.NewCmd(log),
 			shell.NewCmd(log),
+			e2e.NewCmd(log),
 		},
 	}
 }
