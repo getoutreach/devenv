@@ -322,6 +322,30 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 
 	o.log.Info("Cleaning up snapshot restore artifacts")
 	err = devenvutil.DeleteObjects(ctx, o.log, o.k, o.r, devenvutil.DeleteObjectsObjects{
+		Type: &corev1.Namespace{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Namespace",
+				APIVersion: corev1.SchemeGroupVersion.Identifier(),
+			},
+		},
+		Validator: func(obj *unstructured.Unstructured) bool {
+			var daemonset *corev1.Namespace
+			if err := kruntime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &daemonset); err != nil {
+				return true
+			}
+
+			if daemonset.Name == "velero" {
+				return false
+			}
+
+			return true
+		},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to cleanup namespaces")
+	}
+
+	err = devenvutil.DeleteObjects(ctx, o.log, o.k, o.r, devenvutil.DeleteObjectsObjects{
 		Type: &corev1.Pod{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Pod",
