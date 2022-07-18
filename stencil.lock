@@ -1,24 +1,24 @@
-version: v1.19.3
-generated: 2022-06-23T00:32:17.420583Z
+version: v1.21.0
+generated: 2022-07-18T04:05:41.167768Z
 modules:
     - name: github.com/getoutreach/stencil-actions
       url: https://github.com/getoutreach/stencil-actions
       version: v0.1.0
     - name: github.com/getoutreach/stencil-base
       url: https://github.com/getoutreach/stencil-base
-      version: v0.4.0
+      version: v0.5.0-rc.2
     - name: github.com/getoutreach/stencil-circleci
       url: https://github.com/getoutreach/stencil-circleci
-      version: v1.1.2
+      version: v1.2.0-rc.3
     - name: github.com/getoutreach/stencil-discovery
       url: https://github.com/getoutreach/stencil-discovery
       version: v1.0.0
     - name: github.com/getoutreach/stencil-golang
       url: https://github.com/getoutreach/stencil-golang
-      version: v1.0.0
+      version: v1.2.0-rc.5
     - name: github.com/getoutreach/stencil-opslevel
       url: https://github.com/getoutreach/stencil-opslevel
-      version: v0.1.0
+      version: v0.1.1-rc.1
     - name: github.com/getoutreach/stencil-outreach
       url: https://github.com/getoutreach/stencil-outreach
       version: v0.2.2
@@ -238,6 +238,9 @@ files:
       module: github.com/getoutreach/stencil-base
     - name: documentation/SLOs.md
       template: documentation/SLOs.md.tpl
+      module: github.com/getoutreach/stencil-base
+    - name: documentation/deployments.md
+      template: documentation/deployments.md.tpl
       module: github.com/getoutreach/stencil-base
     - name: documentation/disaster-recovery.md
       template: documentation/disaster-recovery.md.tpl

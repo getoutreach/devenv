@@ -19,6 +19,10 @@ contexts: &contexts
 
 jobs:
   {}
+  ###Block(circleJobs)
+
+  ###EndBlock(circleJobs)
+
   ### Start jobs inserted by other modules
   ### End jobs inserted by other modules
 
@@ -34,6 +38,7 @@ workflows:
   release:
     jobs:
       ###Block(circleWorkflowJobs)
+
       ###EndBlock(circleWorkflowJobs)
       ### Start jobs inserted by other modules
       ### End jobs inserted by other modules
@@ -70,6 +75,11 @@ workflows:
       - shared/test:
           context: *contexts
           app_name: devenv
+          ### Start parameters inserted by other modules
+          ### End parameters inserted by other modules
+          ###Block(circleTestExtra)
+
+          ###EndBlock(circleTestExtra)
 
       - shared/publish_docs:
           context: *contexts
