@@ -63,6 +63,8 @@ func TestCanProvisionSnapshotDevenv(t *testing.T) {
 	provisionArgs := defaultProvisionArgs
 	ctx := context.Background()
 
+	devenv.ProvisionDevenv(t, ctx, &provisionArgs)()
+
 	cleanupFn, err := devenv.UseSnapshotStorage(t, ctx, provisionArgs.Box)
 	if cleanupFn != nil {
 		defer cleanupFn()
