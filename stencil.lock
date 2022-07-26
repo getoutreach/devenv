@@ -1,24 +1,24 @@
-version: v1.21.0
-generated: 2022-07-19T18:07:31.977199Z
+version: v1.21.1
+generated: 2022-07-26T21:26:38.866086Z
 modules:
     - name: github.com/getoutreach/stencil-actions
       url: https://github.com/getoutreach/stencil-actions
       version: v0.1.0
     - name: github.com/getoutreach/stencil-base
       url: https://github.com/getoutreach/stencil-base
-      version: v0.5.0-rc.3
+      version: v0.5.0
     - name: github.com/getoutreach/stencil-circleci
       url: https://github.com/getoutreach/stencil-circleci
-      version: v1.2.0-rc.6
+      version: v1.2.1
     - name: github.com/getoutreach/stencil-discovery
       url: https://github.com/getoutreach/stencil-discovery
       version: v1.0.0
     - name: github.com/getoutreach/stencil-golang
       url: https://github.com/getoutreach/stencil-golang
-      version: v1.2.0-rc.5
+      version: v1.2.0
     - name: github.com/getoutreach/stencil-opslevel
       url: https://github.com/getoutreach/stencil-opslevel
-      version: v0.1.1-rc.1
+      version: v0.1.1
     - name: github.com/getoutreach/stencil-outreach
       url: https://github.com/getoutreach/stencil-outreach
       version: v0.2.2
@@ -79,10 +79,10 @@ files:
       module: github.com/getoutreach/stencil-outreach
     - name: .vscode/private.env
       template: .vscode/private.env.tpl
-      module: github.com/getoutreach/stencil-golang
+      module: github.com/getoutreach/stencil-outreach
     - name: .vscode/private.env
       template: .vscode/private.env.tpl
-      module: github.com/getoutreach/stencil-outreach
+      module: github.com/getoutreach/stencil-golang
     - name: .vscode/settings.json
       template: .vscode/settings.json.tpl
       module: github.com/getoutreach/stencil-golang
@@ -100,6 +100,9 @@ files:
       module: github.com/getoutreach/stencil-base
     - name: _helpers
       template: _helpers.tpl
+      module: github.com/getoutreach/stencil-circleci
+    - name: _helpers
+      template: _helpers.tpl
       module: github.com/getoutreach/stencil-base
     - name: _helpers
       template: _helpers.tpl
@@ -107,9 +110,6 @@ files:
     - name: _helpers
       template: _helpers.tpl
       module: github.com/getoutreach/stencil-opslevel
-    - name: _helpers
-      template: _helpers.tpl
-      module: github.com/getoutreach/stencil-circleci
     - name: api/clients/node/.eslintrc.js
       template: api/clients/node/.eslintrc.js.tpl
       module: github.com/getoutreach/stencil-golang
