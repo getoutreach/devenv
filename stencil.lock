@@ -1,5 +1,5 @@
 version: v1.21.1
-generated: 2022-07-26T21:26:38.866086Z
+generated: 2022-07-27T19:10:24.424542Z
 modules:
     - name: github.com/getoutreach/stencil-actions
       url: https://github.com/getoutreach/stencil-actions
@@ -12,10 +12,10 @@ modules:
       version: v1.2.1
     - name: github.com/getoutreach/stencil-discovery
       url: https://github.com/getoutreach/stencil-discovery
-      version: v1.0.0
+      version: v1.1.0
     - name: github.com/getoutreach/stencil-golang
       url: https://github.com/getoutreach/stencil-golang
-      version: v1.2.0
+      version: v1.3.0-rc.3
     - name: github.com/getoutreach/stencil-opslevel
       url: https://github.com/getoutreach/stencil-opslevel
       version: v0.1.1
@@ -28,10 +28,10 @@ files:
       module: github.com/getoutreach/stencil-golang
     - name: .circleci/config.yml
       template: .circleci/config.yml.tpl
-      module: github.com/getoutreach/stencil-outreach
+      module: github.com/getoutreach/stencil-circleci
     - name: .circleci/config.yml
       template: .circleci/config.yml.tpl
-      module: github.com/getoutreach/stencil-circleci
+      module: github.com/getoutreach/stencil-outreach
     - name: .dockerignore
       template: .dockerignore.tpl
       module: github.com/getoutreach/stencil-golang
@@ -79,10 +79,10 @@ files:
       module: github.com/getoutreach/stencil-outreach
     - name: .vscode/private.env
       template: .vscode/private.env.tpl
-      module: github.com/getoutreach/stencil-outreach
+      module: github.com/getoutreach/stencil-golang
     - name: .vscode/private.env
       template: .vscode/private.env.tpl
-      module: github.com/getoutreach/stencil-golang
+      module: github.com/getoutreach/stencil-outreach
     - name: .vscode/settings.json
       template: .vscode/settings.json.tpl
       module: github.com/getoutreach/stencil-golang
@@ -227,6 +227,9 @@ files:
     - name: deployments/devenv/resources.libsonnet
       template: deployments/appname/resources.libsonnet.tpl
       module: github.com/getoutreach/stencil-golang
+    - name: deployments/docker.yaml
+      template: deployments/docker.yaml.tpl
+      module: github.com/getoutreach/stencil-golang
     - name: devenv.yaml
       template: devenv.yaml.tpl
       module: github.com/getoutreach/stencil-golang
@@ -331,6 +334,21 @@ files:
       module: github.com/getoutreach/stencil-golang
     - name: internal/k8s/resource.go
       template: internal/appName/k8s/resource.go.tpl
+      module: github.com/getoutreach/stencil-golang
+    - name: monitoring/dashboard.tf
+      template: monitoring/dashboard.tf.tpl
+      module: github.com/getoutreach/stencil-golang
+    - name: monitoring/datadog.tf
+      template: monitoring/datadog.tf.tpl
+      module: github.com/getoutreach/stencil-golang
+    - name: monitoring/main.tf
+      template: monitoring/main.tf.tpl
+      module: github.com/getoutreach/stencil-golang
+    - name: monitoring/terraform.tfvars
+      template: monitoring/terraform.tfvars.tpl
+      module: github.com/getoutreach/stencil-golang
+    - name: monitoring/versions.tf
+      template: monitoring/versions.tf.tpl
       module: github.com/getoutreach/stencil-golang
     - name: opslevel.yml
       template: opslevel.yml.tpl
