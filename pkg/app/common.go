@@ -24,7 +24,7 @@ import (
 // the location of devspace binary.
 // Note: this outputs text if devspace is being downloaded
 func ensureDevspace(log logrus.FieldLogger) (string, error) {
-	devspaceVersion := "v6.0.0-alpha.13"
+	devspaceVersion := "v6.0.0-beta.8"
 	devspaceDownloadURL := fmt.Sprintf(
 		"https://github.com/loft-sh/devspace/releases/download/%s/devspace-%s-%s",
 		devspaceVersion,
