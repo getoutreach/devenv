@@ -41,15 +41,12 @@ import (
 	"github.com/jetstack/cert-manager/cmd/ctl/pkg/factory"
 	"github.com/jetstack/cert-manager/cmd/ctl/pkg/renew"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	cmclient "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 )
@@ -310,46 +307,20 @@ func (o *Options) snapshotRestore(ctx context.Context) error { //nolint:funlen,g
 		}
 	}
 
-	// Sometimes, if we don't preemptively delete all restic-wait containing pods
-	// we can end up with a restic-wait attempting to run again, which results
-	// in the pod being blocked. This appears to happen whenever a pod is "restarted".
-	// Deleting all of these pods prevents that from happening as the restic-wait pod is
-	// removed by velero's admission controller.
 	o.log.Info("Waiting for restic restores to finish")
 	if err := o.waitForResticRestores(ctx); err != nil {
 		return errors.Wrap(err, "failed to wait for restic restores to complete")
 	}
 
 	o.log.Info("Cleaning up snapshot restore artifacts")
-	err = devenvutil.DeleteObjects(ctx, o.log, o.k, o.r, devenvutil.DeleteObjectsObjects{
-		Type: &corev1.Pod{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Pod",
-				APIVersion: corev1.SchemeGroupVersion.Identifier(),
-			},
-		},
-		Validator: func(obj *unstructured.Unstructured) bool {
-			var pod *corev1.Pod
-			if err := kruntime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &pod); err != nil {
-				return true
-			}
 
-			for i := range pod.Spec.InitContainers {
-				cont := &pod.Spec.InitContainers[i]
-				if cont.Name == "restic-wait" {
-					return false
-				}
-			}
-
-			return true
-		},
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to cleanup statefulset pods")
+	// After we restore the snapshot we no longer need the velero resource. They can also prevent auto scaling in loft.
+	if err := cmdutil.RunKubernetesCommand(ctx, "", false, "kubectl", "delete", "helmchart", "-n", "kube-system", "velero"); err != nil {
+		return errors.Wrap(err, "failed to cleanup velero helm chart")
 	}
+	o.log.Info("Deleted velero helmchart")
 
-	err = o.runProvisionScripts(ctx)
-	if err != nil {
+	if err := o.runProvisionScripts(ctx); err != nil {
 		return errors.Wrap(err, "failed to run provision.d scripts")
 	}
 

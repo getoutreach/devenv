@@ -165,7 +165,9 @@ func DeleteObjects(ctx context.Context, log logrus.FieldLogger,
 		log.WithField("key", fmt.Sprintf("%s/%s", unstruct.GetNamespace(),
 			unstruct.GetName())).Infof("deleting %s", mapping.Resource.GroupResource().String())
 		namespacedDr := dyn.Resource(mapping.Resource).Namespace(unstruct.GetNamespace())
-		err := namespacedDr.Delete(ctx, unstruct.GetName(), metav1.DeleteOptions{}) //nolint:govet // Why: We're OK shadowing err
+		propagationPolicy := metav1.DeletePropagationForeground
+		err := namespacedDr.Delete( //nolint:govet // Why: We're OK shadowing err
+			ctx, unstruct.GetName(), metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 		return errors.Wrap(trace.SetCallStatus(ctx, err), "failed to delete object"), nil
 	})
 	return err
