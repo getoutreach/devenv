@@ -21,9 +21,10 @@ type RunOptions struct {
 	UseLocalImage      bool
 	SkipPortForwarding bool
 	DeployDependencies bool
+	E2E                bool
 }
 
-// Run is a wrapper around NewApp().Run()
+// Run is a wrapper around NewApp().Dev()
 func Run(ctx context.Context, log logrus.FieldLogger, k kubernetes.Interface, b *box.Config,
 	conf *rest.Config, appNameOrPath string, kr kubernetesruntime.RuntimeConfig, opts RunOptions) error {
 	app, err := NewApp(ctx, log, k, b, conf, appNameOrPath, &kr)
@@ -73,6 +74,9 @@ func (a *App) runCommand(ctx context.Context, opts RunOptions) (*exec.Cmd, error
 	}
 	if opts.DeploymentProfile != "" {
 		vars = append(vars, fmt.Sprintf("DEVENV_DEV_DEPLOYMENT_PROFILE=%s", opts.DeploymentProfile))
+	}
+	if opts.E2E {
+		vars = append(vars, "E2E=true")
 	}
 
 	return a.command(ctx, &commandBuilderOptions{
